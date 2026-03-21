@@ -1,9 +1,63 @@
-// 조장 화면 — Phase 1 핵심 구현 예정
-// 현재: 플레이스홀더
-export default function GroupPage() {
+import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import GroupCheckinView from "@/components/group/GroupCheckinView";
+import type { CheckIn } from "@/lib/types";
+
+export default async function GroupPage() {
+  const supabase = createClient();
+
+  const {
+    data: { user: authUser },
+  } = await supabase.auth.getUser();
+  if (!authUser) redirect("/login");
+
+  const { data: currentUser } = await supabase
+    .from("users")
+    .select("id, name, role, group_id")
+    .eq("email", authUser.email!)
+    .single();
+
+  if (!currentUser || currentUser.role !== "leader") redirect("/");
+
+  const [{ data: group }, { data: members }, { data: activeSchedule }] =
+    await Promise.all([
+      supabase
+        .from("groups")
+        .select("name")
+        .eq("id", currentUser.group_id)
+        .single(),
+      supabase
+        .from("users")
+        .select("id, name")
+        .eq("group_id", currentUser.group_id)
+        .order("name"),
+      supabase
+        .from("schedules")
+        .select("*")
+        .eq("is_active", true)
+        .maybeSingle(),
+    ]);
+
+  let checkIns: CheckIn[] = [];
+  if (activeSchedule && members?.length) {
+    const { data } = await supabase
+      .from("check_ins")
+      .select("*")
+      .eq("schedule_id", activeSchedule.id)
+      .in(
+        "user_id",
+        members.map((m) => m.id)
+      );
+    checkIns = (data as CheckIn[]) ?? [];
+  }
+
   return (
-    <main className="flex min-h-screen items-center justify-center bg-app-bg">
-      <p className="text-muted-foreground">조장 화면 (Phase 1 구현 예정)</p>
-    </main>
+    <GroupCheckinView
+      currentUser={{ id: currentUser.id, group_id: currentUser.group_id }}
+      groupName={group?.name ?? "내 조"}
+      members={members ?? []}
+      activeSchedule={activeSchedule ?? null}
+      initialCheckIns={checkIns}
+    />
   );
 }

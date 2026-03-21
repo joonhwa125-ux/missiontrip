@@ -15,6 +15,18 @@ export function useOfflineSync() {
   const [isOnline, setIsOnline] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
 
+  // 대기 중 체크인 동기화 — useEffect보다 먼저 선언해야 의존성 참조 가능
+  const syncPending = useCallback(async () => {
+    const pending = getPendingCheckins();
+    if (pending.length === 0) return;
+
+    const result = await syncOfflineCheckins(pending);
+    if (result.ok) {
+      clearPendingCheckins();
+      setPendingCount(0);
+    }
+  }, []);
+
   // 온라인/오프라인 상태 감지
   useEffect(() => {
     setIsOnline(navigator.onLine);
@@ -36,24 +48,12 @@ export function useOfflineSync() {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
-  }, []);
+  }, [syncPending]);
 
   // 오프라인 체크인 저장
   const addPending = useCallback((item: OfflinePendingCheckin) => {
     savePendingCheckin(item);
     setPendingCount(getPendingCheckins().length);
-  }, []);
-
-  // 대기 중 체크인 동기화
-  const syncPending = useCallback(async () => {
-    const pending = getPendingCheckins();
-    if (pending.length === 0) return;
-
-    const result = await syncOfflineCheckins(pending);
-    if (result.ok) {
-      clearPendingCheckins();
-      setPendingCount(0);
-    }
   }, []);
 
   // 활성 일정 캐싱/복원

@@ -7,7 +7,6 @@ import type {
   SetupPreviewData,
   ParsedGroup,
   ParsedUser,
-  ParsedSchedule,
   ValidationError,
 } from "@/lib/types";
 import {

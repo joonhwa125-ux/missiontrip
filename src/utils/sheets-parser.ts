@@ -11,7 +11,6 @@ import {
   MAX_DAY_NUMBER,
 } from "@/lib/constants";
 
-const VALID_ROLES: UserRole[] = ["member", "leader", "admin"];
 const ROLE_MAP: Record<string, UserRole> = {
   조원: "member",
   조장: "leader",
@@ -35,7 +34,6 @@ export function parseGroupsSheet(rows: string[][]): {
 } {
   const groups: ParsedGroup[] = [];
   const errors: ValidationError[] = [];
-  const header = rows[0];
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
