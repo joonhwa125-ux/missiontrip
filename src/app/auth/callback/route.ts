@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createServerClient } from "@supabase/ssr";
 import { ALLOWED_EMAIL_DOMAIN } from "@/lib/constants";
 
 export async function GET(request: Request) {
@@ -11,14 +11,40 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login?error=no-code`);
   }
 
-  const supabase = createClient();
+  // 리다이렉트 응답을 미리 생성하고 쿠키를 직접 설정
+  const redirectUrl = `${origin}${next}`;
+  const response = NextResponse.redirect(redirectUrl);
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.headers
+            .get("cookie")
+            ?.split(";")
+            .map((c) => {
+              const [name, ...rest] = c.trim().split("=");
+              return { name, value: rest.join("=") };
+            })
+            .filter((c) => c.name) ?? [];
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options);
+          });
+        },
+      },
+    }
+  );
+
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
     return NextResponse.redirect(`${origin}/login?error=auth-failed`);
   }
 
-  // 세션 교환 성공 후 사용자 조회
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -29,6 +55,5 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login?error=unauthorized`);
   }
 
-  // 미들웨어에서 역할 라우팅 처리 — 루트로 보내면 미들웨어가 분기함
-  return NextResponse.redirect(`${origin}${next}`);
+  return response;
 }
