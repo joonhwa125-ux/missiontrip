@@ -42,7 +42,7 @@ function LoginContent() {
           </div>
           <h1 className="text-2xl font-bold">미션트립 인원관리</h1>
           <p className="text-sm text-muted-foreground">
-            장애인표준사업장 제주도 여행
+            링키지랩 10주년 미션트립
           </p>
         </div>
 

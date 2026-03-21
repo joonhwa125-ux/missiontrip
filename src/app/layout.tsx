@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "미션트립 인원관리",
-  description: "장애인표준사업장 제주도 미션트립 인원관리 시스템",
+  description: "링키지랩 10주년 미션트립 인원관리 시스템",
 };
 
 export const viewport: Viewport = {
