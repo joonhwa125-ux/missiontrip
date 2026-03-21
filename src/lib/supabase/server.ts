@@ -13,9 +13,11 @@ export function createClient() {
         getAll() {
           return cookieStore.getAll();
         },
-        setAll(cookiesToSet: Parameters<typeof cookieStore.set>[]) {
+        setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach((args) => cookieStore.set(...args));
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
           } catch {
             // Server Component에서는 쿠키 쓰기 불가 — 무시
           }
@@ -37,9 +39,11 @@ export function createServiceClient() {
         getAll() {
           return cookieStore.getAll();
         },
-        setAll(cookiesToSet: Parameters<typeof cookieStore.set>[]) {
+        setAll(cookiesToSet) {
           try {
-            cookiesToSet.forEach((args) => cookieStore.set(...args));
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
           } catch {
             // 무시
           }
