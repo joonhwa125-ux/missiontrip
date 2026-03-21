@@ -1,0 +1,102 @@
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
+import type { ActionResult } from "@/lib/types";
+
+async function requireAdmin() {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data } = await supabase
+    .from("users")
+    .select("id, role")
+    .eq("email", user.email!)
+    .single();
+
+  return data?.role === "admin" ? data : null;
+}
+
+// 일정 활성화 (RPC — 트랜잭션으로 동시 활성화 방지)
+export async function activateSchedule(
+  scheduleId: string
+): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  if (!admin) return { ok: false, error: "관리자 권한이 필요해요" };
+
+  const supabase = createClient();
+  const { error } = await supabase.rpc("activate_schedule", {
+    target_id: scheduleId,
+  });
+
+  if (error) {
+    return { ok: false, error: "일정 활성화 중 오류가 발생했어요" };
+  }
+
+  return { ok: true };
+}
+
+// 즉흥 일정 추가
+export async function createSchedule(
+  title: string,
+  location: string | null,
+  dayNumber: number,
+  scheduledTime: string | null
+): Promise<ActionResult<string>> {
+  const admin = await requireAdmin();
+  if (!admin) return { ok: false, error: "관리자 권한이 필요해요" };
+
+  const supabase = createClient();
+
+  // 같은 day 내 최대 sort_order 조회
+  const { data: existing } = await supabase
+    .from("schedules")
+    .select("sort_order")
+    .eq("day_number", dayNumber)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .single();
+
+  const nextOrder = existing ? existing.sort_order + 1 : 1;
+
+  const { data, error } = await supabase
+    .from("schedules")
+    .insert({
+      title,
+      location,
+      day_number: dayNumber,
+      sort_order: nextOrder,
+      scheduled_time: scheduledTime,
+    })
+    .select("id")
+    .single();
+
+  if (error) {
+    return { ok: false, error: "일정 추가 중 오류가 발생했어요" };
+  }
+
+  return { ok: true, data: data.id };
+}
+
+// 예정 시각 변경
+export async function updateScheduleTime(
+  scheduleId: string,
+  scheduledTime: string | null
+): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  if (!admin) return { ok: false, error: "관리자 권한이 필요해요" };
+
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("schedules")
+    .update({ scheduled_time: scheduledTime })
+    .eq("id", scheduleId);
+
+  if (error) {
+    return { ok: false, error: "시간 변경 중 오류가 발생했어요" };
+  }
+
+  return { ok: true };
+}

@@ -1,0 +1,50 @@
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+
+// 일반 서버 컴포넌트/Action용 (RLS 적용)
+export function createClient() {
+  const cookieStore = cookies();
+
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet: Parameters<typeof cookieStore.set>[]) {
+          try {
+            cookiesToSet.forEach((args) => cookieStore.set(...args));
+          } catch {
+            // Server Component에서는 쿠키 쓰기 불가 — 무시
+          }
+        },
+      },
+    }
+  );
+}
+
+// Service Role 클라이언트 — RLS 우회, Server Action/API Route 전용
+export function createServiceClient() {
+  const cookieStore = cookies();
+
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet: Parameters<typeof cookieStore.set>[]) {
+          try {
+            cookiesToSet.forEach((args) => cookieStore.set(...args));
+          } catch {
+            // 무시
+          }
+        },
+      },
+    }
+  );
+}

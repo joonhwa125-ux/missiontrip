@@ -1,0 +1,686 @@
+# 미션트립 인원관리 시스템
+
+> **Claude Code 개발 지시서**
+> 장애인표준사업장 미션트립 | 2박 3일 제주도 | 조장 중심 운영 | 구글 계정 로그인
+> KWCAG 2.2 준수 | 1회성 운영 | Next.js 14 + Supabase + Vercel
+
+---
+
+## 자동 검증 규칙 (매 코드 작성 시 필수 확인)
+
+> 이 섹션은 Claude가 코드를 작성/수정할 때마다 자동으로 준수해야 하는 규칙이다.
+> Hook 스크립트(`.claude/scripts/check-violations.sh`)가 패턴 위반을 잡고,
+> 아래 의미적 규칙은 Claude가 직접 확인한다.
+
+### A. Ad-hoc 방지 (PRD 일치 검증)
+코드 작성 시 이 문서의 명세와 불일치하는 구현을 하지 않는다.
+- 새 컴포넌트/함수 작성 전: 해당 섹션(4. 화면별 기능 명세)을 재확인
+- 색상값은 반드시 8.1 컬러 시스템 테이블의 값만 사용
+- UI 문구는 반드시 8.2 UI 문구 테이블의 값만 사용
+- "절대 금지 사항"에 해당하는 코드를 절대 생성하지 않는다
+- 명세에 없는 기능을 임의로 추가하지 않는다
+
+### B. KWCAG 2.2 접근성 (코드 작성 시 자동 적용)
+TSX 파일 작성 시 아래를 기본 적용한다:
+- 모든 `<button>`, `<a>` → 최소 44x44px (`min-h-11 min-w-11`)
+- 모든 아이콘 → `aria-label` 또는 인접 텍스트 레이블
+- 상태 변화 컨테이너 → `aria-live="polite"`
+- `outline-none` 사용 시 반드시 `focus-visible:ring-2` 대체
+- 색상으로 상태 표현 시 반드시 텍스트 또는 아이콘 병기
+- 폰트 크기 → rem 단위만 사용 (px 금지)
+- 모달 → 포커스 트랩 + `role="dialog"` + `aria-modal="true"`
+
+### C. 클린코드 (자동 준수)
+- `any` 타입 금지 → 구체적 타입 정의
+- 함수 50줄 이내
+- `console.log` 금지 (디버깅 완료 후 반드시 제거)
+- 매직넘버 금지 → `constants.ts`에 상수 정의
+- 컴포넌트당 1파일, 200줄 이내 권장
+
+---
+
+## 개발 환경 & 규칙
+
+### 기술 스택
+- **Framework:** Next.js 14 (App Router) — `'use client'` 최소화, 서버 컴포넌트 우선
+- **Backend:** Supabase (Auth, Database, Realtime)
+- **Styling:** Tailwind CSS + shadcn/ui (Radix UI 기반 접근성 내장)
+- **Deploy:** Vercel
+- **Language:** TypeScript (strict mode)
+
+### 코딩 컨벤션
+- 컴포넌트: PascalCase (`GroupCard.tsx`), 유틸/훅: camelCase (`useCheckin.ts`)
+- CSS: Tailwind utility-first, 커스텀 색상은 `tailwind.config`에 등록
+- 한글 주석 허용 (PRD와 일관성)
+- rem 단위 사용 (KWCAG 1.4.4)
+
+### 디렉토리 구조 (계획)
+```
+src/
+├── app/
+│   ├── (auth)/login/page.tsx, auth/callback/route.ts
+│   ├── (main)/group/page.tsx, checkin/page.tsx, admin/page.tsx
+│   ├── setup/page.tsx                    # 개발자/관리자 셋업
+│   ├── layout.tsx
+│   └── middleware.ts
+├── actions/                              # Server Actions (모든 DB 쓰기)
+│   ├── checkin.ts, schedule.ts, report.ts, setup.ts
+├── components/ui/, group/, admin/, setup/, common/
+├── lib/supabase/ (client.ts, server.ts, middleware.ts), types.ts, constants.ts
+├── hooks/ (useCheckin.ts, useRealtime.ts, useOfflineSync.ts)
+└── utils/offline.ts, sheets-parser.ts    # Google Sheets CSV 파싱
+```
+
+### 절대 금지 사항
+- `text-decoration: line-through` (완료 카드)
+- 공지 배너에 `#FEE500` (노란색) 사용
+- 오프라인 배너 상단 배치
+- Polling 방식 (Realtime broadcast만 사용)
+- 보고 버튼 `disabled` 처리
+- 색상만으로 상태 구분 (KWCAG 1.3.3)
+- `focus-visible` 링 제거
+
+---
+
+## 0. 이 문서의 목적
+
+이 문서는 Claude Code가 오해 없이 구현할 수 있도록 작성된 개발 지시서다. 모호한 표현 대신 정확한 기술 명세를 사용하며, 설계 결정의 배경을 함께 기술한다.
+
+> **이 시스템의 목적은 '편의성'이 아닌 '안전'이다.** 장애인·비장애인이 함께하는 여행에서 이동 시마다 단 한 명의 누락도 없도록 하는 것이 핵심 가치다.
+
+> **운영 모델: 조장 중심.** 조원은 앱 사용이 선택사항. 조장 20명이 각 조의 체크인을 주도한다.
+
+> **인증: 회사 구글 계정 OAuth 단일 방식.** 전 참가자(외부 지원 인력 포함) 회사 계정 보유 확인 완료.
+
+> **핵심 사용 시나리오: 이동 전 정차 상태에서 체크인 완료.** 이동 중 네트워크 단절 시 실시간 동기화 불가 — 이는 근본적 전제다.
+
+### 설계 원칙
+
+- 조장 화면이 핵심 화면이다. 탭탭탭 흐름에 가장 많은 공을 들인다
+- 장애/비장애 구분 로직 없음 — 접근성 갖춘 단일 UI로 모든 사용자 지원
+- 안전 확인 vs 사용자 편의 → 안전 확인 우선
+- 기능 추가 vs 단순함 → 단순함 우선 (1회성 서비스)
+
+---
+
+## 1. 프로젝트 개요
+
+| 항목 | 내용 |
+|---|---|
+| 서비스명 | 미션트립 인원관리 시스템 |
+| 여행지 | 제주도 (2박 3일) — 비행기 + 버스 이동 포함 |
+| 목적 | 이동 시마다 약 200명의 인원 누락을 실시간으로 방지 |
+| 운영 모델 | 조장 중심 — 조장 20명이 체크인 주도. 조원 앱 사용은 선택 |
+| 인증 | 회사 구글 계정 OAuth. 전 참가자(외부 지원 인력 포함) 회사 계정 보유 |
+| 참가자 특성 | 장애인·비장애인 혼합, 수어통역사·트레블헬퍼·활동지원사 포함. 모두 동일 인터페이스 |
+| 운영 기간 | 1회성. 미션트립 기간만 운영, 이후 데이터 1개월 보존 후 삭제 |
+| 참가 인원 | 약 200명 / 조 약 20개 / 조당 약 10명 |
+| 기술 스택 | Next.js 14 (App Router) + Supabase + Tailwind CSS + shadcn/ui + Vercel |
+
+### 1.1 체크인 발생 상황 (2박 3일 예시)
+
+| 일차 | 상황 | 이동 수단 |
+|---|---|---|
+| 1일차 | 김포공항 탑승 게이트 집결 | 비행기 |
+| 1일차 | 제주공항 도착 인원 확인 | 비행기 |
+| 1일차 | 숙소 체크인 | 버스 |
+| 2일차 | 버스 탑승 (서귀포 이동) | 버스 |
+| 2일차 | 점심 식당 집결 | 도보 |
+| 3일차 | 제주공항 출발 집결 | 버스 |
+| 수시 | 우천 등 돌발 상황 발생 시 관리자가 즉석 일정 추가 | — |
+
+### 1.2 사용자 역할
+
+| 역할 | 인원 | 핵심 행동 | 앱 사용 |
+|---|---|---|---|
+| 조장 | 20명 | 조원 카드 탭탭탭으로 체크인 처리, 최종 보고 | 필수 |
+| 총괄 관리자 | 1~2명 | 일정 활성화, 전체 현황 모니터링, 공지 발송 | 필수 |
+| 참가자 (조원) | 약 180명 | 셀프 체크인 (선택), 현황 확인 | 선택 |
+
+---
+
+## 2. 인증 설계 (Google OAuth)
+
+### 2.1 Supabase 설정
+
+- Supabase Dashboard → Authentication → Providers → Google 활성화
+- Google Cloud Console에서 OAuth 2.0 클라이언트 ID 생성
+- 승인된 리디렉션 URI: `https://{supabase-project}.supabase.co/auth/v1/callback`
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`을 Supabase에 등록
+
+### 2.2 도메인 제한 (회사 계정 외 차단)
+
+```typescript
+// middleware.ts
+const ALLOWED_DOMAIN = '@linkagelab.co.kr'
+
+if (!user.email?.endsWith(ALLOWED_DOMAIN)) {
+  await supabase.auth.signOut()
+  redirect('/login?error=unauthorized')
+}
+```
+
+### 2.3 로그인 흐름
+
+| 단계 | 동작 | 구현 위치 |
+|---|---|---|
+| 1 | [Google로 계속하기] 버튼 탭 | /login 페이지 |
+| 2 | Supabase OAuth → 구글 계정 선택 | Supabase Auth 처리 |
+| 3 | 콜백 수신 → 이메일 도메인 검증 | middleware.ts |
+| 4 | Users 테이블에서 email로 사용자 조회 | 서버 컴포넌트 |
+| 5a | 조회 성공 → role에 따라 라우팅 | leader→/group, member→/checkin, admin→/admin |
+| 5b | 조회 실패 → 안내 화면 | /login?error=not-registered |
+
+> 미등록 이메일: '등록되지 않은 계정이에요. 담당자에게 문의해주세요.' 안내 화면 표시. 별도 회원가입 플로우 없음.
+
+### 2.4 사전 준비 — Google Sheets 기반 셋업 (`/setup`)
+
+> Supabase Dashboard 수동 입력 대신, `/setup` 페이지에서 Google Sheets 데이터를 일괄 동기화한다.
+> 조 이름 → UUID 매핑을 시스템이 자동 처리하므로 사람이 UUID를 다룰 일이 없다.
+
+**Google Sheets 구조 (3개 시트):**
+
+| 시트명 | 컬럼 | 예시 |
+|---|---|---|
+| 조구성 | 조이름, 차량 | 1조, 1호차 |
+| 참가자 | 이름, 이메일, 전화번호, 역할(조원/조장/관리자), 소속조 | 홍길동, hong@linkagelab.co.kr, 010-1234-5678, 조장, 1조 |
+| 일정 | 일차, 순서, 일정명, 장소, 예정시각 | 1, 1, 김포공항 탑승 게이트 집결, 국내선 3번 게이트, 08:30 |
+
+**동기화 흐름:**
+
+1. 관리자가 `/setup`에서 Google Sheet URL 입력 (또는 CSV 파일 업로드)
+2. 시스템이 시트 데이터를 파싱 + 검증 (이메일 형식, 도메인, 역할값, 조 존재 여부)
+3. 미리보기 화면에서 데이터 확인 → [DB에 반영] 버튼
+4. Groups → Users → Schedules 순서로 트랜잭션 INSERT
+5. 결과 요약 표시 (성공/실패/중복 건수)
+
+**Google Sheets 읽기 방식:**
+- 시트를 "링크가 있는 모든 사용자에게 공개 (뷰어)" 설정
+- CSV export URL로 서버에서 fetch: `https://docs.google.com/spreadsheets/d/{ID}/export?format=csv&gid={GID}`
+- 클라이언트에서 Sheet ID만 입력하면 Server Action에서 시트별 CSV 다운로드 → 파싱
+
+**재동기화 지원:**
+- 출발 전 참가자 변경 시 재실행 가능
+- 기존 데이터와 비교: 신규 → INSERT, 변경 → UPDATE, 삭제된 행 → 표시만 (자동 삭제 안 함)
+- 재동기화 전 변경사항 diff 미리보기 제공
+
+---
+
+## 3. 데이터베이스 스키마 (Supabase)
+
+### 3.1 Groups 테이블
+
+| 컬럼명 | 타입 | 제약 | 설명 |
+|---|---|---|---|
+| id | uuid | PK, default gen_random_uuid() | 조 고유 ID |
+| name | text | NOT NULL | 조 이름 (예: 1조) |
+| bus_name | text | nullable | 배정 차량 (예: 1호차) |
+| created_at | timestamptz | default now() | 생성 시각 |
+
+### 3.2 Users 테이블
+
+| 컬럼명 | 타입 | 제약 | 설명 |
+|---|---|---|---|
+| id | uuid | PK, default gen_random_uuid() | 사용자 고유 ID |
+| name | text | NOT NULL | 참가자 이름 |
+| email | text | UNIQUE, NOT NULL | 회사 구글 계정 이메일 (로그인 키) |
+| phone | text | nullable | 전화번호 (비상연락용, 예: 010-1234-5678) |
+| role | text | CHECK IN ('member','leader','admin') | 참가자 / 조장 / 관리자 |
+| group_id | uuid | FK → Groups.id, NOT NULL | 소속 조 |
+| created_at | timestamptz | default now() | 생성 시각 |
+
+> 장애 여부, 지원 필요 여부 등 개인 특성 컬럼은 의도적으로 포함하지 않는다.
+> 비상연락 시 이름 + phone + 소속 조(group_id → Groups.name)로 충분하다. 이메일은 비상연락에 불필요.
+
+### 3.3 Schedules 테이블
+
+> `is_active` boolean 단독 사용 금지. 아래 DB 제약을 반드시 함께 적용.
+
+| 컬럼명 | 타입 | 제약 | 설명 |
+|---|---|---|---|
+| id | uuid | PK, default gen_random_uuid() | 일정 고유 ID |
+| title | text | NOT NULL | 일정명 (예: 제주공항 도착 확인) |
+| location | text | nullable | 장소 (예: 1층 출구 앞) |
+| day_number | int | NOT NULL, CHECK (day_number >= 1) | 일차 구분 (1, 2, 3) |
+| sort_order | int | NOT NULL | 같은 day 내 표시 순서 |
+| scheduled_time | timestamptz | nullable | 예정 시각 (관리자가 실시간 변경 가능) |
+| is_active | boolean | default false, NOT NULL | 현재 진행 중 여부 |
+| activated_at | timestamptz | nullable | 활성화 시각 (로그용) |
+| created_at | timestamptz | default now() | 생성 시각 |
+
+**필수 DB 제약:**
+
+```sql
+CREATE UNIQUE INDEX idx_one_active_schedule
+  ON schedules (is_active)
+  WHERE is_active = true;
+```
+
+### 3.4 Check_ins 테이블
+
+| 컬럼명 | 타입 | 제약 | 설명 |
+|---|---|---|---|
+| id | uuid | PK, default gen_random_uuid() | 체크인 고유 ID |
+| user_id | uuid | FK → Users.id, NOT NULL | 체크인된 사용자 |
+| schedule_id | uuid | FK → Schedules.id, NOT NULL | 해당 일정 |
+| checked_at | timestamptz | default now() | 체크인 시각 |
+| checked_by | text | CHECK IN ('self','leader','admin') | 셀프 / 조장대리 / 관리자 |
+| checked_by_user_id | uuid | FK → Users.id, nullable | 체크인 처리한 사용자 (조장/관리자 추적) |
+| offline_pending | boolean | default false, NOT NULL | 오프라인 미sync 여부 |
+
+**필수 DB 제약:**
+
+```sql
+ALTER TABLE check_ins
+  ADD CONSTRAINT unique_checkin UNIQUE (user_id, schedule_id);
+```
+
+→ 동일 사용자의 동일 일정 중복 체크인 불가. `ON CONFLICT DO NOTHING`.
+
+### 3.5 Group_reports 테이블 (보고 상태 영속화)
+
+> Realtime broadcast는 휘발성이다. 관리자 새로고침 시 보고 상태가 사라지지 않도록 DB에 영속화한다.
+
+| 컬럼명 | 타입 | 제약 | 설명 |
+|---|---|---|---|
+| id | uuid | PK, default gen_random_uuid() | 보고 고유 ID |
+| group_id | uuid | FK → Groups.id, NOT NULL | 보고한 조 |
+| schedule_id | uuid | FK → Schedules.id, NOT NULL | 해당 일정 |
+| reported_by | uuid | FK → Users.id, NOT NULL | 보고한 조장 |
+| pending_count | int | NOT NULL, default 0 | 보고 시 미완료 인원 수 |
+| reported_at | timestamptz | default now() | 보고 시각 |
+
+**필수 DB 제약:**
+
+```sql
+ALTER TABLE group_reports
+  ADD CONSTRAINT unique_group_report UNIQUE (group_id, schedule_id);
+```
+
+→ 동일 조의 동일 일정 중복 보고 방지. 재보고 시 `ON CONFLICT DO UPDATE`.
+
+### 3.6 일정 상태 판별 로직
+
+> Schedules에 별도 status 컬럼을 추가하지 않는다. 기존 컬럼 조합으로 판별한다.
+
+```typescript
+type ScheduleStatus = 'active' | 'completed' | 'waiting'
+
+function getScheduleStatus(schedule: Schedule): ScheduleStatus {
+  if (schedule.is_active) return 'active'           // 현재 진행중
+  if (schedule.activated_at) return 'completed'      // 활성화된 적 있음 = 완료
+  return 'waiting'                                   // 한 번도 활성화 안 됨 = 대기
+}
+```
+
+### 3.7 RLS 정책 (Row Level Security)
+
+> Supabase RLS를 반드시 활성화한다. 아래 정책이 없으면 인증된 사용자 누구나 모든 데이터를 조작할 수 있다.
+
+```sql
+-- 모든 테이블 RLS 활성화
+ALTER TABLE groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE schedules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE check_ins ENABLE ROW LEVEL SECURITY;
+ALTER TABLE group_reports ENABLE ROW LEVEL SECURITY;
+
+-- Groups: 인증된 사용자 읽기 전용
+CREATE POLICY "groups_read" ON groups FOR SELECT TO authenticated USING (true);
+
+-- Users: 인증된 사용자 읽기 전용 (같은 조 + 관리자)
+CREATE POLICY "users_read" ON users FOR SELECT TO authenticated USING (true);
+
+-- Schedules: 읽기 전체, 쓰기 admin만
+CREATE POLICY "schedules_read" ON schedules FOR SELECT TO authenticated USING (true);
+CREATE POLICY "schedules_write" ON schedules FOR ALL TO authenticated
+  USING (EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin'));
+
+-- Check_ins: 같은 조 읽기, 본인/조장/관리자 쓰기
+CREATE POLICY "checkins_read" ON check_ins FOR SELECT TO authenticated USING (
+  EXISTS (
+    SELECT 1 FROM users u1
+    JOIN users u2 ON u1.group_id = u2.group_id
+    WHERE u1.id = check_ins.user_id AND u2.id = auth.uid()
+  )
+  OR EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+);
+CREATE POLICY "checkins_insert" ON check_ins FOR INSERT TO authenticated WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM users WHERE id = auth.uid()
+    AND (role IN ('leader', 'admin') OR id = check_ins.user_id)
+  )
+);
+CREATE POLICY "checkins_delete" ON check_ins FOR DELETE TO authenticated USING (
+  EXISTS (
+    SELECT 1 FROM users WHERE id = auth.uid() AND role IN ('leader', 'admin'))
+);
+
+-- Group_reports: 조장 쓰기, 관리자+조장 읽기
+CREATE POLICY "reports_read" ON group_reports FOR SELECT TO authenticated USING (
+  EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role IN ('leader', 'admin'))
+);
+CREATE POLICY "reports_insert" ON group_reports FOR INSERT TO authenticated WITH CHECK (
+  EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role IN ('leader', 'admin'))
+);
+```
+
+### 3.8 RPC 함수
+
+```sql
+-- 일정 활성화 (트랜잭션으로 동시 활성화 방지)
+CREATE OR REPLACE FUNCTION activate_schedule(target_id uuid)
+RETURNS void AS $$
+BEGIN
+  UPDATE schedules SET is_active = false, activated_at = COALESCE(activated_at, now())
+    WHERE is_active = true;
+  UPDATE schedules SET is_active = true, activated_at = now()
+    WHERE id = target_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 오프라인 체크인 일괄 동기화
+CREATE OR REPLACE FUNCTION sync_offline_checkins(checkins jsonb)
+RETURNS int AS $$
+DECLARE
+  item jsonb;
+  synced int := 0;
+BEGIN
+  FOR item IN SELECT * FROM jsonb_array_elements(checkins)
+  LOOP
+    INSERT INTO check_ins (user_id, schedule_id, checked_by, checked_by_user_id, checked_at)
+    VALUES (
+      (item->>'user_id')::uuid,
+      (item->>'schedule_id')::uuid,
+      item->>'checked_by',
+      (item->>'checked_by_user_id')::uuid,
+      (item->>'checked_at')::timestamptz
+    )
+    ON CONFLICT (user_id, schedule_id) DO NOTHING;
+    IF FOUND THEN synced := synced + 1; END IF;
+  END LOOP;
+  RETURN synced;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+```
+
+### 3.9 환경 변수
+
+```env
+# .env.local
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...         # 서버 전용 (setup, admin 작업)
+ALLOWED_EMAIL_DOMAIN=@linkagelab.co.kr        # 도메인 제한
+```
+
+> `SUPABASE_SERVICE_ROLE_KEY`는 RLS를 우회하므로 Server Action/API Route에서만 사용. 클라이언트 노출 금지.
+
+---
+
+## 4. 화면별 기능 명세
+
+### 4.1 로그인 화면 (`/login`)
+
+- 구성: 서비스 로고 + 서비스명 + [Google로 계속하기] 버튼 하나
+- 버튼: 구글 공식 가이드라인 준수 (흰 배경, G 로고)
+- `error=unauthorized` → '회사 계정(@linkagelab.co.kr)으로만 로그인할 수 있어요'
+- `error=not-registered` → '등록되지 않은 계정이에요. 담당자에게 문의해주세요'
+
+---
+
+### 4.2 조장 화면 (`/group`) — 핵심 화면
+
+> 탑승 현장에서 조원 얼굴을 보며 탭탭탭 처리하는 흐름이 최우선이다.
+
+#### 4.2.1 화면 구성 (위→아래)
+
+- **공지 배너 (`#E6F1FB` 파란색):** 관리자 공지 수신 시 상단 표시. X 버튼으로 닫기
+- **상단 바:** 현재 활성 일정명 + 장소
+- **이니셜 동그라미 행:** 조원 전원 이니셜 원 + 완료/전체 카운트
+- **조원 카드 리스트:** 미완료 상단, 완료 하단 자동 정렬
+- **하단 고정:** 보고 버튼
+- **오프라인 배너:** 하단 고정 (`position: fixed; bottom: 0`)
+
+#### 4.2.2 이니셜 동그라미
+
+- 미완료: 회색 배경 + 회색 점선 테두리
+- 완료: 노란(`#FEE500`) 배경 + 우하단 초록 체크 점 (`14px`, `#00C471`)
+
+#### 4.2.3 조원 카드 스펙
+
+- 카드 최소 높이: **72px** (KWCAG 2.5.5)
+- **미완료:** 흰 배경 + '아직 안 보여요' + 빈 원(점선) + [탔어요!] 버튼(`#FEE500`)
+- **완료:** 연초록(`#EAF3DE`) 배경 + 'HH:MM 탑승 완료' + 초록 체크 원 + [취소] 버튼(회색)
+- 완료 카드 하단 자동 이동: `sort((a,b) => Number(a.checked) - Number(b.checked))`
+
+#### 4.2.4 탭탭탭 흐름
+
+- [탔어요!] 탭 → **확인 모달 없이 즉시 INSERT** (현장 속도 우선)
+- [취소] 탭 → '체크인을 취소할까요?' 확인 모달 → DELETE
+
+#### 4.2.5 전원 완료 축하 화면
+
+- 미완료 수 `=== 0`이면: 컨페티 CSS + '[조명] 전원 탑승 완료!' 화면 전환
+- 이니셜 원 `animation-delay` 0.08s 간격 순차 팝인
+- [우리 조 다 탔어요! 보고하기] 버튼 강조
+
+#### 4.2.6 보고 버튼
+
+- **항상 활성 — `disabled` 금지** (KWCAG 2.5.5)
+- 미완료 시: '[N]명이 아직이에요. 그래도 보고할까요?' 확인 모달
+- Realtime `'admin'` 채널로 `{type:'group_reported', group_id, pending_count}` broadcast
+
+---
+
+### 4.3 관리자 화면 (`/admin`) — 3탭 구조
+
+> 탭 구성: **현황 / 일정 / 공지**. 헤더 배경색 `#FEE500`.
+
+#### 4.3.1 [현황] 탭
+
+- **경과 시간 표시:** 활성 일정의 `activated_at`으로부터 경과 시간을 상단에 실시간 표시 (예: '23분 경과')
+- 상단 요약: 보고완료 / 진행중 / 미시작 카드 3개
+- 조별 그리드 (2열): 프로그레스 바 + 완료/전체 수 + 상태 배지
+- **조 카드 드릴다운:** 조 카드 탭 → 바텀시트로 해당 조 미확인 인원 이름 목록 표시 (이름 + 전화번호). 전원 완료 시 '전원 확인 완료' 표시
+
+| 상태 | 배지 | 배경 | 텍스트 | 조건 |
+|---|---|---|---|---|
+| 보고완료 | 보고완료 | `#EAF3DE` | `#27500A` | 전원 체크인 + 보고 완료 |
+| 전원확인 | 전원확인 | `#FEE500` | `#3C1E1E` | 전원 체크인, 보고 미완 |
+| 진행중 | 진행중 | `#FAEEDA` | `#633806` | 1명+ 체크인, 미완료 있음 |
+| 미시작 | 미시작 | bg-secondary | gray-tertiary | 체크인 0명 |
+
+#### 4.3.2 [일정] 탭
+
+- `day_number + sort_order` 순 표시, 일차별 섹션 구분
+- 완료: `opacity: 0.55`, 진행중: 노란 배경 + '진행중' pill, 대기: [활성화] 버튼
+- [활성화] → 기존 활성 해제 → 선택 활성화 → `schedule_activated` broadcast
+- **예정 시각 표시:** 각 일정에 `scheduled_time`이 있으면 `HH:MM` 표시
+- **시간 수정:** 일정 카드 탭 → 시간 수정 입력 (시:분 picker) → DB 업데이트 → `schedule_updated` broadcast → 전체 화면에 '일정 시간이 변경되었어요' 토스트
+- [+ 일정 추가]: 일정명(필수), 장소(선택), 일차(필수), 예정시각(선택) — 4개 필드
+
+#### 4.3.3 [공지] 탭
+
+- 텍스트 입력 + [전체 공지 보내기] → `'global'` 채널 `notice` broadcast
+- 파란색(`#E6F1FB`) 배너로 전체 화면에 표시
+
+---
+
+### 4.4 셋업 화면 (`/setup`) — 개발자/관리자 전용
+
+> admin role만 접근 가능. 출발 전 데이터 초기 셋업 및 검증용.
+
+#### 4.4.1 화면 구성
+
+- **Step 1 — 데이터 소스 선택:**
+  - [Google Sheet URL 입력] 텍스트 필드 + [불러오기] 버튼
+  - 또는 [CSV 파일 업로드] 버튼 (대안)
+- **Step 2 — 미리보기 + 검증:**
+  - 3개 탭(조구성 / 참가자 / 일정)으로 파싱된 데이터 표시
+  - 검증 오류 행은 빨간 하이라이트 + 오류 메시지 (예: "이메일 형식 오류", "조 이름 불일치")
+  - 요약: 조 N개, 참가자 N명(조장 N, 조원 N, 관리자 N), 일정 N개
+- **Step 3 — 반영:**
+  - [DB에 반영] 버튼 → 확인 모달 "기존 데이터를 덮어씁니다. 계속할까요?"
+  - 진행 상태 표시 (Groups 완료 → Users 완료 → Schedules 완료)
+  - 결과: 성공 N건, 실패 N건, 중복 스킵 N건
+
+#### 4.4.2 검증 규칙
+
+| 검증 항목 | 조건 | 오류 메시지 |
+|---|---|---|
+| 이메일 형식 | `@` 포함 + 도메인 일치 | 이메일 형식이 올바르지 않아요 |
+| 이메일 중복 | 시트 내 중복 없음 | 이메일이 중복되어 있어요 |
+| 역할값 | 조원/조장/관리자 중 하나 | 역할은 조원/조장/관리자만 가능해요 |
+| 소속조 존재 | 조구성 시트의 조이름과 일치 | 조구성에 없는 조 이름이에요 |
+| 조장 수 | 조당 최소 1명 | [N]조에 조장이 없어요 |
+| 일차 범위 | 1~3 | 일차는 1~3만 가능해요 |
+
+#### 4.4.3 데이터 리셋
+
+- [전체 데이터 초기화] 버튼 (하단, 빨간 텍스트)
+- 확인 모달: "모든 체크인, 보고, 참가자 데이터가 삭제됩니다"
+- check_ins → group_reports → users → schedules → groups 순서로 삭제 (FK 순서)
+
+---
+
+### 4.5 참가자 화면 (`/checkin`) — Phase 2
+
+- `role=member` 자동 진입
+- 현재 활성 일정 + [나 탔어요!] 버튼 + 우리 조 이니셜 현황
+
+---
+
+## 5. 실시간 동기화 (Supabase Realtime)
+
+| 채널 | 이벤트 | 발생 조건 | 수신 대상 | 반응 |
+|---|---|---|---|---|
+| `global` | `schedule_activated` | 관리자 일정 활성화 | 전체 | 일정명 갱신 + 토스트 |
+| `global` | `schedule_updated` | 관리자 일정 시간 변경 | 전체 | 예정 시각 갱신 + '일정 시간이 변경되었어요' 토스트 |
+| `global` | `notice` | 관리자 공지 | 전체 | 파란 배너 표시 |
+| `group:{group_id}` | `checkin_updated` | 조원 셀프 체크인 | 해당 조장 | 카드 즉시 업데이트 |
+| `admin` | `group_reported` | 조장 보고 | 관리자 | 배지 '보고완료' 전환 |
+
+---
+
+## 6. 오프라인 대응
+
+- INSERT 실패 → 낙관적 업데이트 + 오프라인 아이콘
+- `localStorage 'mtrip_pending'`에 `{user_id, schedule_id, checked_by, checked_at}` 저장
+- 하단 배너: '오프라인 상태예요. N건 저장 중 — 연결되면 자동으로 보낼게요'
+- `window.addEventListener('online', sync)` → `INSERT ON CONFLICT DO NOTHING`
+- 활성 일정: `localStorage 'mtrip_active_schedule'`에 캐싱
+
+---
+
+## 7. 접근성 (KWCAG 2.2)
+
+| KWCAG | 항목 | 구현 |
+|---|---|---|
+| 1.1.1 | 비텍스트 콘텐츠 | `aria-label` 또는 텍스트 레이블 병기 |
+| 1.3.3 | 감각적 특성 | 색상+텍스트+아이콘 3중 표시 |
+| 1.4.3 | 명도 대비 | 4.5:1 이상 |
+| 1.4.4 | 텍스트 크기 | rem 단위, 200% 확대 유지 |
+| 2.4.3 | 포커스 순서 | DOM = 시각적 순서 |
+| 2.5.5 | 타겟 크기 | 최소 44x44px, 카드 72px |
+| 3.3.1 | 오류 식별 | 원인 텍스트 명확 표시 |
+| 4.1.3 | 상태 메시지 | `aria-live='polite'` |
+
+---
+
+## 8. UX 톤 가이드
+
+> **밝고 따뜻한 분위기 (카카오 스타일).** 업무 도구가 아닌 함께하는 여행의 일부.
+
+### 컬러 시스템
+
+| 용도 | 컬러값 | 사용처 |
+|---|---|---|
+| 메인 액션 | `#FEE500` | [탔어요!], 보고 버튼, 관리자 헤더 |
+| 완료 카드 | `#EAF3DE` | 완료 조원 카드 배경 |
+| 완료 체크 | `#00C471` | 체크 원, 이니셜 완료 점 |
+| 공지 배너 | `#E6F1FB` | 상단 공지 배너 |
+| 오프라인 | `#F1EFE8` | 하단 오프라인 배너 |
+| 진행중 배지 | `#FAEEDA` | 진행중 배지 배경 |
+| 앱 배경 | `#F5F3EF` | 전체 화면 배경 |
+
+### UI 문구
+
+| 상황 | 문구 |
+|---|---|
+| 미완료 | 아직 안 보여요 |
+| 완료 | HH:MM 탑승 완료 |
+| 체크인 버튼 | 탔어요! |
+| 전체 카운트 | N / M명 탑승 완료 |
+| 전원 완료 | [조명] 전원 탑승 완료! |
+| 보고 (완료) | 우리 조 다 탔어요! 보고하기 |
+| 보고 (미완료) | N명 남았어요 |
+| 오프라인 | 오프라인 상태예요. N건 저장 중 — 연결되면 자동으로 보낼게요 |
+
+---
+
+## 9. API 레이어 설계 (Server Actions)
+
+> 모든 DB 쓰기 작업은 Server Action을 경유한다. 클라이언트에서 Supabase 직접 INSERT/UPDATE/DELETE 금지.
+> Realtime broadcast만 클라이언트에서 직접 수행 (읽기 전용 구독 + 메시지 전송).
+
+### 9.1 Server Actions 목록
+
+```
+src/actions/
+├── checkin.ts        # 체크인 CRUD
+├── schedule.ts       # 일정 활성화/추가
+├── report.ts         # 조장 보고
+├── setup.ts          # Google Sheets 동기화, 데이터 리셋
+└── notice.ts         # 공지 이력 저장 (선택)
+```
+
+| Action | 함수명 | 권한 | 설명 |
+|---|---|---|---|
+| checkin.ts | `createCheckin(userId, scheduleId)` | leader, admin | 체크인 INSERT + broadcast |
+| checkin.ts | `deleteCheckin(userId, scheduleId)` | leader, admin | 체크인 취소 DELETE + broadcast |
+| checkin.ts | `syncOfflineCheckins(checkins[])` | leader | RPC `sync_offline_checkins` 호출 |
+| schedule.ts | `activateSchedule(scheduleId)` | admin | RPC `activate_schedule` + broadcast |
+| schedule.ts | `createSchedule(title, location, dayNumber, scheduledTime?)` | admin | 즉흥 일정 INSERT |
+| schedule.ts | `updateScheduleTime(scheduleId, scheduledTime)` | admin | 예정 시각 변경 + broadcast |
+| report.ts | `submitReport(groupId, scheduleId, pendingCount)` | leader | group_reports UPSERT + broadcast |
+| setup.ts | `importFromGoogleSheet(sheetId)` | admin | 3개 시트 파싱 → 검증 → 일괄 INSERT |
+| setup.ts | `resetAllData()` | admin | 전체 데이터 초기화 (FK 역순 삭제) |
+
+### 9.2 핵심 구현 지시
+
+| 항목 | 지시 |
+|---|---|
+| 구글 OAuth | `signInWithOAuth({ provider: 'google', options: { redirectTo } })` → `/auth/callback` 세션 교환 |
+| 도메인 차단 | `middleware.ts`: `email.endsWith(ALLOWED_EMAIL_DOMAIN)` 실패 → signOut + redirect |
+| 역할 라우팅 | leader→/group, member→/checkin, admin→/admin, admin→/setup 접근 가능 |
+| 카드 스타일 | 완료: `bg-[#EAF3DE]`, 미완료: `bg-white` |
+| 카드 정렬 | `sort((a,b) => Number(a.checked) - Number(b.checked))` |
+| 체크인 | 확인 모달 없이 즉시 Server Action 호출. 취소만 모달 |
+| 중복 방지 | `UNIQUE(user_id, schedule_id)` + `ON CONFLICT DO NOTHING` |
+| 일정 활성화 | Server Action → RPC `activate_schedule` → broadcast |
+| 보고 영속화 | Server Action → group_reports UPSERT → broadcast |
+| 시간 변경 | Server Action → Schedules UPDATE `scheduled_time` → `schedule_updated` broadcast |
+| 경과 시간 | `Date.now() - activated_at` 실시간 카운트 (setInterval 1분), Polling 아님 — 로컬 타이머 |
+| 조 드릴다운 | 조 카드 탭 → 바텀시트: 미확인 인원 이름+전화번호 리스트 |
+
+---
+
+## 10. 개발 우선순위
+
+> Phase 0(인프라/셋업)이 선행되어야 Phase 1 개발이 가능하다.
+
+| Phase | 기능 | 우선순위 |
+|---|---|---|
+| **Phase 0** | Supabase 프로젝트 + 스키마 + RLS + RPC 설정 | 선행 |
+| **Phase 0** | Next.js 초기화 + 환경변수 + 인증 미들웨어 | 선행 |
+| **Phase 0** | `/setup` — Google Sheets 동기화 + 데이터 검증 + 리셋 | 선행 |
+| **Phase 1** | OAuth + 도메인 차단 + 역할 라우팅 | 최고 |
+| **Phase 1** | 조장 체크인 (탭탭탭 + 이니셜 + 완료카드) | 최고 |
+| **Phase 1** | 전원 완료 축하 + 보고 (group_reports 영속화) | 최고 |
+| **Phase 1** | 관리자 3탭 (현황/일정/공지) | 최고 |
+| **Phase 1** | 즉흥 일정 추가 | 최고 |
+| **Phase 1** | Realtime 동기화 | 최고 |
+| **Phase 1** | 오프라인 대응 | 최고 |
+| Phase 2 | 조원 셀프 체크인 (/checkin) | 중간 |
+| Phase 2 | CSV 다운로드 (체크인 기록 내보내기) | 중간 |

@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 20% 97%;
+    --foreground: 20 14% 13%;
+    --card: 0 0% 100%;
+    --card-foreground: 20 14% 13%;
+    --primary: 52 100% 50%;
+    --primary-foreground: 0 30% 18%;
+    --secondary: 40 12% 92%;
+    --secondary-foreground: 20 14% 30%;
+    --muted: 40 12% 92%;
+    --muted-foreground: 20 10% 45%;
+    --accent: 40 12% 92%;
+    --accent-foreground: 20 14% 13%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 40 10% 86%;
+    --input: 40 10% 86%;
+    --ring: 52 100% 50%;
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Pretendard Variable", Pretendard, -apple-system,
+      BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI",
+      "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic",
+      "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+  }
+}
