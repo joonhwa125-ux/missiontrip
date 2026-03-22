@@ -265,7 +265,7 @@ function GroupStatusGrid({
           <h3 className="mb-1.5 text-xs font-bold text-muted-foreground">
             {busName}
           </h3>
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className="grid grid-cols-2 gap-1.5 [&>*:last-child:nth-child(odd)]:col-span-2">
             {busGroupList.map((g) => {
               const total = groupMemberCounts.get(g.id) ?? 0;
               const checked = groupCheckedCounts.get(g.id) ?? 0;
