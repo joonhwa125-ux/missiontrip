@@ -104,7 +104,7 @@ export default function GroupView({
   }, [toast]);
 
   return (
-    <div className="flex min-h-screen flex-col bg-app-bg">
+    <div className="flex min-h-full flex-col">
       {view === "feed" ? (
         <GroupFeedView
           schedules={schedules}

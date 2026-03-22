@@ -103,7 +103,7 @@ export default function AdminView({
   });
 
   return (
-    <div className="flex min-h-screen flex-col bg-app-bg">
+    <div className="flex min-h-full flex-col">
       {/* 헤더 + 탭 */}
       <header className="bg-main-action px-4 pt-6 pb-0">
         <h1 className="mb-3 text-xl font-bold">미션트립 관리자</h1>
