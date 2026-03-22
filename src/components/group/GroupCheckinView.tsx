@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useTransition, useEffect } from "react";
-import { useRealtime, useBroadcast } from "@/hooks/useRealtime";
+import { useState, useCallback, useTransition, useMemo, type Dispatch, type SetStateAction } from "react";
+import { useBroadcast } from "@/hooks/useRealtime";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { createCheckin, deleteCheckin, markAbsent } from "@/actions/checkin";
 import { submitReport } from "@/actions/report";
@@ -34,7 +34,10 @@ interface Props {
   groupName: string;
   members: Member[];
   activeSchedule: Schedule | null;
-  initialCheckIns: CheckIn[];
+  checkIns: CheckIn[];
+  setCheckIns: Dispatch<SetStateAction<CheckIn[]>>;
+  onBack: () => void;
+  showToast: (msg: string) => void;
 }
 
 export default function GroupCheckinView({
@@ -42,68 +45,27 @@ export default function GroupCheckinView({
   groupName,
   members,
   activeSchedule,
-  initialCheckIns,
+  checkIns,
+  setCheckIns,
+  onBack,
+  showToast,
 }: Props) {
-  const [schedule, setSchedule] = useState(activeSchedule);
-  const [checkIns, setCheckIns] = useState<CheckIn[]>(initialCheckIns);
-  const [cancelTarget, setCancelTarget] = useState<Member | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<{ member: Member; isAbsent: boolean } | null>(null);
   const [absentTarget, setAbsentTarget] = useState<Member | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [reported, setReported] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   const { isOnline, pendingCount, addPending, addPendingReport } = useOfflineSync();
   const { broadcast } = useBroadcast();
 
-  const showToast = useCallback((msg: string) => {
-    setToast(msg);
-  }, []);
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 3500);
-    return () => clearTimeout(timer);
-  }, [toast]);
-
-  useRealtime(currentUser.group_id, false, {
-    onScheduleActivated: () => window.location.reload(),
-    onScheduleUpdated: ({ schedule_id, scheduled_time }) => {
-      setSchedule((prev) =>
-        prev?.id === schedule_id ? { ...prev, scheduled_time } : prev
-      );
-    },
-    onCheckinUpdated: ({ user_id, action }) => {
-      if (!schedule) return;
-      setCheckIns((prev) => {
-        if (action === "insert") {
-          if (prev.some((c) => c.user_id === user_id)) return prev;
-          return [
-            ...prev,
-            {
-              id: `rt-${user_id}`,
-              user_id,
-              schedule_id: schedule.id,
-              checked_at: new Date().toISOString(),
-              checked_by: "self",
-              checked_by_user_id: null,
-              offline_pending: false,
-              is_absent: false,
-            },
-          ];
-        }
-        return prev.filter((c) => c.user_id !== user_id);
-      });
-    },
-  });
-
   const handleCheckin = useCallback(
     async (userId: string) => {
-      if (!schedule) return;
+      if (!activeSchedule) return;
       const temp: CheckIn = {
         id: `temp-${userId}`,
         user_id: userId,
-        schedule_id: schedule.id,
+        schedule_id: activeSchedule.id,
         checked_at: new Date().toISOString(),
         checked_by: "leader",
         checked_by_user_id: currentUser.id,
@@ -115,7 +77,7 @@ export default function GroupCheckinView({
       if (!isOnline) {
         const saved = addPending({
           user_id: userId,
-          schedule_id: schedule.id,
+          schedule_id: activeSchedule.id,
           checked_by: "leader",
           checked_by_user_id: currentUser.id,
           checked_at: temp.checked_at,
@@ -128,9 +90,9 @@ export default function GroupCheckinView({
       }
 
       startTransition(async () => {
-        const res = await createCheckin(userId, schedule.id);
+        const res = await createCheckin(userId, activeSchedule.id);
         if (res.ok) {
-          const payload = { user_id: userId, schedule_id: schedule.id, action: "insert" as const };
+          const payload = { user_id: userId, schedule_id: activeSchedule.id, action: "insert" as const };
           await Promise.all([
             broadcast(`${CHANNEL_GROUP_PREFIX}${currentUser.group_id}`, EVENT_CHECKIN_UPDATED, payload),
             broadcast(CHANNEL_ADMIN, EVENT_CHECKIN_UPDATED, payload),
@@ -141,19 +103,19 @@ export default function GroupCheckinView({
         }
       });
     },
-    [schedule, isOnline, addPending, currentUser.id, currentUser.group_id, broadcast]
+    [activeSchedule, isOnline, addPending, currentUser.id, currentUser.group_id, broadcast, setCheckIns, showToast]
   );
 
   const handleCancelConfirm = useCallback(async () => {
-    if (!cancelTarget || !schedule) return;
-    const userId = cancelTarget.id;
+    if (!cancelTarget || !activeSchedule) return;
+    const userId = cancelTarget.member.id;
     setCancelTarget(null);
     setReported(false);
     setCheckIns((prev) => prev.filter((c) => c.user_id !== userId));
     startTransition(async () => {
-      const res = await deleteCheckin(userId, schedule.id);
+      const res = await deleteCheckin(userId, activeSchedule.id);
       if (res.ok) {
-        const payload = { user_id: userId, schedule_id: schedule.id, action: "delete" as const };
+        const payload = { user_id: userId, schedule_id: activeSchedule.id, action: "delete" as const };
         await Promise.all([
           broadcast(`${CHANNEL_GROUP_PREFIX}${currentUser.group_id}`, EVENT_CHECKIN_UPDATED, payload),
           broadcast(CHANNEL_ADMIN, EVENT_CHECKIN_UPDATED, payload),
@@ -163,16 +125,16 @@ export default function GroupCheckinView({
         window.location.reload();
       }
     });
-  }, [cancelTarget, schedule, currentUser.group_id, broadcast]);
+  }, [cancelTarget, activeSchedule, currentUser.group_id, broadcast, setCheckIns, showToast]);
 
   const handleAbsentConfirm = useCallback(async () => {
-    if (!absentTarget || !schedule) return;
+    if (!absentTarget || !activeSchedule) return;
     const userId = absentTarget.id;
     setAbsentTarget(null);
     const temp: CheckIn = {
       id: `absent-${userId}`,
       user_id: userId,
-      schedule_id: schedule.id,
+      schedule_id: activeSchedule.id,
       checked_at: new Date().toISOString(),
       checked_by: "leader",
       checked_by_user_id: currentUser.id,
@@ -181,9 +143,9 @@ export default function GroupCheckinView({
     };
     setCheckIns((prev) => [...prev.filter((c) => c.user_id !== userId), temp]);
     startTransition(async () => {
-      const res = await markAbsent(userId, schedule.id);
+      const res = await markAbsent(userId, activeSchedule.id);
       if (res.ok) {
-        const payload = { user_id: userId, schedule_id: schedule.id, action: "insert" as const };
+        const payload = { user_id: userId, schedule_id: activeSchedule.id, action: "insert" as const };
         await Promise.all([
           broadcast(`${CHANNEL_GROUP_PREFIX}${currentUser.group_id}`, EVENT_CHECKIN_UPDATED, payload),
           broadcast(CHANNEL_ADMIN, EVENT_CHECKIN_UPDATED, payload),
@@ -193,10 +155,10 @@ export default function GroupCheckinView({
         showToast(res.error ?? "불참 처리 중 오류가 발생했어요.");
       }
     });
-  }, [absentTarget, schedule, currentUser.id, currentUser.group_id, broadcast]);
+  }, [absentTarget, activeSchedule, currentUser.id, currentUser.group_id, broadcast, setCheckIns, showToast]);
 
   const handleReport = useCallback(async () => {
-    if (!schedule) return;
+    if (!activeSchedule) return;
     const unchecked = members.filter(
       (m) => !checkIns.some((c) => c.user_id === m.id)
     ).length;
@@ -205,11 +167,12 @@ export default function GroupCheckinView({
     if (!isOnline) {
       const saved = addPendingReport({
         group_id: currentUser.group_id,
-        schedule_id: schedule.id,
+        schedule_id: activeSchedule.id,
         pending_count: unchecked,
       });
       if (saved) {
         setReported(true);
+        showToast(COPY.reportButtonDone);
       } else {
         showToast("저장 공간이 부족해요. 기기 저장소를 확인해주세요.");
       }
@@ -217,9 +180,10 @@ export default function GroupCheckinView({
     }
 
     startTransition(async () => {
-      const res = await submitReport(currentUser.group_id, schedule.id, unchecked);
+      const res = await submitReport(currentUser.group_id, activeSchedule.id, unchecked);
       if (res.ok) {
         setReported(true);
+        showToast(COPY.reportButtonDone);
         await broadcast(CHANNEL_ADMIN, EVENT_GROUP_REPORTED, {
           group_id: currentUser.group_id,
           pending_count: unchecked,
@@ -228,10 +192,11 @@ export default function GroupCheckinView({
         showToast(res.error ?? "보고 처리 중 오류가 발생했어요. 다시 시도해주세요.");
       }
     });
-  }, [schedule, members, checkIns, currentUser.group_id, broadcast, isOnline, addPendingReport]);
+  }, [activeSchedule, members, checkIns, currentUser.group_id, broadcast, isOnline, addPendingReport, showToast]);
 
-  const checkedIds = new Set(checkIns.map((c) => c.user_id));
-  const absentIds = new Set(checkIns.filter((c) => c.is_absent).map((c) => c.user_id));
+  // checkIns 변경 시에만 재계산 (매 렌더 Set 재생성 방지)
+  const checkedIds = useMemo(() => new Set(checkIns.map((c) => c.user_id)), [checkIns]);
+  const absentIds = useMemo(() => new Set(checkIns.filter((c) => c.is_absent).map((c) => c.user_id)), [checkIns]);
   const uncheckedCount = members.filter(
     (m) => !checkedIds.has(m.id)
   ).length;
@@ -250,12 +215,31 @@ export default function GroupCheckinView({
 
   return (
     <div className="flex flex-1 flex-col">
-      {/* 상단 바 */}
+      {/* 상단 바 (뒤로 가기 포함) */}
       <header className="bg-white px-4 py-4 shadow-sm">
-        <h1 className="text-lg font-bold">{schedule?.title ?? "대기 중"}</h1>
-        {schedule?.location && (
-          <p className="mt-0.5 text-sm text-muted-foreground">{schedule.location}</p>
-        )}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onBack}
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-main-action"
+            aria-label="일정 피드로 돌아가기"
+          >
+            <svg
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <div>
+            <h1 className="text-lg font-bold">{activeSchedule?.title ?? "대기 중"}</h1>
+            {activeSchedule?.location && (
+              <p className="text-sm text-muted-foreground">{activeSchedule.location}</p>
+            )}
+          </div>
+        </div>
       </header>
 
       {/* 이니셜 원 행 */}
@@ -326,7 +310,7 @@ export default function GroupCheckinView({
 
       {/* 조원 카드 리스트 — 전원 완료 시에도 취소 가능하도록 항상 표시 */}
       <ul
-        className="flex flex-col gap-2 px-4 pb-36 pt-3"
+        className="flex flex-col gap-2 px-4 pb-28 pt-3"
         aria-label="조원 탑승 현황"
       >
         {sorted.map((m) => (
@@ -335,7 +319,10 @@ export default function GroupCheckinView({
             user={m}
             checkIn={checkIns.find((c) => c.user_id === m.id) ?? null}
             onCheckin={handleCheckin}
-            onCancel={setCancelTarget}
+            onCancel={(m) => {
+              const ci = checkIns.find((c) => c.user_id === m.id);
+              setCancelTarget({ member: m, isAbsent: ci?.is_absent ?? false });
+            }}
             onAbsent={setAbsentTarget}
           />
         ))}
@@ -344,7 +331,7 @@ export default function GroupCheckinView({
       {/* 오프라인 배너 (하단 고정) */}
       {!isOnline && (
         <div
-          className="fixed bottom-20 left-0 right-0 bg-offline-banner px-4 py-2 text-center text-sm"
+          className="fixed bottom-16 left-0 right-0 bg-offline-banner px-4 py-2 text-center text-sm"
           aria-live="polite"
           role="status"
         >
@@ -352,8 +339,8 @@ export default function GroupCheckinView({
         </div>
       )}
 
-      {/* 보고 버튼 — 항상 활성, 탭 바 위에 위치 */}
-      <div className="fixed bottom-12 left-0 right-0 border-t bg-white px-4 py-3">
+      {/* 보고 버튼 -- 항상 활성, 하단 고정 */}
+      <div className="fixed bottom-0 left-0 right-0 border-t bg-white px-4 py-3 pb-safe">
         <button
           onClick={() => (allComplete ? handleReport() : setReportOpen(true))}
           className={cn(
@@ -373,17 +360,6 @@ export default function GroupCheckinView({
         </button>
       </div>
 
-      {/* 에러 토스트 */}
-      {toast && (
-        <div
-          className="fixed bottom-24 left-4 right-4 z-50 rounded-xl bg-gray-900 px-4 py-3 text-center text-sm text-white shadow-lg"
-          role="alert"
-          aria-live="assertive"
-        >
-          {toast}
-        </div>
-      )}
-
       {/* 취소 확인 모달 */}
       <Dialog
         open={!!cancelTarget}
@@ -391,10 +367,12 @@ export default function GroupCheckinView({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>체크인을 취소할까요?</DialogTitle>
+            <DialogTitle>
+              {cancelTarget?.isAbsent ? COPY.absentCancel : "체크인을 취소할까요?"}
+            </DialogTitle>
           </DialogHeader>
           <p className="text-center text-sm text-muted-foreground">
-            {cancelTarget?.name}님의 탑승 확인을 취소해요.
+            {cancelTarget?.member.name}님의 {cancelTarget?.isAbsent ? "불참" : "탑승 확인"}을 취소해요.
           </p>
           <DialogFooter>
             <DialogClose className="min-h-11 flex-1 rounded-xl bg-gray-100 text-sm font-medium">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useRealtime } from "@/hooks/useRealtime";
 import { cn } from "@/lib/utils";
 import StatusTab from "./StatusTab";
@@ -17,6 +17,7 @@ interface Member {
 interface CheckIn {
   user_id: string;
   is_absent: boolean;
+  checked_at?: string;
 }
 interface Report {
   group_id: string;
@@ -43,7 +44,7 @@ const TABS: { key: TabName; label: string }[] = [
 
 export default function AdminView({
   groups,
-  members,
+  members: initialMembers,
   activeSchedule,
   schedules: initialSchedules,
   initialCheckIns,
@@ -51,14 +52,20 @@ export default function AdminView({
 }: Props) {
   const [tab, setTab] = useState<TabName>("status");
   const [schedules, setSchedules] = useState(initialSchedules);
+  const [members, setMembers] = useState(initialMembers);
   const [checkIns, setCheckIns] = useState(initialCheckIns);
   const [reports, setReports] = useState(initialReports);
   const [toast, setToast] = useState<string | null>(null);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
-    setTimeout(() => setToast(null), 3000);
   }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   useRealtime(null, true, {
     onScheduleActivated: () => window.location.reload(),
@@ -72,7 +79,7 @@ export default function AdminView({
       setCheckIns((prev) => {
         if (action === "insert") {
           if (prev.some((c) => c.user_id === user_id)) return prev;
-          return [...prev, { user_id, is_absent: false }];
+          return [...prev, { user_id, is_absent: false, checked_at: new Date().toISOString() }];
         }
         return prev.filter((c) => c.user_id !== user_id);
       });
@@ -129,6 +136,8 @@ export default function AdminView({
             activeSchedule={activeSchedule}
             checkIns={checkIns}
             reports={reports}
+            onMembersChange={setMembers}
+            onCheckInsChange={setCheckIns}
           />
         )}
         {tab === "schedule" && (
@@ -136,6 +145,9 @@ export default function AdminView({
             schedules={schedules}
             onSchedulesChange={setSchedules}
             onToast={showToast}
+            checkIns={checkIns}
+            totalMemberCount={members.length}
+            activeSchedule={activeSchedule}
           />
         )}
       </div>

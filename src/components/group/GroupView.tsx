@@ -1,14 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { useState, useCallback, useEffect } from "react";
+import { useRealtime } from "@/hooks/useRealtime";
+import GroupFeedView from "./GroupFeedView";
 import GroupCheckinView from "./GroupCheckinView";
-import GroupScheduleTab from "./GroupScheduleTab";
 import type { Schedule, CheckIn, Group } from "@/lib/types";
 
 interface Member {
   id: string;
   name: string;
+}
+
+interface AllMember {
+  id: string;
+  group_id: string;
 }
 
 interface Props {
@@ -20,14 +25,11 @@ interface Props {
   schedules: Schedule[];
   allGroups: Group[];
   allCheckIns: { user_id: string; is_absent: boolean }[];
+  allMembers: AllMember[];
+  scheduleCounts: Record<string, number>;
 }
 
-type TabName = "checkin" | "schedule";
-
-const TABS: { key: TabName; label: string }[] = [
-  { key: "checkin", label: "체크인" },
-  { key: "schedule", label: "일정" },
-];
+type ViewMode = "feed" | "checkin";
 
 export default function GroupView({
   currentUser,
@@ -35,55 +37,118 @@ export default function GroupView({
   members,
   activeSchedule,
   initialCheckIns,
-  schedules,
+  schedules: initialSchedules,
   allGroups,
   allCheckIns,
+  allMembers,
+  scheduleCounts,
 }: Props) {
-  const [tab, setTab] = useState<TabName>("checkin");
+  const [view, setView] = useState<ViewMode>("feed");
+  const [schedules, setSchedules] = useState(initialSchedules);
+  const [checkIns, setCheckIns] = useState<CheckIn[]>(initialCheckIns);
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3500);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const showToast = useCallback((msg: string) => setToast(msg), []);
+
+  // Realtime 구독 — GroupView 레벨 (feed <-> checkin 전환 시에도 유지)
+  useRealtime(currentUser.group_id, false, {
+    onScheduleActivated: ({ title }) => {
+      if (view === "checkin") {
+        showToast(`새로운 일정이 시작되었어요: ${title}`);
+      } else {
+        window.location.reload();
+      }
+    },
+    onScheduleUpdated: ({ schedule_id, scheduled_time }) => {
+      setSchedules((prev) =>
+        prev.map((s) => (s.id === schedule_id ? { ...s, scheduled_time } : s))
+      );
+      showToast("일정 시간이 변경되었어요");
+    },
+    onCheckinUpdated: ({ user_id, action }) => {
+      if (!activeSchedule) return;
+      setCheckIns((prev) => {
+        if (action === "insert") {
+          if (prev.some((c) => c.user_id === user_id)) return prev;
+          return [
+            ...prev,
+            {
+              id: `rt-${user_id}`,
+              user_id,
+              schedule_id: activeSchedule.id,
+              checked_at: new Date().toISOString(),
+              checked_by: "self" as const,
+              checked_by_user_id: null,
+              offline_pending: false,
+              is_absent: false,
+            },
+          ];
+        }
+        return prev.filter((c) => c.user_id !== user_id);
+      });
+    },
+  });
+
+  const handleEnterCheckin = useCallback(() => setView("checkin"), []);
+
+  const handleBack = useCallback(() => {
+    setView("feed");
+    // 피드 복귀 시 일정 전환 등 반영을 위해 reload
+    if (toast) window.location.reload();
+  }, [toast]);
 
   return (
     <div className="flex min-h-screen flex-col bg-app-bg">
-      {/* 탭 네비게이션 — 하단 고정 위에 */}
-      {tab === "checkin" ? (
+      {view === "feed" ? (
+        <GroupFeedView
+          schedules={schedules}
+          activeSchedule={activeSchedule}
+          members={members}
+          checkIns={checkIns}
+          scheduleCounts={scheduleCounts}
+          allGroups={allGroups}
+          allCheckIns={allCheckIns}
+          allMembers={allMembers}
+          onEnterCheckin={handleEnterCheckin}
+        />
+      ) : (
         <GroupCheckinView
           currentUser={currentUser}
           groupName={groupName}
           members={members}
           activeSchedule={activeSchedule}
-          initialCheckIns={initialCheckIns}
-        />
-      ) : (
-        <GroupScheduleTab
-          activeSchedule={activeSchedule}
-          schedules={schedules}
-          allGroups={allGroups}
-          allCheckIns={allCheckIns}
+          checkIns={checkIns}
+          setCheckIns={setCheckIns}
+          onBack={handleBack}
+          showToast={showToast}
         />
       )}
 
-      {/* 하단 탭 바 */}
-      <nav
-        className="fixed bottom-0 left-0 right-0 z-40 border-t bg-white pb-safe"
-        role="tablist"
-        aria-label="조장 메뉴"
-      >
-        <div className="flex">
-          {TABS.map((t) => (
+      {/* 토스트 */}
+      {toast && (
+        <div
+          className="fixed bottom-[max(1.5rem,_env(safe-area-inset-bottom))] left-4 right-4 z-50 rounded-xl bg-gray-900 px-4 py-3 text-center text-sm text-white shadow-lg"
+          role="status"
+          aria-live="polite"
+        >
+          {toast}
+          {view === "checkin" && toast.includes("일정이 시작되었어요") && (
             <button
-              key={t.key}
-              role="tab"
-              aria-selected={tab === t.key}
-              onClick={() => setTab(t.key)}
-              className={cn(
-                "flex-1 py-3 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-main-action",
-                tab === t.key ? "text-gray-900" : "text-gray-400"
-              )}
+              onClick={() => setView("feed")}
+              className="ml-2 min-h-11 font-medium underline focus-visible:ring-2 focus-visible:ring-main-action"
+              aria-label="피드 화면으로 이동"
             >
-              {t.label}
+              피드로 이동
             </button>
-          ))}
+          )}
         </div>
-      </nav>
+      )}
     </div>
   );
 }

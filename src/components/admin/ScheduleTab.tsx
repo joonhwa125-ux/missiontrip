@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect, useRef, useCallback } from "react";
 import { activateSchedule, createSchedule, updateScheduleTime } from "@/actions/schedule";
 import { useBroadcast } from "@/hooks/useRealtime";
 import {
   CHANNEL_GLOBAL,
+  COPY,
   EVENT_SCHEDULE_ACTIVATED,
   EVENT_SCHEDULE_UPDATED,
 } from "@/lib/constants";
-import { cn } from "@/lib/utils";
+import { cn, formatTime } from "@/lib/utils";
 import type { Schedule } from "@/lib/types";
 import {
   Dialog,
@@ -27,26 +28,33 @@ function getStatus(s: Schedule): ScheduleStatus {
   return "waiting";
 }
 
-function formatScheduledTime(t: string | null): string | null {
-  if (!t) return null;
-  try {
-    return new Date(t).toLocaleTimeString("ko-KR", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-  } catch {
-    return t;
-  }
-}
-
 interface Props {
   schedules: Schedule[];
   onSchedulesChange: (s: Schedule[]) => void;
   onToast: (msg: string) => void;
+  checkIns: { user_id: string; is_absent: boolean }[];
+  totalMemberCount: number;
+  activeSchedule: Schedule | null;
 }
 
-export default function ScheduleTab({ schedules, onSchedulesChange, onToast }: Props) {
+/** 현재 활성 일정 기준 미확인 인원 수 계산 */
+function calcUncheckedCount(
+  checkIns: { user_id: string; is_absent: boolean }[],
+  totalMemberCount: number
+): number {
+  const absentCount = checkIns.filter((c) => c.is_absent).length;
+  const checkedCount = checkIns.filter((c) => !c.is_absent).length;
+  return totalMemberCount - absentCount - checkedCount;
+}
+
+export default function ScheduleTab({
+  schedules,
+  onSchedulesChange,
+  onToast,
+  checkIns,
+  totalMemberCount,
+  activeSchedule,
+}: Props) {
   const [, startTransition] = useTransition();
   const { broadcast } = useBroadcast();
   const [timeTarget, setTimeTarget] = useState<Schedule | null>(null);
@@ -56,26 +64,77 @@ export default function ScheduleTab({ schedules, onSchedulesChange, onToast }: P
   const [newLocation, setNewLocation] = useState("");
   const [newDay, setNewDay] = useState("1");
   const [newTime, setNewTime] = useState("");
+  const [warningTarget, setWarningTarget] = useState<Schedule | null>(null);
+
+  const autoAlertedRef = useRef<Set<string>>(new Set());
 
   const days = Array.from(new Set(schedules.map((s) => s.day_number))).sort();
 
-  const handleActivate = (s: Schedule) => {
-    startTransition(async () => {
-      const res = await activateSchedule(s.id);
-      if (res.ok) {
-        await broadcast(CHANNEL_GLOBAL, EVENT_SCHEDULE_ACTIVATED, {
-          schedule_id: s.id,
-          title: s.title,
-        });
-        window.location.reload();
+  const handleActivate = useCallback(
+    (s: Schedule) => {
+      startTransition(async () => {
+        const res = await activateSchedule(s.id);
+        if (res.ok) {
+          await broadcast(CHANNEL_GLOBAL, EVENT_SCHEDULE_ACTIVATED, {
+            schedule_id: s.id,
+            title: s.title,
+          });
+          window.location.reload();
+        }
+      });
+    },
+    [broadcast, startTransition]
+  );
+
+  // A. 자동 활성화 타이머
+  useEffect(() => {
+    const check = () => {
+      const now = new Date();
+      const waiting = schedules.filter(
+        (s) => !s.is_active && !s.activated_at && s.scheduled_time
+      );
+      const due = waiting.find((s) => new Date(s.scheduled_time!) <= now);
+      if (!due || autoAlertedRef.current.has(due.id)) return;
+
+      const unchecked = calcUncheckedCount(checkIns, totalMemberCount);
+
+      if (activeSchedule && unchecked > 0) {
+        autoAlertedRef.current.add(due.id);
+        onToast(`${due.title} 시간이 됐지만 ${unchecked}명이 미확인이에요`);
+        return;
       }
-    });
+      handleActivate(due);
+    };
+
+    check();
+    const timer = setInterval(check, 60000);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") check();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [schedules, checkIns, totalMemberCount, activeSchedule, handleActivate, onToast]);
+
+  // B. 수동 활성화 — 미확인 경고 래핑
+  const handleActivateClick = (s: Schedule) => {
+    if (!activeSchedule) {
+      handleActivate(s);
+      return;
+    }
+    const unchecked = calcUncheckedCount(checkIns, totalMemberCount);
+    if (unchecked > 0) {
+      setWarningTarget(s);
+    } else {
+      handleActivate(s);
+    }
   };
 
   const handleTimeEdit = () => {
     if (!timeTarget || !timeValue) return;
     startTransition(async () => {
-      // HH:MM → full ISO (오늘 날짜 기준)
       const [hh, mm] = timeValue.split(":");
       const d = new Date();
       d.setHours(parseInt(hh), parseInt(mm), 0, 0);
@@ -127,7 +186,9 @@ export default function ScheduleTab({ schedules, onSchedulesChange, onToast }: P
               .filter((s) => s.day_number === day)
               .map((s) => {
                 const status = getStatus(s);
-                const timeDisplay = formatScheduledTime(s.scheduled_time);
+                const timeDisplay = s.scheduled_time
+                  ? formatTime(s.scheduled_time)
+                  : null;
                 return (
                   <div
                     key={s.id}
@@ -162,8 +223,9 @@ export default function ScheduleTab({ schedules, onSchedulesChange, onToast }: P
                       )}
                       {status === "waiting" && (
                         <button
-                          onClick={() => handleActivate(s)}
+                          onClick={() => handleActivateClick(s)}
                           className="min-h-11 flex-shrink-0 rounded-xl bg-gray-900 px-3 text-xs font-bold text-white focus-visible:ring-2 focus-visible:ring-ring"
+                          aria-label={`${s.title} 활성화`}
                         >
                           활성화
                         </button>
@@ -179,11 +241,12 @@ export default function ScheduleTab({ schedules, onSchedulesChange, onToast }: P
       <button
         onClick={() => setAddOpen(true)}
         className="w-full min-h-11 rounded-2xl border-2 border-dashed border-gray-300 py-4 text-sm font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action"
+        aria-label="일정 추가"
       >
         + 일정 추가
       </button>
 
-      {/* 시간 수정 */}
+      {/* 시간 수정 모달 */}
       <Dialog open={!!timeTarget} onOpenChange={(o) => !o && setTimeTarget(null)}>
         <DialogContent>
           <DialogHeader>
@@ -204,6 +267,7 @@ export default function ScheduleTab({ schedules, onSchedulesChange, onToast }: P
             <button
               onClick={handleTimeEdit}
               className="min-h-11 flex-1 rounded-xl bg-main-action text-sm font-bold focus-visible:ring-2 focus-visible:ring-main-action"
+              aria-label="시간 변경 확인"
             >
               변경
             </button>
@@ -211,7 +275,7 @@ export default function ScheduleTab({ schedules, onSchedulesChange, onToast }: P
         </DialogContent>
       </Dialog>
 
-      {/* 일정 추가 */}
+      {/* 일정 추가 모달 */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent>
           <DialogHeader>
@@ -258,8 +322,36 @@ export default function ScheduleTab({ schedules, onSchedulesChange, onToast }: P
               onClick={handleAdd}
               disabled={!newTitle.trim()}
               className="min-h-11 flex-1 rounded-xl bg-main-action text-sm font-bold focus-visible:ring-2 focus-visible:ring-main-action disabled:opacity-50"
+              aria-label="일정 추가 확인"
             >
               추가
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 미확인 경고 모달 (수동 활성화 시) */}
+      <Dialog open={!!warningTarget} onOpenChange={(o) => !o && setWarningTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {COPY.uncheckedWarning(calcUncheckedCount(checkIns, totalMemberCount))}
+            </DialogTitle>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose className="min-h-11 flex-1 rounded-xl bg-gray-100 text-sm font-medium">
+              취소
+            </DialogClose>
+            <button
+              onClick={() => {
+                const target = warningTarget;
+                setWarningTarget(null);
+                if (target) handleActivate(target);
+              }}
+              className="min-h-11 flex-1 rounded-xl bg-main-action text-sm font-bold focus-visible:ring-2 focus-visible:ring-main-action"
+              aria-label="일정 전환 확인"
+            >
+              전환할게요
             </button>
           </DialogFooter>
         </DialogContent>

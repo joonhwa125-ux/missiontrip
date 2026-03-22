@@ -6,9 +6,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// 시각 포매팅 (HH:MM)
+// 시각 포매팅 (HH:MM, KST 고정)
 export function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString("ko-KR", {
+    timeZone: "Asia/Seoul",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,

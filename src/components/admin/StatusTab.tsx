@@ -1,13 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { getElapsedMinutes, cn } from "@/lib/utils";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { COPY } from "@/lib/constants";
+import AdminGroupDrillDown from "./AdminGroupDrillDown";
 import type { Group, Schedule, GroupBadgeStatus } from "@/lib/types";
 
 interface Member {
@@ -20,6 +16,7 @@ interface Member {
 interface CheckIn {
   user_id: string;
   is_absent: boolean;
+  checked_at?: string;
 }
 interface Report {
   group_id: string;
@@ -33,6 +30,8 @@ interface Props {
   activeSchedule: Schedule | null;
   checkIns: CheckIn[];
   reports: Report[];
+  onMembersChange: (members: Member[]) => void;
+  onCheckInsChange: React.Dispatch<React.SetStateAction<CheckIn[]>>;
 }
 
 const BADGE: Record<GroupBadgeStatus, { bg: string; text: string; label: string }> = {
@@ -59,6 +58,8 @@ export default function StatusTab({
   activeSchedule,
   checkIns,
   reports,
+  onMembersChange,
+  onCheckInsChange,
 }: Props) {
   const [elapsed, setElapsed] = useState(0);
   const [drillGroup, setDrillGroup] = useState<Group | null>(null);
@@ -87,7 +88,6 @@ export default function StatusTab({
     return { group: g, gMembers, totalCount, checkedCount, badge, leader };
   });
 
-  // bus_name별 그룹핑
   const busGroups = new Map<string, typeof summaries>();
   for (const s of summaries) {
     const bus = s.group.bus_name ?? "미배정";
@@ -104,18 +104,23 @@ export default function StatusTab({
   ).length;
   const notStartedCount = summaries.filter((s) => s.badge === "not_started").length;
 
-  const drillMembers = drillGroup
-    ? members.filter((m) => m.group_id === drillGroup.id)
-    : [];
+  const totalChecked = members.filter(
+    (m) => checkedIds.has(m.id) && !absentIds.has(m.id)
+  ).length;
 
   return (
     <div className="px-4 py-4">
       {/* 경과 시간 */}
       {activeSchedule?.activated_at && (
-        <p className="mb-3 text-sm text-muted-foreground" aria-live="polite">
+        <p className="mb-1 text-sm text-muted-foreground" aria-live="polite">
           {activeSchedule.title} · {elapsed}분 경과
         </p>
       )}
+
+      {/* 전체 인원 요약 */}
+      <p className="mb-3 text-sm font-medium" aria-live="polite">
+        {COPY.totalSummary(totalChecked, members.length)}
+      </p>
 
       {/* 요약 카드 */}
       <div className="mb-4 grid grid-cols-3 gap-2">
@@ -174,9 +179,7 @@ export default function StatusTab({
                           className="flex min-h-11 min-w-11 items-center justify-center"
                           aria-label={`${leader.name} 조장에게 전화`}
                         >
-                          <svg className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                          </svg>
+                          <PhoneIcon />
                         </a>
                       )}
                     </div>
@@ -197,44 +200,24 @@ export default function StatusTab({
         </section>
       ))}
 
-      {/* 드릴다운 다이얼로그 */}
-      <Dialog open={!!drillGroup} onOpenChange={(o) => !o && setDrillGroup(null)}>
-        <DialogContent className="max-h-[70vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{drillGroup?.name} 미탑승 인원</DialogTitle>
-          </DialogHeader>
-          {(() => {
-            const unchecked = drillMembers.filter((m) => !checkedIds.has(m.id));
-            return unchecked.length === 0 ? (
-              <p className="py-4 text-center text-sm text-muted-foreground">
-                전원 확인 완료
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {unchecked.map((m) => (
-                  <li
-                    key={m.id}
-                    className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2.5"
-                  >
-                    <span className="font-medium">{m.name}</span>
-                    {m.phone && (
-                      <a
-                        href={`tel:${m.phone}`}
-                        className="flex min-h-11 min-w-11 items-center justify-center"
-                        aria-label={`${m.name}에게 전화`}
-                      >
-                        <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                        </svg>
-                      </a>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
+      {/* 드릴다운 */}
+      <AdminGroupDrillDown
+        group={drillGroup}
+        members={members}
+        checkIns={checkIns}
+        activeSchedule={activeSchedule}
+        onClose={() => setDrillGroup(null)}
+        onMembersChange={onMembersChange}
+        onCheckInsChange={onCheckInsChange}
+      />
     </div>
+  );
+}
+
+function PhoneIcon() {
+  return (
+    <svg className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+    </svg>
   );
 }

@@ -14,7 +14,7 @@ export default async function GroupPage() {
   const { data: currentUser } = await supabase
     .from("users")
     .select("id, name, role, group_id")
-    .eq("email", authUser.email!)
+    .eq("email", authUser.email ?? "")
     .single();
 
   if (!currentUser || !["leader", "admin"].includes(currentUser.role)) redirect("/");
@@ -25,6 +25,7 @@ export default async function GroupPage() {
     { data: activeSchedule },
     { data: schedules },
     { data: allGroups },
+    { data: allMembers },
   ] = await Promise.all([
     supabase
       .from("groups")
@@ -47,10 +48,11 @@ export default async function GroupPage() {
       .order("day_number")
       .order("sort_order"),
     supabase.from("groups").select("*").order("name"),
+    supabase.from("users").select("id, group_id"),
   ]);
 
   let checkIns: CheckIn[] = [];
-  let allCheckIns: { user_id: string; is_absent: boolean; group_id?: string }[] = [];
+  let allCheckIns: { user_id: string; is_absent: boolean }[] = [];
 
   if (activeSchedule) {
     const queries = [
@@ -77,6 +79,23 @@ export default async function GroupPage() {
     }
   }
 
+  // 완료 일정별 체크인 카운트 (우리 조 기준)
+  const completedScheduleIds = (schedules ?? [])
+    .filter((s: Schedule) => s.activated_at && !s.is_active)
+    .map((s: Schedule) => s.id);
+
+  const scheduleCounts: Record<string, number> = {};
+  if (completedScheduleIds.length > 0 && members?.length) {
+    const { data: counts } = await supabase
+      .from("check_ins")
+      .select("schedule_id")
+      .in("schedule_id", completedScheduleIds)
+      .in("user_id", members.map((m) => m.id));
+    for (const c of counts ?? []) {
+      scheduleCounts[c.schedule_id] = (scheduleCounts[c.schedule_id] ?? 0) + 1;
+    }
+  }
+
   return (
     <GroupView
       currentUser={{ id: currentUser.id, group_id: currentUser.group_id }}
@@ -87,6 +106,8 @@ export default async function GroupPage() {
       schedules={(schedules as Schedule[]) ?? []}
       allGroups={(allGroups as Group[]) ?? []}
       allCheckIns={allCheckIns}
+      allMembers={(allMembers ?? []) as { id: string; group_id: string }[]}
+      scheduleCounts={scheduleCounts}
     />
   );
 }

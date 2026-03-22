@@ -136,13 +136,29 @@ export async function importToDatabase(
   const groupMap = new Map(insertedGroups.map((g) => [g.name, g.id]));
 
   // 2. Users INSERT
-  const usersPayload = data.users.map((u) => ({
-    name: u.name,
-    email: u.email,
-    phone: u.phone,
-    role: u.role,
-    group_id: groupMap.get(u.group_name)!,
-  }));
+  const usersPayload: {
+    name: string;
+    email: string;
+    phone: string | null;
+    role: string;
+    group_id: string;
+  }[] = [];
+  for (const u of data.users) {
+    const groupId = groupMap.get(u.group_name);
+    if (!groupId) {
+      return {
+        ok: false,
+        error: `조 "${u.group_name}"를 찾을 수 없어요. 데이터를 다시 확인해주세요`,
+      };
+    }
+    usersPayload.push({
+      name: u.name,
+      email: u.email,
+      phone: u.phone,
+      role: u.role,
+      group_id: groupId,
+    });
+  }
 
   const { error: userError } = await supabase
     .from("users")
@@ -229,4 +245,29 @@ function validateLeaderCount(
   }
 
   return errors;
+}
+
+// 조장 ↔ 조원 역할 변경 (admin 전용)
+export async function updateUserRole(
+  userId: string,
+  newRole: "member" | "leader"
+): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  if (!admin) return { ok: false, error: "관리자 권한이 필요해요" };
+
+  if (userId === admin.id) {
+    return { ok: false, error: "자신의 역할은 변경할 수 없어요" };
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("users")
+    .update({ role: newRole })
+    .eq("id", userId);
+
+  if (error) {
+    return { ok: false, error: "역할 변경 중 오류가 발생했어요" };
+  }
+
+  return { ok: true };
 }

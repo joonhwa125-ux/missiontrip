@@ -14,7 +14,7 @@ export default async function AdminPage() {
   const { data: currentUser } = await supabase
     .from("users")
     .select("id, role")
-    .eq("email", authUser.email!)
+    .eq("email", authUser.email ?? "")
     .single();
 
   if (!currentUser || currentUser.role !== "admin") redirect("/");
@@ -35,7 +35,7 @@ export default async function AdminPage() {
       .order("sort_order"),
   ]);
 
-  let checkIns: { user_id: string; is_absent: boolean }[] = [];
+  let checkIns: { user_id: string; is_absent: boolean; checked_at: string }[] = [];
   let reports: {
     group_id: string;
     pending_count: number;
@@ -46,7 +46,7 @@ export default async function AdminPage() {
     const [{ data: ci }, { data: rp }] = await Promise.all([
       supabase
         .from("check_ins")
-        .select("user_id, is_absent")
+        .select("user_id, is_absent, checked_at")
         .eq("schedule_id", activeSchedule.id),
       supabase
         .from("group_reports")

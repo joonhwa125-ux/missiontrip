@@ -39,7 +39,7 @@ export const MAX_DAY_NUMBER = 3;
 // 역할 라우팅
 export const ROLE_ROUTES = {
   leader: "/group",
-  member: "/checkin",
+  member: "/no-access",
   admin: "/admin",
 } as const;
 
@@ -66,4 +66,9 @@ export const COPY = {
   reportButtonPending: (n: number) => `${n}명 남았어요`,
   absent: "불참",
   offline: (n: number) => `오프라인 상태예요. ${n}건 저장 중 — 연결되면 자동으로 보낼게요`,
+  scheduleAlert: (title: string) => `새로운 일정이 시작되었어요: ${title}`,
+  uncheckedWarning: (n: number) => `현재 일정에 ${n}명이 미확인 상태예요. 그래도 전환할까요?`,
+  emptySchedule: "현재 진행 중인 일정이 없어요",
+  totalSummary: (checked: number, total: number) => `전체 ${checked}/${total}명 확인`,
+  absentCancel: "불참을 취소할까요?",
 } as const;
