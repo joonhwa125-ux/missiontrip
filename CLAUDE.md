@@ -59,7 +59,7 @@ TSX 파일 작성 시 아래를 기본 적용한다:
 src/
 ├── app/
 │   ├── (auth)/login/page.tsx, auth/callback/route.ts
-│   ├── (main)/group/page.tsx, admin/page.tsx
+│   ├── (main)/group/page.tsx, admin/page.tsx, no-access/page.tsx
 │   ├── setup/page.tsx                    # 개발자/관리자 셋업
 │   ├── layout.tsx
 │   └── middleware.ts
@@ -83,7 +83,7 @@ src/
 
 ## 0. 이 문서의 목적
 
-이 문서는 Claude Code가 오해 없이 구현할 수 있도록 작성된 개발 지시서다. 모호한 표현 대신 정확한 기술 명세를 사용하며, 설계 결정의 배경을 함께 기술한다.
+이 문서는 **현재 스펙(Single Source of Truth)**이다. "지금 이렇게 구현한다"만 기술한다. 결정 배경은 `docs/decisions.md` 참조.
 
 > **이 시스템의 목적은 '편의성'이 아닌 '안전'이다.** 장애인·비장애인이 함께하는 여행에서 이동 시마다 단 한 명의 누락도 없도록 하는 것이 핵심 가치다.
 
@@ -167,7 +167,7 @@ if (!user.email?.endsWith(ALLOWED_DOMAIN)) {
 | 2 | Supabase OAuth → 구글 계정 선택 | Supabase Auth 처리 |
 | 3 | 콜백 수신 → 이메일 도메인 검증 | middleware.ts |
 | 4 | Users 테이블에서 email로 사용자 조회 | 서버 컴포넌트 |
-| 5a | 조회 성공 → role에 따라 라우팅 | leader→/group, admin→/admin (member→/group 읽기전용 또는 접근 제한) |
+| 5a | 조회 성공 → role에 따라 라우팅 | leader→/group, admin→/admin, member→/no-access |
 | 5b | 조회 실패 → 안내 화면 | /login?error=not-registered |
 
 > 미등록 이메일: '등록되지 않은 계정이에요. 담당자에게 문의해주세요.' 안내 화면 표시. 별도 회원가입 플로우 없음.
@@ -238,8 +238,7 @@ if (!user.email?.endsWith(ALLOWED_DOMAIN)) {
 | group_id | uuid | FK → Groups.id, NOT NULL | 소속 조 |
 | created_at | timestamptz | default now() | 생성 시각 |
 
-> 장애 여부, 지원 필요 여부 등 개인 특성 컬럼은 의도적으로 포함하지 않는다.
-> 비상연락 시 이름 + phone + 소속 조(group_id → Groups.name)로 충분하다. 이메일은 비상연락에 불필요.
+> 비상연락: 이름 + phone + 소속 조. 장애 여부 등 개인 특성 컬럼 없음. (`docs/decisions.md` 참조)
 
 ### 3.3 Schedules 테이블
 
@@ -273,7 +272,7 @@ CREATE UNIQUE INDEX idx_one_active_schedule
 | user_id | uuid | FK → Users.id, NOT NULL | 체크인된 사용자 |
 | schedule_id | uuid | FK → Schedules.id, NOT NULL | 해당 일정 |
 | checked_at | timestamptz | default now() | 체크인 시각 |
-| checked_by | text | CHECK IN ('self','leader','admin') | 셀프 / 조장대리 / 관리자 |
+| checked_by | text | CHECK IN ('leader','admin') | 조장 / 관리자 |
 | checked_by_user_id | uuid | FK → Users.id, nullable | 체크인 처리한 사용자 (조장/관리자 추적) |
 | offline_pending | boolean | default false, NOT NULL | 오프라인 미sync 여부 |
 | is_absent | boolean | default false, NOT NULL | 불참 처리 여부 (조장·관리자 설정 가능) |
@@ -292,7 +291,7 @@ ALTER TABLE check_ins
 
 ### 3.5 Group_reports 테이블 (보고 상태 영속화)
 
-> Realtime broadcast는 휘발성이다. 관리자 새로고침 시 보고 상태가 사라지지 않도록 DB에 영속화한다.
+> 보고 상태 DB 영속화. Realtime broadcast 휘발성 보완. (`docs/decisions.md` 참조)
 
 | 컬럼명 | 타입 | 제약 | 설명 |
 |---|---|---|---|
@@ -361,7 +360,7 @@ CREATE POLICY "checkins_read" ON check_ins FOR SELECT TO authenticated USING (
 CREATE POLICY "checkins_insert" ON check_ins FOR INSERT TO authenticated WITH CHECK (
   EXISTS (
     SELECT 1 FROM users WHERE id = auth.uid()
-    AND (role IN ('leader', 'admin') OR id = check_ins.user_id)
+    AND role IN ('leader', 'admin')
   )
 );
 CREATE POLICY "checkins_delete" ON check_ins FOR DELETE TO authenticated USING (
@@ -452,13 +451,13 @@ NEXT_PUBLIC_TIMEZONE=Asia/Seoul               # 모든 시각 표시 KST 기준
 
 #### 4.2.1 일정 피드 (첫 화면)
 
-일정을 `day_number + sort_order` 순으로 타임라인 형태로 표시.
-
+- **일차 탭:** 상단에 [1일차] [2일차] [3일차] 필터. 활성 일정의 일차가 기본 선택. 다른 일차 탭 전환 시 해당 일차 일정만 표시. 조장은 모든 일차를 **읽기 전용**으로 확인 가능 (활성화/시간수정 불가)
+- **카드 정렬:** 진행중 > 대기 > 완료 순. 같은 그룹 내에서는 `sort_order` 유지. 해당 일차의 모든 일정이 완료되면 자연스럽게 원래 타임라인 순서로 복원
 - **완료 일정:** dim 처리(`opacity: 0.55`) + 완료/전체 카운트 (예: ✓ 10/10명)
-- **진행중 일정:** 노란 테두리(`#FEE500`) 강조 + '진행중' pill + 완료/전체 카운트 → **탭하면 체크인 화면 진입**
+- **진행중 일정:** 노란 테두리(`#FEE500`) 강조 + '진행중' pill + 완료/전체 카운트 → **카드 본문 탭 → 체크인 화면 진입**
 - **대기 일정:** 일반 표시 (예정 시각 + 장소)
 - **빈 상태:** 활성 일정 없을 때 '현재 진행 중인 일정이 없어요' 안내 문구 표시
-- **전체 현황 버튼:** 피드 상단(일정 목록 위)에 [전체 현황 보기] 버튼 배치. 탭 → 바텀시트로 현재 활성 일정 기준 전체 조 프로그레스 바 + 상태 배지 표시. **같은 차량(`bus_name`) 조는 시각적으로 묶어 표시.** 드릴다운 없음 — 관리자 전용. 활성 일정 없으면 버튼 비활성(회색) + '진행 중인 일정이 없어요'
+- **전체 현황 버튼:** **진행중 일정 카드 내부 하단**에 [전체 현황 보기 >] 버튼 배치. 카드 본문 탭 → 체크인 화면, 하단 버튼 탭 → 바텀시트 (Dual-action card 패턴). `e.stopPropagation()`으로 이벤트 버블링 차단. 바텀시트에 현재 활성 일정 기준 전체 조 프로그레스 바 + 상태 배지 표시. **같은 차량(`bus_name`) 조는 시각적으로 묶어 표시.** 드릴다운 없음 — 조장 전용. 완료/대기 카드에는 버튼 미표시
 - **오프라인 배너:** 하단 고정 (`position: fixed; bottom: 0`)
 - Realtime으로 `schedule_activated`, `schedule_updated` 수신 시 자동 갱신
 
@@ -493,31 +492,60 @@ NEXT_PUBLIC_TIMEZONE=Asia/Seoul               # 모든 시각 표시 KST 기준
 - 완료 카드 [취소] 탭 → '체크인을 취소할까요?' 확인 모달 → DELETE → 미완료 상태로 복귀
 - 불참 카드 [취소] 탭 → '불참을 취소할까요?' 확인 모달 → DELETE → 미완료 상태로 복귀
 
-#### 4.2.6 보고 버튼
+#### 4.2.6 전원 완료 화면
+
+- 미완료 수 `=== 0`이면 축하 화면 전환
+- **현재 구현:** '[조명] 전원 탑승 완료!' 텍스트 + 이모지 + [보고하기] 버튼
+- **Phase 2:** 컨페티 CSS 애니메이션 + 이니셜 원 `animation-delay` 0.08s 간격 순차 팝인
+
+#### 4.2.7 보고 버튼
 
 - **항상 활성 — `disabled` 금지** (KWCAG 2.5.5)
 - 미완료 시: '[N]명이 아직이에요. 그래도 보고할까요?' 확인 모달
 - Realtime `'admin'` 채널로 `{type:'group_reported', group_id, pending_count}` broadcast
-- **보고 성공 피드백:** 보고 완료 시 '보고 완료!' 토스트 2초 표시 (`aria-live="polite"`)
+- **보고 성공 피드백:** 보고 완료 시 '보고 완료!' 토스트 5초 표시 (`aria-live="polite"`, WCAG 2.2 상태 메시지 충분 읽기 시간)
 
 ---
 
-### 4.3 관리자 화면 (`/admin`) — 2탭 구조
+### 4.3 관리자 화면 (`/admin`) — 단일 화면
 
-> 탭 구성: **현황 / 일정**. 헤더 배경색 `#FEE500`. 일반 공지는 카카오워크로 대체.
+> 현황과 일정을 하나의 화면에 통합. 제목 헤더 없음 (HTML `<title>`로 접근성 충족). 일반 공지는 카카오워크로 대체.
 
-#### 4.3.1 [현황] 탭
+#### 4.3.1 화면 구조 (위→아래)
 
-- **경과 시간 표시:** 활성 일정의 `activated_at`으로부터 경과 시간을 상단에 실시간 표시 (예: '23분 경과')
-- **전체 인원 요약:** 상단에 '전체 N/M명 확인' 표시 (전체 참가자 대비 체크인 완료 수, 불참 제외)
-- 상단 요약: 보고완료 / 진행중 / 시작전 카드 3개
-- **차량별 그룹핑:** 조 그리드를 `bus_name`으로 묶어 표시. "1호차" 섹션 아래 해당 차량의 조 카드들을 나열. TF장이 "이 차량 출발 가능?" 판단에 활용
+- **일차 탭:** [1일차] [2일차] [3일차] 필터. 활성 일정의 일차가 기본 선택
+- **일정 카드 목록:** 해당 일차의 일정 카드 표시
+- **[+ 일정 추가] 버튼:** 하단 고정. 일정명(필수), 장소(선택), 일차(필수), 예정시각(선택) — 4개 필드
+
+#### 4.3.2 일정 카드
+
+**카드 정렬:** 진행중 > 대기 > 완료 순. 같은 그룹 내에서는 `sort_order` 유지. 해당 일차의 모든 일정이 완료되면 자연스럽게 원래 타임라인 순서로 복원.
+
+**진행중 카드:**
+- 노란 테두리(`#FEE500`) 강조 + '진행중' pill
+- 카드 내 정보: 일정명 + 장소 + 예정시각 + 경과시간(`activated_at`으로부터 로컬 타이머, 1분 간격)
+- **카드 내 요약 영역:** '보고 N/M조 · 확인 N/M명' 표시. **이 영역을 탭하면 바텀시트 열림** (KPI 드릴다운 패턴). 요약 영역에 [상세보기 >] 텍스트로 탭 가능함을 명시
+
+**대기 카드:**
+- 일반 표시 (예정 시각 + 장소) + [활성화] 버튼
+- [활성화] 버튼 탭 → 직접 활성화 (바텀시트 아님)
+
+**완료 카드:**
+- dim 처리(`opacity: 0.55`) + 완료/전체 카운트
+- 완료 요약 영역 탭 → 바텀시트 (과거 현황, 읽기 전용)
+
+#### 4.3.3 바텀시트 — 전체 현황
+
+진행중/완료 카드의 요약 영역 탭 시 열림.
+
+- **차량별 그룹핑:** 조 그리드를 `bus_name`으로 묶어 표시. "1호차" 섹션 아래 해당 차량의 조 카드들을 나열
 - 조별 그리드 (2열): 프로그레스 바 + 완료/전체 수 + 상태 배지
-- **조 카드에 조장 표시:** 조장 이름 + 전화 아이콘(`<a href="tel:">` + `aria-label="조장에게 전화"`, 44x44px). 긴급 시 TF장→조장 즉시 연락
-- **조 카드 드릴다운:** 조 카드 탭 → 바텀시트로 해당 조 전체 인원 목록 표시 (이름 + 역할 + 전화 아이콘 + 체크인 상태). 전원 완료 시 '전원 확인 완료' 표시
+- **조 카드에 조장 표시:** 조장 이름 + 전화 아이콘(`<a href="tel:">` + `aria-label="조장에게 전화"`, 44x44px)
+- **조 카드 드릴다운:** 조 카드 탭 → 해당 조 전체 인원 목록 (이름 + 역할 + 전화 아이콘 + 체크인 상태). 전원 완료 시 '전원 확인 완료' 표시
 - **체크인 대행:** 드릴다운 내 미탑승 인원 옆 [탔어요!] 버튼. 조장 부재 시 TF장이 직접 체크인 처리 가능 (`checked_by='admin'`)
-- **불참 처리:** 드릴다운 내 미탑승 인원 옆 [불참] 버튼. 탭 → '불참 처리할까요?' 확인 모달 → `check_ins` INSERT (`is_absent=true, checked_by='admin'`). 불참 인원은 조장 카드에 '불참' 텍스트 표시, 탑승 카운트에서 제외하되 전원 완료를 차단하지 않음
-- **조장 권한 부여/회수:** 드릴다운 내 조원 이름 옆 [조장 지정] / [조장 해제] 버튼. 탭 → 확인 모달 → Users 테이블 `role` UPDATE. 현장에서 조장 부재 시 대행자 즉시 지정 가능
+- **불참 처리:** 드릴다운 내 미탑승 인원 옆 [불참] 버튼. 탭 → '불참 처리할까요?' 확인 모달 → `check_ins` INSERT (`is_absent=true, checked_by='admin'`). 불참 인원은 탑승 카운트에서 제외하되 전원 완료를 차단하지 않음
+- **조장 권한 부여/회수:** 드릴다운 내 조원 이름 옆 [조장 지정] / [조장 해제] 버튼. 탭 → 확인 모달 → Users 테이블 `role` UPDATE
+- **시간 수정:** 바텀시트 상단에 현재 예정시각 표시 + 수정 아이콘. 탭 → 시:분 picker → DB 업데이트 → `schedule_updated` broadcast → '일정 시간이 변경되었어요' 토스트
 
 | 상태 | 배지 | 배경 | 텍스트 | 조건 |
 |---|---|---|---|---|
@@ -526,16 +554,11 @@ NEXT_PUBLIC_TIMEZONE=Asia/Seoul               # 모든 시각 표시 KST 기준
 | 진행중 | 진행중 | `#FAEEDA` | `#633806` | 1명+ 체크인, 미완료 있음 |
 | 시작전 | 시작전 | bg-secondary | gray-tertiary | 체크인 0명 |
 
-#### 4.3.2 [일정] 탭
+#### 4.3.4 일정 관리 기능
 
-- `day_number + sort_order` 순 표시, 일차별 섹션 구분
-- 완료: `opacity: 0.55`, 진행중: 노란 배경 + '진행중' pill, 대기: 일반 표시
 - **자동 활성화 (관리자 클라이언트 타이머):** 관리자 앱이 열려있는 동안 1분 간격으로 현재 시각과 대기 일정의 `scheduled_time`을 비교. 시각 도래 시 `activateSchedule` Server Action 자동 호출. 앱이 백그라운드였다가 돌아올 때(`visibilitychange` 이벤트) 밀린 활성화를 즉시 처리. 서버 cron 불필요
-- **수동 조정:** TF장이 필요시 [활성화] 버튼으로 다른 일정을 수동 활성화하거나, 시간 변경 가능. 자동 활성화가 안 됐어도 수동 [활성화]로 언제든 체크인 시작 가능
+- **수동 조정:** TF장이 필요시 [활성화] 버튼으로 다른 일정을 수동 활성화 가능. 자동 활성화가 안 됐어도 수동 [활성화]로 언제든 체크인 시작 가능
 - **미확인 경고:** 현재 활성 일정에 미확인 인원이 남아있는 상태에서 다른 일정을 활성화하려 하면 '현재 일정에 N명이 미확인 상태예요. 그래도 전환할까요?' 경고 모달 표시. 자동 활성화 시에도 동일 — 미확인 인원 있으면 자동 전환하지 않고 관리자에게 알림 토스트로 판단 요청
-- **예정 시각 표시:** 각 일정에 `scheduled_time`이 있으면 `HH:MM` 표시
-- **시간 수정:** 일정 카드 탭 → 시간 수정 입력 (시:분 picker) → DB 업데이트 → `schedule_updated` broadcast → 전체 화면에 '일정 시간이 변경되었어요' 토스트
-- [+ 일정 추가]: 일정명(필수), 장소(선택), 일차(필수), 예정시각(선택) — 4개 필드
 
 ---
 
@@ -577,15 +600,14 @@ NEXT_PUBLIC_TIMEZONE=Asia/Seoul               # 모든 시각 표시 KST 기준
 
 ---
 
----
-
 ## 5. 실시간 동기화 (Supabase Realtime)
 
 | 채널 | 이벤트 | 발생 조건 | 수신 대상 | 반응 |
 |---|---|---|---|---|
 | `global` | `schedule_activated` | 관리자 일정 활성화 | 전체 | 일정명 갱신 + 토스트 |
 | `global` | `schedule_updated` | 관리자 일정 시간 변경 | 전체 | 예정 시각 갱신 + '일정 시간이 변경되었어요' 토스트 |
-| `group:{group_id}` | `checkin_updated` | 관리자 체크인 대행 | 해당 조장 | 카드 즉시 업데이트 |
+| `group:{group_id}` | `checkin_updated` | 체크인/취소/불참 처리 | 해당 조장 | 카드 즉시 업데이트 |
+| `admin` | `checkin_updated` | 체크인/취소/불참 처리 | 관리자 | 현황 탭 즉시 갱신 |
 | `admin` | `group_reported` | 조장 보고 | 관리자 | 배지 '보고완료' 전환 |
 
 ---
@@ -690,7 +712,7 @@ src/actions/
 |---|---|
 | 구글 OAuth | `signInWithOAuth({ provider: 'google', options: { redirectTo } })` → `/auth/callback` 세션 교환 |
 | 도메인 차단 | `middleware.ts`: `email.endsWith(ALLOWED_EMAIL_DOMAIN)` 실패 → signOut + redirect |
-| 역할 라우팅 | leader→/group, admin→/admin, admin→/setup 접근 가능. member는 앱 사용 없음 (접근 제한 또는 읽기전용 안내) |
+| 역할 라우팅 | leader→/group, admin→/admin, admin→/setup 접근 가능. member→/no-access (앱 접근 불가) |
 | 카드 스타일 | 완료: `bg-[#EAF3DE]`, 미완료: `bg-white` |
 | 카드 정렬 | `sort((a,b) => Number(a.checked) - Number(b.checked))` |
 | 체크인 | 확인 모달 없이 즉시 Server Action 호출. 취소만 모달 |
@@ -725,5 +747,5 @@ src/actions/
 | **Phase 1** | 일정 자동 활성화 + 수동 조정 + 즉흥 추가 | 최고 |
 | **Phase 1** | Realtime 동기화 | 최고 |
 | **Phase 1** | 오프라인 대응 | 최고 |
-| Phase 2 | 전원 완료 축하 화면 (컨페티 애니메이션) | 낮음 |
+| Phase 2 | 전원 완료 축하 애니메이션 (컨페티 CSS + 이니셜 팝인) | 낮음 |
 | Phase 2 | CSV 다운로드 (체크인 기록 내보내기) | 낮음 |

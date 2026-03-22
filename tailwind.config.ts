@@ -71,6 +71,8 @@ const config: Config = {
     },
   },
   plugins: [require("tailwindcss-animate")],
+  // CR-008: globals.css 정의 커스텀 클래스 purge 방지
+  safelist: ["pb-safe"],
 };
 
 export default config;

@@ -55,7 +55,7 @@ export const COLORS = {
 
 // UI 문구 (PRD 8.2)
 export const COPY = {
-  notChecked: "아직 안 보여요",
+  notChecked: "확인 전",
   checked: (time: string) => `${time} 탑승 완료`,
   checkinButton: "탔어요!",
   cancelButton: "취소",

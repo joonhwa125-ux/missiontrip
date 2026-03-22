@@ -5,45 +5,9 @@
 
 ---
 
-## Phase 0: 인프라/셋업
+## 현재 활성 작업
 
-| 항목 | 상태 | 완료일 | 비고 |
-|---|---|---|---|
-| Next.js 14 프로젝트 초기화 | ✅ 완료 | 2026-03-22 | App Router, TypeScript strict |
-| Supabase 프로젝트 생성 | ✅ 완료 | 2026-03-22 | Mission Trip (joonhwa125-ux's Org) |
-| 환경변수 설정 (.env.local) | ✅ 완료 | 2026-03-22 | SUPABASE_URL, ANON_KEY, SERVICE_ROLE_KEY |
-| Vercel 배포 | ✅ 완료 | 2026-03-22 | 환경변수 설정 완료 |
-| Google OAuth 설정 (Supabase) | ✅ 완료 | 2026-03-22 | Google Cloud Console + Supabase Provider |
-
-## Phase 0: DB 스키마
-
-| 항목 | 상태 | 완료일 | 비고 |
-|---|---|---|---|
-| groups 테이블 | ✅ 완료 | 2026-03-22 | |
-| users 테이블 | ✅ 완료 | 2026-03-22 | email UNIQUE |
-| schedules 테이블 | ✅ 완료 | 2026-03-22 | idx_one_active_schedule 포함 |
-| check_ins 테이블 | ✅ 완료 | 2026-03-22 | unique_checkin 제약 포함 |
-| group_reports 테이블 | ✅ 완료 | 2026-03-22 | unique_group_report 제약 포함 |
-| RLS 정책 전체 | ✅ 완료 | 2026-03-22 | groups_read, users_read, schedules_read/write, checkins_read/insert/delete, reports_read/insert |
-| RPC: activate_schedule | ✅ 완료 | 2026-03-22 | SECURITY DEFINER |
-| RPC: sync_offline_checkins | ✅ 완료 | 2026-03-22 | SECURITY DEFINER |
-| 테스트 데이터 INSERT | ✅ 완료 | 2026-03-22 | 조 2개, 참가자 (admin: liam.j@linkagelab.co.kr 포함), 일정 2개 |
-
-## Phase 1: 핵심 기능 코드
-
-| 항목 | 상태 | 완료일 | 비고 |
-|---|---|---|---|
-| 로그인 페이지 (/login) | ✅ 완료 | 2026-03-22 | Google OAuth, 에러 메시지 |
-| Auth callback (/auth/callback) | ✅ 완료 | 2026-03-22 | 쿠키 설정 이슈 해결 (TSG-001) |
-| Middleware (인증+역할 라우팅) | ✅ 완료 | 2026-03-22 | 도메인 제한, 미등록 차단, 역할별 리다이렉트 |
-| 조장 화면 (/group) | ✅ 완료 | 2026-03-22 | GroupCheckinView, MemberCard |
-| 관리자 화면 (/admin) | ✅ 완료 | 2026-03-22 | AdminView, StatusTab, ScheduleTab, NoticeTab |
-| Server Actions | ✅ 완료 | 2026-03-22 | checkin.ts, schedule.ts, report.ts, setup.ts |
-| Realtime hooks | ✅ 완료 | 2026-03-22 | useRealtime.ts (broadcast 구독+전송) |
-| 오프라인 대응 | ✅ 완료 | 2026-03-22 | useOfflineSync.ts, offline.ts |
-| 로그인 동작 테스트 | ✅ 완료 | 2026-03-22 | Google 로그인 → 역할 라우팅 정상 확인 |
-
-## Phase 1: 미완료
+### 검증 필요 (Phase 1 마무리)
 
 | 항목 | 상태 | 비고 |
 |---|---|---|
@@ -52,46 +16,63 @@
 | Realtime 실시간 동기화 검증 | ⬜ 미시작 | 2개 브라우저로 broadcast 테스트 |
 | Vercel 배포 후 프로덕션 검증 | ⬜ 미시작 | 최신 코드 배포 + 동작 확인 |
 
-## 운영 안정성 수정 (2026-03-22)
-
-| 항목 | 상태 | 완료일 | 비고 |
-|---|---|---|---|
-| [FIX-001] useRealtime 콜백 스테일 클로저 | ✅ 완료 | 2026-03-22 | callbacksRef 패턴 도입 |
-| [FIX-002] 체크인/취소/보고 에러 토스트 | ✅ 완료 | 2026-03-22 | GroupCheckinView 에러 피드백 추가 |
-| [FIX-003] Middleware DB N+1 최적화 | ✅ 완료 | 2026-03-22 | / 와 /setup 경로에서만 role 조회 |
-| [FIX-004] schedule.ts .maybeSingle() | ✅ 완료 | 2026-03-22 | 즉흥 일정 추가 시 0건 day 처리 |
-| [FIX-005] offline.ts try-catch | ✅ 완료 | 2026-03-22 | QuotaExceededError 처리 + boolean 반환 |
-| [FIX-006] iOS Safari dvh + safe-area | ✅ 완료 | 2026-03-22 | viewportFit=cover, pb-safe, 100dvh override |
-
-> 상세 내용: `docs/stability-fixes.md` 참조
-
-## 코드 리뷰 (2026-03-22)
+### PRD→코드 정합성 수정 (별도 세션 필요)
 
 | 항목 | 상태 | 비고 |
 |---|---|---|
-| [CR-001] useBroadcast 채널 생성/해제 반복 | **Critical** | 현장 broadcast 실패 원인 |
-| [CR-002] window.location.reload() 남용 | **Critical** | router.refresh() 전환 필요 |
-| [CR-003] 전체 현황 인라인 표시 (PRD 불일치) | **Critical** | 버튼 → 바텀시트로 변경 |
-| [CR-004] updateUserRole RLS 정책 누락 | **Critical** | 조장 권한 변경 조용히 실패 |
-| [CR-005] uncheckedCount 불참 계산 오류 | **Critical** | 보고 N명 수치 부정확 |
-| [CR-006] 오프라인 배너 z-index 충돌 | **Critical** | iPhone safe-area 겹침 |
-| [CR-007] checkin unique violation 에러 코드 | **Critical** | Supabase 에러 코드 불일치 |
-| [CR-008~019] Major 12건 | **Major** | pb-safe, stale prop, 뒤로가기 등 |
-| [CR-020~028] Minor 9건 | **Minor** | 터치 타겟, 중복 코드, 색상 토큰 등 |
+| `sheets-parser.ts` 5컬럼→4컬럼 | ✅ 완료 | 이메일 컬럼 제거 (사용자 직접 수정) |
+| `constants.ts` EXPECTED_GROUP_COUNT | ⬜ 미시작 | 미사용 상수 — 삭제 또는 무시 |
+| DB `checked_by` CHECK에서 'self' 제거 | ⬜ 미시작 | Supabase SQL 실행 필요 |
+| DB RLS `checkins_insert` 셀프 허용 제거 | ⬜ 미시작 | Supabase SQL 실행 필요 |
+| 토스트 시간 3.5초→5초 | ⬜ 미시작 | WCAG 접근성 기준 |
+| `types.ts` CheckedBy 타입에서 'self' 제거 | ⬜ 미시작 | |
 
-> 상세 내용: `docs/code-review.md` 참조
+### 보류 항목 (운영 후 개선)
 
-## Phase 2: 추가 기능
+| 항목 | 출처 | 비고 |
+|---|---|---|
+| CR-003 전체 현황 바텀시트 | 1차 리뷰 | PRD 4.2.1 기준 변경 가능 |
+| CR-015 일정 추가 form 태그 | 1차 리뷰 | Enter 제출 |
+| CR-020~028 Minor 9건 | 1차 리뷰 | |
+| NEW-002 text-[0.625rem] 가독성 | 2차 리뷰 | |
+| NEW-004 DataSourceStep htmlFor | 2차 리뷰 | |
+| NEW-005~010 Minor 6건 | 2차 리뷰 | |
+
+### Phase 2: 추가 기능
 
 | 항목 | 상태 | 비고 |
 |---|---|---|
-| 참가자 셀프 체크인 (/checkin) | ⬜ 미시작 | role=member 전용 |
 | CSV 다운로드 | ⬜ 미시작 | 체크인 기록 내보내기 |
+
+---
+
+## 완료 아카이브
+
+> 아래 항목은 모두 2026-03-22에 완료되었다. 상세 내용은 해당 문서 참조.
+
+### Phase 0 (인프라/셋업 + DB 스키마) — 전체 완료
+Next.js 14 초기화, Supabase 프로젝트, 환경변수, Vercel 배포, Google OAuth,
+DB 5개 테이블 + RLS + RPC 2개 + 테스트 데이터
+
+### Phase 1 (핵심 기능 코드) — 전체 완료
+로그인, Auth callback, Middleware, 조장 화면, 관리자 화면,
+Server Actions, Realtime hooks, 오프라인 대응, 로그인 테스트
+
+### 운영 안정성 수정 (FIX-001~006) — 전체 완료
+> 상세: `docs/stability-fixes.md`
+
+### 코드 리뷰 1차 (CR-001~019) — 수정 완료 (보류 3건 제외)
+> 상세: `docs/code-review.md`
+
+### 코드 리뷰 2차 (NEW-001~010) — 수정 완료 (보류 3건 제외)
+> 2차 리뷰 결과: Score 78/100, Critical 0건. 운영 배포 가능 상태.
+
+### PRD 정합성 수정 (PRD-001~010) — CLAUDE.md 전체 수정 완료
 
 ---
 
 ## 업데이트 규칙
 
 - 각 항목 완료 시 상태를 `✅ 완료`로 변경하고 완료일 기입
-- 새로운 작업 발견 시 해당 Phase에 행 추가
+- 새로운 작업 발견 시 해당 섹션에 행 추가
 - 세션 시작 시 이 문서를 먼저 확인하여 중복 작업 방지

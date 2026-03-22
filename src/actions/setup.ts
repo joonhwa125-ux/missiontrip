@@ -157,12 +157,18 @@ export async function importToDatabase(
   }
 
   // 3. Schedules INSERT
+  // NEW-003: "HH:MM" (날짜 없음) → null (timestamptz 오류 방지)
+  // 예정시각은 운영 당일 관리자 화면([일정] 탭)에서 설정 가능
+  const HH_MM_ONLY = /^\d{2}:\d{2}$/;
   const schedulesPayload = data.schedules.map((s) => ({
     title: s.title,
     location: s.location,
     day_number: s.day_number,
     sort_order: s.sort_order,
-    scheduled_time: s.scheduled_time,
+    scheduled_time:
+      s.scheduled_time && HH_MM_ONLY.test(s.scheduled_time)
+        ? null
+        : s.scheduled_time,
   }));
 
   const { error: scheduleError } = await supabase
