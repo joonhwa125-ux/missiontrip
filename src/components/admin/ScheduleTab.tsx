@@ -9,24 +9,19 @@ import {
   EVENT_SCHEDULE_ACTIVATED,
   EVENT_SCHEDULE_UPDATED,
 } from "@/lib/constants";
-import { cn, formatTime } from "@/lib/utils";
+import { cn, formatTime, getScheduleStatus } from "@/lib/utils";
 import type { Schedule } from "@/lib/types";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
 
-type ScheduleStatus = "active" | "completed" | "waiting";
-
-function getStatus(s: Schedule): ScheduleStatus {
-  if (s.is_active) return "active";
-  if (s.activated_at) return "completed";
-  return "waiting";
-}
+// getScheduleStatus는 utils.ts에서 import
 
 interface Props {
   schedules: Schedule[];
@@ -193,7 +188,7 @@ export default function ScheduleTab({
             {schedules
               .filter((s) => s.day_number === day)
               .map((s) => {
-                const status = getStatus(s);
+                const status = getScheduleStatus(s);
                 const timeDisplay = s.scheduled_time
                   ? formatTime(s.scheduled_time)
                   : null;
@@ -259,8 +254,8 @@ export default function ScheduleTab({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>예정 시각 변경</DialogTitle>
+            <DialogDescription>{timeTarget?.title}</DialogDescription>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">{timeTarget?.title}</p>
           <input
             type="time"
             value={timeValue}
@@ -288,6 +283,7 @@ export default function ScheduleTab({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>일정 추가</DialogTitle>
+            <DialogDescription className="sr-only">새 일정의 이름, 장소, 일차, 시각을 입력합니다.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <input
@@ -345,6 +341,7 @@ export default function ScheduleTab({
             <DialogTitle>
               {COPY.uncheckedWarning(calcUncheckedCount(checkIns, totalMemberCount))}
             </DialogTitle>
+            <DialogDescription className="sr-only">미확인 인원이 있는 상태에서 일정을 전환할지 확인합니다.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <DialogClose className="min-h-11 flex-1 rounded-xl bg-gray-100 text-sm font-medium">

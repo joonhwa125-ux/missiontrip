@@ -6,15 +6,9 @@ import { useRealtime } from "@/hooks/useRealtime";
 import { cn } from "@/lib/utils";
 import StatusTab from "./StatusTab";
 import ScheduleTab from "./ScheduleTab";
-import type { Group, Schedule } from "@/lib/types";
+import type { Group, Schedule, AdminMember } from "@/lib/types";
 
-interface Member {
-  id: string;
-  name: string;
-  phone: string | null;
-  role: string;
-  group_id: string;
-}
+type Member = AdminMember;
 interface CheckIn {
   user_id: string;
   is_absent: boolean;

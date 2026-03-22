@@ -25,7 +25,7 @@ export const MEMBER_CARD_MIN_HEIGHT = 72; // px — 조원 카드 최소 높이
 
 // 참가 규모
 export const EXPECTED_TOTAL_MEMBERS = 200;
-export const EXPECTED_GROUP_COUNT = 10;
+export const EXPECTED_GROUP_COUNT = 20;
 export const EXPECTED_LEADER_COUNT = 18;
 
 // 이메일 자동 생성 (setup 파싱용)
@@ -55,7 +55,7 @@ export const COLORS = {
 
 // UI 문구 (PRD 8.2)
 export const COPY = {
-  notChecked: "확인 전",
+  notChecked: "아직 안 보여요",
   checked: (time: string) => `${time} 탑승 완료`,
   checkinButton: "탔어요!",
   cancelButton: "취소",

@@ -1,7 +1,7 @@
 "use server";
 
 import { createServiceClient } from "@/lib/supabase/server";
-import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth";
 import type {
   ActionResult,
   SetupPreviewData,
@@ -14,23 +14,6 @@ import {
   parseUsersSheet,
   parseSchedulesSheet,
 } from "@/utils/sheets-parser";
-
-// 관리자 확인 헬퍼
-async function requireAdmin(): Promise<{ id: string } | null> {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user?.email) return null;
-
-  const { data } = await supabase
-    .from("users")
-    .select("id, role")
-    .eq("email", user.email)
-    .single();
-
-  return data?.role === "admin" ? data : null;
-}
 
 // Google Sheets CSV export URL 생성
 function buildCsvUrl(sheetId: string, gid: string): string {
@@ -46,9 +29,14 @@ export async function previewFromGoogleSheet(
   if (!admin) return { ok: false, error: "관리자 권한이 필요해요" };
 
   try {
+    const fetchCsv = async (url: string) => {
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.text();
+    };
     const [usersCsv, schedulesCsv] = await Promise.all([
-      fetch(buildCsvUrl(sheetId, gids.users)).then((r) => r.text()),
-      fetch(buildCsvUrl(sheetId, gids.schedules)).then((r) => r.text()),
+      fetchCsv(buildCsvUrl(sheetId, gids.users)),
+      fetchCsv(buildCsvUrl(sheetId, gids.schedules)),
     ]);
 
     const usersRows = parseCsv(usersCsv);
@@ -259,7 +247,7 @@ export async function updateUserRole(
     return { ok: false, error: "자신의 역할은 변경할 수 없어요" };
   }
 
-  const supabase = createClient();
+  const supabase = createServiceClient();
   const { error } = await supabase
     .from("users")
     .update({ role: newRole })

@@ -42,7 +42,9 @@ export async function GET(request: Request) {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
-    return NextResponse.redirect(`${origin}/login?error=auth-failed`);
+    await supabase.auth.signOut();
+    response.headers.set("location", `${origin}/login?error=auth-failed`);
+    return response;
   }
 
   const {

@@ -2,12 +2,9 @@
 
 import { COPY } from "@/lib/constants";
 import { formatTime, cn } from "@/lib/utils";
-import type { CheckIn } from "@/lib/types";
+import type { CheckIn, GroupMember } from "@/lib/types";
 
-interface Member {
-  id: string;
-  name: string;
-}
+type Member = GroupMember;
 
 interface Props {
   user: Member;

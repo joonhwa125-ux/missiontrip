@@ -1,23 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth";
 import type { ActionResult } from "@/lib/types";
-
-async function requireAdmin() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user?.email) return null;
-
-  const { data } = await supabase
-    .from("users")
-    .select("id, role")
-    .eq("email", user.email)
-    .single();
-
-  return data?.role === "admin" ? data : null;
-}
 
 // 일정 활성화 (RPC — 트랜잭션으로 동시 활성화 방지)
 export async function activateSchedule(

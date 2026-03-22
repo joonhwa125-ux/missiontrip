@@ -11,6 +11,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
@@ -22,12 +23,9 @@ import {
   EVENT_GROUP_REPORTED,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import type { Schedule, CheckIn } from "@/lib/types";
+import type { Schedule, CheckIn, GroupMember } from "@/lib/types";
 
-interface Member {
-  id: string;
-  name: string;
-}
+type Member = GroupMember;
 
 interface Props {
   currentUser: { id: string; group_id: string };
@@ -111,7 +109,12 @@ export default function GroupCheckinView({
     const userId = cancelTarget.member.id;
     setCancelTarget(null);
     setReported(false);
-    setCheckIns((prev) => prev.filter((c) => c.user_id !== userId));
+    // 낙관적 제거 전 백업 (롤백용)
+    let removed: CheckIn | undefined;
+    setCheckIns((prev) => {
+      removed = prev.find((c) => c.user_id === userId);
+      return prev.filter((c) => c.user_id !== userId);
+    });
     startTransition(async () => {
       const res = await deleteCheckin(userId, activeSchedule.id);
       if (res.ok) {
@@ -121,6 +124,10 @@ export default function GroupCheckinView({
           broadcast(CHANNEL_ADMIN, EVENT_CHECKIN_UPDATED, payload),
         ]);
       } else {
+        // 서버 에러 시 낙관적 업데이트 롤백
+        if (removed) {
+          setCheckIns((prev) => [...prev, removed!]);
+        }
         showToast(res.error ?? "취소 처리 중 오류가 발생했어요.");
       }
     });
@@ -371,9 +378,9 @@ export default function GroupCheckinView({
               {cancelTarget?.isAbsent ? COPY.absentCancel : "체크인을 취소할까요?"}
             </DialogTitle>
           </DialogHeader>
-          <p className="text-center text-sm text-muted-foreground">
+          <DialogDescription className="text-center">
             {cancelTarget?.member.name}님의 {cancelTarget?.isAbsent ? "불참" : "탑승 확인"}을 취소해요.
-          </p>
+          </DialogDescription>
           <DialogFooter>
             <DialogClose className="min-h-11 flex-1 rounded-xl bg-gray-100 text-sm font-medium">
               아니요
@@ -397,9 +404,9 @@ export default function GroupCheckinView({
           <DialogHeader>
             <DialogTitle>불참 처리할까요?</DialogTitle>
           </DialogHeader>
-          <p className="text-center text-sm text-muted-foreground">
+          <DialogDescription className="text-center">
             {absentTarget?.name}님을 불참 처리해요. 탑승 카운트에서 제외돼요.
-          </p>
+          </DialogDescription>
           <DialogFooter>
             <DialogClose className="min-h-11 flex-1 rounded-xl bg-gray-100 text-sm font-medium">
               아니요
@@ -421,6 +428,7 @@ export default function GroupCheckinView({
             <DialogTitle>
               {uncheckedCount}명이 아직이에요. 그래도 보고할까요?
             </DialogTitle>
+            <DialogDescription className="sr-only">미완료 인원이 있는 상태에서 보고 여부를 확인합니다.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <DialogClose className="min-h-11 flex-1 rounded-xl bg-gray-100 text-sm font-medium">

@@ -15,19 +15,23 @@ export async function middleware(request: NextRequest) {
     return await updateSession(request).then((r) => r.supabaseResponse);
   }
 
-  const { supabaseResponse, user } = await updateSession(request);
+  const { supabaseResponse, user, supabase } = await updateSession(request);
 
   // 미인증 → 로그인
   if (!user) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // 도메인 제한
+  // 도메인 제한 — signOut 후 세션 삭제 쿠키를 리다이렉트에 전달
   if (!user.email?.endsWith(ALLOWED_EMAIL_DOMAIN)) {
-    // 세션 종료 처리는 Server Action 또는 /auth/callback에서 수행
-    return NextResponse.redirect(
+    await supabase.auth.signOut();
+    const redirect = NextResponse.redirect(
       new URL("/login?error=unauthorized", request.url)
     );
+    supabaseResponse.cookies.getAll().forEach((c) => {
+      redirect.cookies.set(c.name, c.value);
+    });
+    return redirect;
   }
 
   // DB 조회가 필요한 경로만 role 확인

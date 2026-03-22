@@ -1,14 +1,11 @@
 "use client";
 
 import { useOfflineSync } from "@/hooks/useOfflineSync";
-import { formatTime, cn } from "@/lib/utils";
+import { formatTime, cn, getScheduleStatus } from "@/lib/utils";
 import { COPY } from "@/lib/constants";
-import type { Schedule, CheckIn, Group } from "@/lib/types";
+import type { Schedule, CheckIn, Group, GroupMember } from "@/lib/types";
 
-interface Member {
-  id: string;
-  name: string;
-}
+type Member = GroupMember;
 
 interface AllMember {
   id: string;
@@ -27,13 +24,7 @@ interface Props {
   onEnterCheckin: () => void;
 }
 
-type ScheduleStatus = "active" | "completed" | "waiting";
-
-function getStatus(s: Schedule): ScheduleStatus {
-  if (s.is_active) return "active";
-  if (s.activated_at) return "completed";
-  return "waiting";
-}
+// getScheduleStatus는 utils.ts에서 import
 
 export default function GroupFeedView({
   schedules,
@@ -101,7 +92,7 @@ export default function GroupFeedView({
       {/* 오프라인 배너 (하단 고정) */}
       {!isOnline && (
         <div
-          className="fixed bottom-0 left-0 right-0 bg-offline-banner px-4 py-2 text-center text-sm"
+          className="fixed bottom-0 left-1/2 w-full max-w-lg -translate-x-1/2 bg-offline-banner px-4 py-2 text-center text-sm"
           aria-live="polite"
           role="status"
         >
@@ -126,7 +117,7 @@ function ScheduleCard({
   scheduleCounts: Record<string, number>;
   onEnterCheckin: () => void;
 }) {
-  const status = getStatus(schedule);
+  const status = getScheduleStatus(schedule);
   const timeDisplay = schedule.scheduled_time
     ? formatTime(schedule.scheduled_time)
     : null;

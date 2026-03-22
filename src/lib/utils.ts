@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import type { Schedule, ScheduleStatus } from "./types";
 
 // shadcn/ui 표준 cn 유틸
 export function cn(...inputs: ClassValue[]) {
@@ -24,4 +25,11 @@ export function getElapsedMinutes(from: string): number {
 // 이니셜 추출 (한글 이름 → 첫 글자)
 export function getInitial(name: string): string {
   return name.charAt(0);
+}
+
+// 일정 상태 판별
+export function getScheduleStatus(schedule: Schedule): ScheduleStatus {
+  if (schedule.is_active) return "active";
+  if (schedule.activated_at) return "completed";
+  return "waiting";
 }

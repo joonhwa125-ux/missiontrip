@@ -5,12 +5,9 @@ import { useRouter } from "next/navigation";
 import { useRealtime } from "@/hooks/useRealtime";
 import GroupFeedView from "./GroupFeedView";
 import GroupCheckinView from "./GroupCheckinView";
-import type { Schedule, CheckIn, Group } from "@/lib/types";
+import type { Schedule, CheckIn, Group, GroupMember } from "@/lib/types";
 
-interface Member {
-  id: string;
-  name: string;
-}
+type Member = GroupMember;
 
 interface AllMember {
   id: string;

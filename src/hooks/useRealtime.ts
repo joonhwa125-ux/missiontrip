@@ -110,7 +110,13 @@ export function useBroadcast() {
 
       if (!channel) {
         channel = supabaseRef.current.channel(channelName);
-        channel.subscribe();
+        await new Promise<void>((resolve) => {
+          channel!.subscribe((status) => {
+            if (status === "SUBSCRIBED" || status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+              resolve();
+            }
+          });
+        });
         map.set(channelName, channel);
       }
 

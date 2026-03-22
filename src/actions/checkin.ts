@@ -1,24 +1,8 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth";
 import type { ActionResult, OfflinePendingCheckin } from "@/lib/types";
-
-// 현재 로그인 사용자 확인 헬퍼
-async function getCurrentUser() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user?.email) return null;
-
-  const { data } = await supabase
-    .from("users")
-    .select("id, role, group_id")
-    .eq("email", user.email)
-    .single();
-
-  return data;
-}
 
 // 체크인 INSERT (조장/관리자 대리 체크인)
 export async function createCheckin(
@@ -155,7 +139,7 @@ export async function syncOfflineCheckins(
   }
 
   const { data, error } = await supabase.rpc("sync_offline_checkins", {
-    checkins: JSON.stringify(checkins),
+    checkins,
   });
 
   if (error) {

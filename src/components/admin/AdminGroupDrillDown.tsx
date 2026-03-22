@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { useBroadcast } from "@/hooks/useRealtime";
 import { createCheckin, deleteCheckin, markAbsent } from "@/actions/checkin";
 import { updateUserRole } from "@/actions/setup";
@@ -16,18 +16,13 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import type { Group, Schedule } from "@/lib/types";
+import type { Group, Schedule, AdminMember } from "@/lib/types";
 
-interface Member {
-  id: string;
-  name: string;
-  phone: string | null;
-  role: string;
-  group_id: string;
-}
+type Member = AdminMember;
 
 interface CheckIn {
   user_id: string;
@@ -64,27 +59,33 @@ export default function AdminGroupDrillDown({
   const { broadcast } = useBroadcast();
   const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
 
-  if (!group) return null;
-
-  const groupMembers = members.filter((m) => m.group_id === group.id);
-  const checkedMap = new Map(
-    checkIns.filter((c) => groupMembers.some((m) => m.id === c.user_id))
-      .map((c) => [c.user_id, c])
+  const groupMembers = useMemo(
+    () => group ? members.filter((m) => m.group_id === group.id) : [],
+    [members, group]
+  );
+  const checkedMap = useMemo(
+    () => new Map(
+      checkIns.filter((c) => groupMembers.some((m) => m.id === c.user_id))
+        .map((c) => [c.user_id, c])
+    ),
+    [checkIns, groupMembers]
   );
 
-  const checkedNonAbsent = groupMembers.filter(
-    (m) => checkedMap.has(m.id) && !checkedMap.get(m.id)!.is_absent
-  );
   const totalCount = groupMembers.length;
-  const checkedCount = checkedNonAbsent.length;
+  const checkedCount = useMemo(
+    () => groupMembers.filter((m) => checkedMap.has(m.id) && !checkedMap.get(m.id)!.is_absent).length,
+    [groupMembers, checkedMap]
+  );
 
-  const sorted = [...groupMembers].sort((a, b) => {
+  const sorted = useMemo(() => [...groupMembers].sort((a, b) => {
     const aCheckin = checkedMap.get(a.id);
     const bCheckin = checkedMap.get(b.id);
     const aOrder = !aCheckin ? 0 : aCheckin.is_absent ? 1 : 2;
     const bOrder = !bCheckin ? 0 : bCheckin.is_absent ? 1 : 2;
     return aOrder - bOrder;
-  });
+  }), [groupMembers, checkedMap]);
+
+  if (!group) return null;
 
   return (
     <>
@@ -93,9 +94,9 @@ export default function AdminGroupDrillDown({
           <DialogHeader>
             <DialogTitle>{group.name}</DialogTitle>
           </DialogHeader>
-          <p className="text-sm font-medium text-muted-foreground" aria-live="polite">
+          <DialogDescription aria-live="polite">
             {checkedCount}/{totalCount}명 확인
-          </p>
+          </DialogDescription>
           <ul className="space-y-2">
             {sorted.map((m) => (
               <MemberRow
@@ -365,7 +366,7 @@ function ConfirmDialog({ action, onClose, onConfirm }: ConfirmDialogProps) {
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <p className="text-sm text-muted-foreground">{desc}</p>
+        <DialogDescription>{desc}</DialogDescription>
         <DialogFooter>
           <DialogClose
             className="min-h-11 flex-1 rounded-xl bg-gray-100 text-sm font-medium"

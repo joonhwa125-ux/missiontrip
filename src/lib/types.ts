@@ -25,6 +25,18 @@ export interface UserWithGroup extends User {
   groups: Group;
 }
 
+/** 조장 화면용 멤버 (id, name) */
+export type GroupMember = Pick<User, "id" | "name">;
+
+/** 관리자 화면용 멤버 (전화, 역할, 소속조 포함) */
+export interface AdminMember {
+  id: string;
+  name: string;
+  phone: string | null;
+  role: string;
+  group_id: string;
+}
+
 export interface Schedule {
   id: string;
   title: string;
