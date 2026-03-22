@@ -37,7 +37,7 @@ const BADGE: Record<GroupBadgeStatus, { bg: string; text: string; label: string 
   reported: { bg: "bg-[#EAF3DE]", text: "text-[#27500A]", label: "보고완료" },
   all_checked: { bg: "bg-main-action", text: "text-[#3C1E1E]", label: "전원확인" },
   in_progress: { bg: "bg-progress-badge", text: "text-[#633806]", label: "진행중" },
-  not_started: { bg: "bg-secondary", text: "text-muted-foreground", label: "미시작" },
+  not_started: { bg: "bg-secondary", text: "text-muted-foreground", label: "시작전" },
 };
 
 function getBadge(
@@ -107,7 +107,7 @@ export default function StatusTab({
           { label: "보고완료", count: reportedCount, color: "text-[#27500A]" },
           { label: "진행중", count: inProgressCount, color: "text-[#633806]" },
           {
-            label: "미시작",
+            label: "시작전",
             count: notStartedCount,
             color: "text-muted-foreground",
           },
