@@ -82,12 +82,17 @@
 
 | 파일 | 수정 내용 |
 |------|-----------|
-| `src/hooks/useRealtime.ts` | callbacksRef 패턴, unsubscribe 추가 |
-| `src/components/group/GroupCheckinView.tsx` | 에러 토스트, safe-area 하단 버튼 |
+| `src/hooks/useRealtime.ts` | callbacksRef 패턴, unsubscribe, useBroadcast useRef 안정화 |
+| `src/components/group/GroupCheckinView.tsx` | 에러 토스트, safe-area, useMemo(Set) |
 | `src/middleware.ts` | DB N+1 최적화 (조건부 role 조회) |
 | `src/actions/schedule.ts` | .maybeSingle() |
+| `src/actions/report.ts` | 조장 소속 조 검증 추가 |
+| `src/actions/setup.ts` | groupMap.get() 안전 처리 |
 | `src/utils/offline.ts` | try-catch, boolean 반환 |
+| `src/utils/sheets-parser.ts` | RFC 4180 CSV 파서 교체 |
 | `src/hooks/useOfflineSync.ts` | addPending boolean 전파 |
 | `src/app/layout.tsx` | viewportFit: "cover" |
 | `src/app/globals.css` | 100dvh override, pb-safe 유틸리티 |
-| `src/components/admin/AdminView.tsx` | 토스트 safe-area bottom |
+| `src/app/(auth)/login/page.tsx` | Suspense fallback 추가 |
+| `src/app/auth/callback/route.ts` | signOut 쿠키 전파 수정 |
+| `src/components/admin/AdminView.tsx` | useEffect toast, safe-area bottom |

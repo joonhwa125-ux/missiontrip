@@ -32,6 +32,7 @@ interface Props {
   schedules: Schedule[];
   onSchedulesChange: (s: Schedule[]) => void;
   onToast: (msg: string) => void;
+  onRefresh: () => void;
   checkIns: { user_id: string; is_absent: boolean }[];
   totalMemberCount: number;
   activeSchedule: Schedule | null;
@@ -51,6 +52,7 @@ export default function ScheduleTab({
   schedules,
   onSchedulesChange,
   onToast,
+  onRefresh,
   checkIns,
   totalMemberCount,
   activeSchedule,
@@ -79,11 +81,11 @@ export default function ScheduleTab({
             schedule_id: s.id,
             title: s.title,
           });
-          window.location.reload();
+          onRefresh();
         }
       });
     },
-    [broadcast, startTransition]
+    [broadcast, startTransition, onRefresh]
   );
 
   // A. 자동 활성화 타이머
@@ -136,7 +138,9 @@ export default function ScheduleTab({
     if (!timeTarget || !timeValue) return;
     startTransition(async () => {
       const [hh, mm] = timeValue.split(":");
-      const d = new Date();
+      const d = timeTarget.scheduled_time
+        ? new Date(timeTarget.scheduled_time)
+        : new Date();
       d.setHours(parseInt(hh), parseInt(mm), 0, 0);
       const iso = d.toISOString();
       const res = await updateScheduleTime(timeTarget.id, iso);
@@ -162,7 +166,11 @@ export default function ScheduleTab({
       let scheduledTime: string | null = null;
       if (newTime) {
         const [hh, mm] = newTime.split(":");
-        const d = new Date();
+        // 같은 day_number의 기존 일정 날짜를 참조하여 날짜 보존
+        const sameDay = schedules.find(
+          (s) => s.day_number === parseInt(newDay) && s.scheduled_time
+        );
+        const d = sameDay ? new Date(sameDay.scheduled_time!) : new Date();
         d.setHours(parseInt(hh), parseInt(mm), 0, 0);
         scheduledTime = d.toISOString();
       }
@@ -172,7 +180,7 @@ export default function ScheduleTab({
         parseInt(newDay),
         scheduledTime
       );
-      if (res.ok) window.location.reload();
+      if (res.ok) onRefresh();
     });
   };
 

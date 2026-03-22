@@ -59,7 +59,7 @@ TSX 파일 작성 시 아래를 기본 적용한다:
 src/
 ├── app/
 │   ├── (auth)/login/page.tsx, auth/callback/route.ts
-│   ├── (main)/group/page.tsx, checkin/page.tsx, admin/page.tsx
+│   ├── (main)/group/page.tsx, admin/page.tsx
 │   ├── setup/page.tsx                    # 개발자/관리자 셋업
 │   ├── layout.tsx
 │   └── middleware.ts
@@ -134,7 +134,7 @@ src/
 |---|---|---|---|
 | 조장 | 18명 | 조원 카드 탭탭탭으로 체크인 처리, 최종 보고 | 필수 |
 | 총괄 관리자 | 1~2명 | 일정 활성화, 전체 현황 모니터링 | 필수 |
-| 참가자 (조원) | 약 180명 | 셀프 체크인 (선택), 현황 확인 | 선택 |
+| 참가자 (조원) | 약 180명 | 앱 사용 없음 — 조장이 대신 체크인 | 없음 |
 
 ---
 
@@ -167,7 +167,7 @@ if (!user.email?.endsWith(ALLOWED_DOMAIN)) {
 | 2 | Supabase OAuth → 구글 계정 선택 | Supabase Auth 처리 |
 | 3 | 콜백 수신 → 이메일 도메인 검증 | middleware.ts |
 | 4 | Users 테이블에서 email로 사용자 조회 | 서버 컴포넌트 |
-| 5a | 조회 성공 → role에 따라 라우팅 | leader→/group, member→/checkin, admin→/admin |
+| 5a | 조회 성공 → role에 따라 라우팅 | leader→/group, admin→/admin (member→/group 읽기전용 또는 접근 제한) |
 | 5b | 조회 실패 → 안내 화면 | /login?error=not-registered |
 
 > 미등록 이메일: '등록되지 않은 계정이에요. 담당자에게 문의해주세요.' 안내 화면 표시. 별도 회원가입 플로우 없음.
@@ -425,7 +425,10 @@ NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...         # 서버 전용 (setup, admin 작업)
 ALLOWED_EMAIL_DOMAIN=@linkagelab.co.kr        # 도메인 제한
+NEXT_PUBLIC_TIMEZONE=Asia/Seoul               # 모든 시각 표시 KST 기준
 ```
+
+> **시간대:** 모든 `scheduled_time`, `checked_at`, `activated_at` 등 시각 데이터는 `Asia/Seoul` (KST) 기준으로 표시한다. DB에는 `timestamptz`(UTC)로 저장하되, UI 표시 시 KST 변환.
 
 > `SUPABASE_SERVICE_ROLE_KEY`는 RLS를 우회하므로 Server Action/API Route에서만 사용. 클라이언트 노출 금지.
 
@@ -445,21 +448,38 @@ ALLOWED_EMAIL_DOMAIN=@linkagelab.co.kr        # 도메인 제한
 ### 4.2 조장 화면 (`/group`) — 핵심 화면
 
 > 탑승 현장에서 조원 얼굴을 보며 탭탭탭 처리하는 흐름이 최우선이다.
+> **피드 드릴다운 구조:** 일정 목록(피드) → 진행중 일정 탭 → 체크인 화면 진입.
 
-#### 4.2.1 화면 구성 (위→아래)
+#### 4.2.1 일정 피드 (첫 화면)
 
-- **상단 바:** 현재 활성 일정명 + 장소
-- **이니셜 동그라미 행:** 조원 전원 이니셜 원 + 완료/전체 카운트
-- **조원 카드 리스트:** 미완료 상단, 완료 하단 자동 정렬
-- **하단 고정:** 보고 버튼
+일정을 `day_number + sort_order` 순으로 타임라인 형태로 표시.
+
+- **완료 일정:** dim 처리(`opacity: 0.55`) + 완료/전체 카운트 (예: ✓ 10/10명)
+- **진행중 일정:** 노란 테두리(`#FEE500`) 강조 + '진행중' pill + 완료/전체 카운트 → **탭하면 체크인 화면 진입**
+- **대기 일정:** 일반 표시 (예정 시각 + 장소)
+- **빈 상태:** 활성 일정 없을 때 '현재 진행 중인 일정이 없어요' 안내 문구 표시
+- **전체 현황 버튼:** 피드 상단(일정 목록 위)에 [전체 현황 보기] 버튼 배치. 탭 → 바텀시트로 현재 활성 일정 기준 전체 조 프로그레스 바 + 상태 배지 표시. **같은 차량(`bus_name`) 조는 시각적으로 묶어 표시.** 드릴다운 없음 — 관리자 전용. 활성 일정 없으면 버튼 비활성(회색) + '진행 중인 일정이 없어요'
 - **오프라인 배너:** 하단 고정 (`position: fixed; bottom: 0`)
+- Realtime으로 `schedule_activated`, `schedule_updated` 수신 시 자동 갱신
 
-#### 4.2.2 이니셜 동그라미
+> 조장은 일정 피드에서 **확인만** 가능. 일정 활성화, 시간 변경 등 조작은 관리자 전용.
+
+#### 4.2.2 체크인 화면 (드릴다운)
+
+진행중 일정을 탭하면 진입하는 화면. [← 뒤로] 버튼으로 일정 피드 복귀.
+
+- **상단 바:** 일정명 + 장소 + [← 뒤로]
+- **이니셜 동그라미 행:** 조원 전원 이니셜 원 + 완료/전체 카운트
+- **조원 카드 리스트:** 미완료 상단, 완료 하단 자동 정렬. **조장 본인도 카드에 포함** — 조장도 자기 조의 조원이므로 본인 카드를 탭하여 체크인 처리
+- **하단 고정:** 보고 버튼
+- **일정 전환 알림:** 체크인 화면에서 작업 중 새 일정이 활성화되면 '새로운 일정이 시작되었어요: {일정명}' 토스트 표시 + [일정 피드로 이동] 링크
+
+#### 4.2.3 이니셜 동그라미
 
 - 미완료: 회색 배경 + 회색 점선 테두리
 - 완료: 노란(`#FEE500`) 배경 + 우하단 초록 체크 점 (`14px`, `#00C471`)
 
-#### 4.2.3 조원 카드 스펙
+#### 4.2.4 조원 카드 스펙
 
 - 카드 최소 높이: **72px** (KWCAG 2.5.5)
 - **미완료:** 흰 배경 + '확인 전' + 빈 원(점선) + [탔어요!] 버튼(`#FEE500`) + [불참] 텍스트 버튼(회색, 44px 터치 영역 확보)
@@ -467,34 +487,18 @@ ALLOWED_EMAIL_DOMAIN=@linkagelab.co.kr        # 도메인 제한
 - **불참:** 회색(`bg-gray-100`) 배경 + '불참' 텍스트 + [취소] 버튼(회색)
 - 완료 카드 하단 자동 이동: `sort((a,b) => Number(a.checked) - Number(b.checked))`
 
-#### 4.2.4 탭탭탭 흐름
+#### 4.2.5 탭탭탭 흐름
 
 - [탔어요!] 탭 → **확인 모달 없이 즉시 INSERT** (현장 속도 우선)
-- [취소] 탭 → '체크인을 취소할까요?' 확인 모달 → DELETE
-
-#### 4.2.5 전원 완료 축하 화면
-
-- 미완료 수 `=== 0`이면: 컨페티 CSS + '[조명] 전원 탑승 완료!' 화면 전환
-- 이니셜 원 `animation-delay` 0.08s 간격 순차 팝인
-- [우리 조 다 탔어요! 보고하기] 버튼 강조
+- 완료 카드 [취소] 탭 → '체크인을 취소할까요?' 확인 모달 → DELETE → 미완료 상태로 복귀
+- 불참 카드 [취소] 탭 → '불참을 취소할까요?' 확인 모달 → DELETE → 미완료 상태로 복귀
 
 #### 4.2.6 보고 버튼
 
 - **항상 활성 — `disabled` 금지** (KWCAG 2.5.5)
 - 미완료 시: '[N]명이 아직이에요. 그래도 보고할까요?' 확인 모달
 - Realtime `'admin'` 채널로 `{type:'group_reported', group_id, pending_count}` broadcast
-
-#### 4.2.7 하단 탭 네비게이션 — 2탭 구조
-
-> 조장 화면은 **[체크인] / [일정]** 2탭으로 구성. 기본 탭은 [체크인].
-
-**[체크인] 탭 (기본):** 4.2.1~4.2.6의 기존 체크인 화면 그대로.
-
-**[일정] 탭:** 읽기 전용. 조장이 일정과 전체 현황을 파악하는 화면.
-
-- **오늘 일정 타임라인:** `day_number`가 오늘인 일정 목록. 각 일정에 예정 시각(HH:MM) + 장소 + 상태(완료/진행중/대기) 표시. 진행중 일정 강조(노란 배경). Realtime으로 `schedule_activated`, `schedule_updated` 수신 시 자동 갱신
-- **전체 조 현황 (읽기 전용):** 현재 활성 일정 기준 전체 조 프로그레스 바 + 상태 배지(보고완료/전원확인/진행중/시작전). **같은 차량(`bus_name`) 조는 시각적으로 묶어 표시.** 드릴다운(미탑승자 명단) 없음 — 관리자 전용
-> 조장이 [일정] 탭에서 할 수 있는 것은 **확인**뿐이다. 일정 활성화, 시간 변경 등 조작은 관리자 전용. 불참 처리는 [체크인] 탭에서 자기 조원에 한해 가능.
+- **보고 성공 피드백:** 보고 완료 시 '보고 완료!' 토스트 2초 표시 (`aria-live="polite"`)
 
 ---
 
@@ -505,12 +509,15 @@ ALLOWED_EMAIL_DOMAIN=@linkagelab.co.kr        # 도메인 제한
 #### 4.3.1 [현황] 탭
 
 - **경과 시간 표시:** 활성 일정의 `activated_at`으로부터 경과 시간을 상단에 실시간 표시 (예: '23분 경과')
+- **전체 인원 요약:** 상단에 '전체 N/M명 확인' 표시 (전체 참가자 대비 체크인 완료 수, 불참 제외)
 - 상단 요약: 보고완료 / 진행중 / 시작전 카드 3개
 - **차량별 그룹핑:** 조 그리드를 `bus_name`으로 묶어 표시. "1호차" 섹션 아래 해당 차량의 조 카드들을 나열. TF장이 "이 차량 출발 가능?" 판단에 활용
 - 조별 그리드 (2열): 프로그레스 바 + 완료/전체 수 + 상태 배지
 - **조 카드에 조장 표시:** 조장 이름 + 전화 아이콘(`<a href="tel:">` + `aria-label="조장에게 전화"`, 44x44px). 긴급 시 TF장→조장 즉시 연락
-- **조 카드 드릴다운:** 조 카드 탭 → 바텀시트로 해당 조 미확인 인원 이름 목록 표시 (이름 + 전화 아이콘). 전원 완료 시 '전원 확인 완료' 표시
+- **조 카드 드릴다운:** 조 카드 탭 → 바텀시트로 해당 조 전체 인원 목록 표시 (이름 + 역할 + 전화 아이콘 + 체크인 상태). 전원 완료 시 '전원 확인 완료' 표시
+- **체크인 대행:** 드릴다운 내 미탑승 인원 옆 [탔어요!] 버튼. 조장 부재 시 TF장이 직접 체크인 처리 가능 (`checked_by='admin'`)
 - **불참 처리:** 드릴다운 내 미탑승 인원 옆 [불참] 버튼. 탭 → '불참 처리할까요?' 확인 모달 → `check_ins` INSERT (`is_absent=true, checked_by='admin'`). 불참 인원은 조장 카드에 '불참' 텍스트 표시, 탑승 카운트에서 제외하되 전원 완료를 차단하지 않음
+- **조장 권한 부여/회수:** 드릴다운 내 조원 이름 옆 [조장 지정] / [조장 해제] 버튼. 탭 → 확인 모달 → Users 테이블 `role` UPDATE. 현장에서 조장 부재 시 대행자 즉시 지정 가능
 
 | 상태 | 배지 | 배경 | 텍스트 | 조건 |
 |---|---|---|---|---|
@@ -522,8 +529,10 @@ ALLOWED_EMAIL_DOMAIN=@linkagelab.co.kr        # 도메인 제한
 #### 4.3.2 [일정] 탭
 
 - `day_number + sort_order` 순 표시, 일차별 섹션 구분
-- 완료: `opacity: 0.55`, 진행중: 노란 배경 + '진행중' pill, 대기: [활성화] 버튼
-- [활성화] → 기존 활성 해제 → 선택 활성화 → `schedule_activated` broadcast
+- 완료: `opacity: 0.55`, 진행중: 노란 배경 + '진행중' pill, 대기: 일반 표시
+- **자동 활성화 (관리자 클라이언트 타이머):** 관리자 앱이 열려있는 동안 1분 간격으로 현재 시각과 대기 일정의 `scheduled_time`을 비교. 시각 도래 시 `activateSchedule` Server Action 자동 호출. 앱이 백그라운드였다가 돌아올 때(`visibilitychange` 이벤트) 밀린 활성화를 즉시 처리. 서버 cron 불필요
+- **수동 조정:** TF장이 필요시 [활성화] 버튼으로 다른 일정을 수동 활성화하거나, 시간 변경 가능. 자동 활성화가 안 됐어도 수동 [활성화]로 언제든 체크인 시작 가능
+- **미확인 경고:** 현재 활성 일정에 미확인 인원이 남아있는 상태에서 다른 일정을 활성화하려 하면 '현재 일정에 N명이 미확인 상태예요. 그래도 전환할까요?' 경고 모달 표시. 자동 활성화 시에도 동일 — 미확인 인원 있으면 자동 전환하지 않고 관리자에게 알림 토스트로 판단 요청
 - **예정 시각 표시:** 각 일정에 `scheduled_time`이 있으면 `HH:MM` 표시
 - **시간 수정:** 일정 카드 탭 → 시간 수정 입력 (시:분 picker) → DB 업데이트 → `schedule_updated` broadcast → 전체 화면에 '일정 시간이 변경되었어요' 토스트
 - [+ 일정 추가]: 일정명(필수), 장소(선택), 일차(필수), 예정시각(선택) — 4개 필드
@@ -568,11 +577,6 @@ ALLOWED_EMAIL_DOMAIN=@linkagelab.co.kr        # 도메인 제한
 
 ---
 
-### 4.5 참가자 화면 (`/checkin`) — Phase 2
-
-- `role=member` 자동 진입
-- 현재 활성 일정 + [나 탔어요!] 버튼 + 우리 조 이니셜 현황
-
 ---
 
 ## 5. 실시간 동기화 (Supabase Realtime)
@@ -581,7 +585,7 @@ ALLOWED_EMAIL_DOMAIN=@linkagelab.co.kr        # 도메인 제한
 |---|---|---|---|---|
 | `global` | `schedule_activated` | 관리자 일정 활성화 | 전체 | 일정명 갱신 + 토스트 |
 | `global` | `schedule_updated` | 관리자 일정 시간 변경 | 전체 | 예정 시각 갱신 + '일정 시간이 변경되었어요' 토스트 |
-| `group:{group_id}` | `checkin_updated` | 조원 셀프 체크인 | 해당 조장 | 카드 즉시 업데이트 |
+| `group:{group_id}` | `checkin_updated` | 관리자 체크인 대행 | 해당 조장 | 카드 즉시 업데이트 |
 | `admin` | `group_reported` | 조장 보고 | 관리자 | 배지 '보고완료' 전환 |
 
 ---
@@ -639,6 +643,12 @@ ALLOWED_EMAIL_DOMAIN=@linkagelab.co.kr        # 도메인 제한
 | 보고 (완료) | 우리 조 다 탔어요! 보고하기 |
 | 보고 (미완료) | N명 남았어요 |
 | 불참 | 불참 |
+| 보고 성공 | 보고 완료! |
+| 일정 전환 알림 | 새로운 일정이 시작되었어요: {일정명} |
+| 미확인 경고 | 현재 일정에 N명이 미확인 상태예요. 그래도 전환할까요? |
+| 빈 상태 | 현재 진행 중인 일정이 없어요 |
+| 전체 인원 요약 | 전체 N/M명 확인 |
+| 불참 취소 | 불참을 취소할까요? |
 | 오프라인 | 오프라인 상태예요. N건 저장 중 — 연결되면 자동으로 보낼게요 |
 
 ---
@@ -671,6 +681,7 @@ src/actions/
 | setup.ts | `previewFromCsv(usersCsv, schedulesCsv)` | admin | CSV 2개 직접 업로드 → 파싱 → 검증 → 미리보기 |
 | setup.ts | `importToDatabase(data)` | admin | 미리보기 데이터 → Groups/Users/Schedules UPSERT |
 | checkin.ts | `markAbsent(userId, scheduleId)` | leader, admin | 불참 처리 INSERT (`is_absent=true`) + broadcast. 조장은 자기 조원만 |
+| setup.ts | `updateUserRole(userId, newRole)` | admin | 조원↔조장 역할 변경. Users 테이블 `role` UPDATE |
 | setup.ts | `resetAllData()` | admin | 전체 데이터 초기화 (FK 역순 삭제) |
 
 ### 9.2 핵심 구현 지시
@@ -679,7 +690,7 @@ src/actions/
 |---|---|
 | 구글 OAuth | `signInWithOAuth({ provider: 'google', options: { redirectTo } })` → `/auth/callback` 세션 교환 |
 | 도메인 차단 | `middleware.ts`: `email.endsWith(ALLOWED_EMAIL_DOMAIN)` 실패 → signOut + redirect |
-| 역할 라우팅 | leader→/group, member→/checkin, admin→/admin, admin→/setup 접근 가능 |
+| 역할 라우팅 | leader→/group, admin→/admin, admin→/setup 접근 가능. member는 앱 사용 없음 (접근 제한 또는 읽기전용 안내) |
 | 카드 스타일 | 완료: `bg-[#EAF3DE]`, 미완료: `bg-white` |
 | 카드 정렬 | `sort((a,b) => Number(a.checked) - Number(b.checked))` |
 | 체크인 | 확인 모달 없이 즉시 Server Action 호출. 취소만 모달 |
@@ -693,6 +704,7 @@ src/actions/
 | 차량 그룹핑 | 현황 탭에서 `bus_name`으로 조 카드를 차량별 섹션으로 묶어 표시 |
 | 조장 연락처 | 조 카드에 조장 이름 + 전화 아이콘. 전화 아이콘은 `<a href="tel:">` + `aria-label` |
 | 오프라인 보고 | 보고도 `localStorage 'mtrip_pending_reports'`에 큐잉. 온라인 복귀 시 체크인→보고 순서로 sync |
+| 시간대 | 모든 시각 표시는 `Asia/Seoul` (KST) 기준. `new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })` |
 | 불참 카드 스타일 | 조장 화면에서 불참 인원: 회색 배경 + '불참' 텍스트. 탑승 카운트에서 제외 |
 
 ---
@@ -708,10 +720,10 @@ src/actions/
 | **Phase 0** | `/setup` — Google Sheets 동기화 + 데이터 검증 + 리셋 | 선행 |
 | **Phase 1** | OAuth + 도메인 차단 + 역할 라우팅 | 최고 |
 | **Phase 1** | 조장 체크인 (탭탭탭 + 이니셜 + 완료카드) | 최고 |
-| **Phase 1** | 전원 완료 축하 + 보고 (group_reports 영속화) | 최고 |
-| **Phase 1** | 관리자 2탭 (현황/일정) | 최고 |
-| **Phase 1** | 즉흥 일정 추가 | 최고 |
+| **Phase 1** | 보고 (group_reports 영속화) | 최고 |
+| **Phase 1** | 관리자 2탭 (현황/일정) + 조장 권한 부여/회수 + 체크인 대행 | 최고 |
+| **Phase 1** | 일정 자동 활성화 + 수동 조정 + 즉흥 추가 | 최고 |
 | **Phase 1** | Realtime 동기화 | 최고 |
 | **Phase 1** | 오프라인 대응 | 최고 |
-| Phase 2 | 조원 셀프 체크인 (/checkin) | 중간 |
-| Phase 2 | CSV 다운로드 (체크인 기록 내보내기) | 중간 |
+| Phase 2 | 전원 완료 축하 화면 (컨페티 애니메이션) | 낮음 |
+| Phase 2 | CSV 다운로드 (체크인 기록 내보내기) | 낮음 |

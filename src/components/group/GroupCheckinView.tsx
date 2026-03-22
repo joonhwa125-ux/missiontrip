@@ -122,7 +122,6 @@ export default function GroupCheckinView({
         ]);
       } else {
         showToast(res.error ?? "취소 처리 중 오류가 발생했어요.");
-        window.location.reload();
       }
     });
   }, [cancelTarget, activeSchedule, currentUser.group_id, broadcast, setCheckIns, showToast]);
@@ -194,12 +193,14 @@ export default function GroupCheckinView({
     });
   }, [activeSchedule, members, checkIns, currentUser.group_id, broadcast, isOnline, addPendingReport, showToast]);
 
-  // checkIns 변경 시에만 재계산 (매 렌더 Set 재생성 방지)
+  // CR-005: checkIns → 불참/확인/미확인 정확히 분리
   const checkedIds = useMemo(() => new Set(checkIns.map((c) => c.user_id)), [checkIns]);
   const absentIds = useMemo(() => new Set(checkIns.filter((c) => c.is_absent).map((c) => c.user_id)), [checkIns]);
-  const uncheckedCount = members.filter(
-    (m) => !checkedIds.has(m.id)
-  ).length;
+  const checkedCount = useMemo(() => checkIns.filter((c) => !c.is_absent).length, [checkIns]);
+  // 미확인 = 체크인도 불참도 아닌 순수 미처리 인원
+  const uncheckedCount = members.filter((m) => !checkedIds.has(m.id)).length;
+  // 탑승 카운트용 전체 = 불참 제외
+  const effectiveTotal = members.length - absentIds.size;
   const allComplete = members.length > 0 && uncheckedCount === 0;
   // 정렬: 미확인 → 불참 → 완료
   const sorted = [...members].sort((a, b) => {
@@ -291,7 +292,7 @@ export default function GroupCheckinView({
           className="px-4 pb-2 text-sm font-medium text-muted-foreground"
           aria-live="polite"
         >
-          {COPY.totalCount(members.length - uncheckedCount, members.length)}
+          {COPY.totalCount(checkedCount, effectiveTotal)}
         </p>
       </div>
 
@@ -328,19 +329,18 @@ export default function GroupCheckinView({
         ))}
       </ul>
 
-      {/* 오프라인 배너 (하단 고정) */}
-      {!isOnline && (
-        <div
-          className="fixed bottom-16 left-0 right-0 bg-offline-banner px-4 py-2 text-center text-sm"
-          aria-live="polite"
-          role="status"
-        >
-          {COPY.offline(pendingCount)}
-        </div>
-      )}
-
-      {/* 보고 버튼 -- 항상 활성, 하단 고정 */}
-      <div className="fixed bottom-0 left-0 right-0 border-t bg-white px-4 py-3 pb-safe">
+      {/* CR-006+016: 보고 버튼 + 오프라인 배너를 하나의 fixed 컨테이너로 통합 */}
+      <div className="fixed bottom-0 left-1/2 w-full max-w-lg -translate-x-1/2 border-t bg-white px-4 py-3 pb-safe">
+        {/* 오프라인 배너 — 보고 버튼 위에 인라인 표시 */}
+        {!isOnline && (
+          <div
+            className="mb-2 rounded-lg bg-offline-banner px-3 py-2 text-center text-sm"
+            aria-live="polite"
+            role="status"
+          >
+            {COPY.offline(pendingCount)}
+          </div>
+        )}
         <button
           onClick={() => (allComplete ? handleReport() : setReportOpen(true))}
           className={cn(

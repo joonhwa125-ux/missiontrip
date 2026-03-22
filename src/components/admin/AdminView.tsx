@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useRealtime } from "@/hooks/useRealtime";
 import { cn } from "@/lib/utils";
 import StatusTab from "./StatusTab";
@@ -50,6 +51,7 @@ export default function AdminView({
   initialCheckIns,
   initialReports,
 }: Props) {
+  const router = useRouter();
   const [tab, setTab] = useState<TabName>("status");
   const [schedules, setSchedules] = useState(initialSchedules);
   const [members, setMembers] = useState(initialMembers);
@@ -68,7 +70,7 @@ export default function AdminView({
   }, [toast]);
 
   useRealtime(null, true, {
-    onScheduleActivated: () => window.location.reload(),
+    onScheduleActivated: () => router.refresh(),
     onScheduleUpdated: ({ schedule_id, scheduled_time }) => {
       setSchedules((prev) =>
         prev.map((s) => (s.id === schedule_id ? { ...s, scheduled_time } : s))
@@ -145,6 +147,7 @@ export default function AdminView({
             schedules={schedules}
             onSchedulesChange={setSchedules}
             onToast={showToast}
+            onRefresh={() => router.refresh()}
             checkIns={checkIns}
             totalMemberCount={members.length}
             activeSchedule={activeSchedule}
@@ -155,11 +158,13 @@ export default function AdminView({
       {/* 토스트 */}
       {toast && (
         <div
-          className="fixed bottom-[max(1.5rem,_env(safe-area-inset-bottom))] left-4 right-4 rounded-xl bg-gray-900 px-4 py-3 text-center text-sm text-white shadow-lg"
+          className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-1/2 z-50 w-full max-w-lg -translate-x-1/2 px-4"
           role="status"
           aria-live="polite"
         >
-          {toast}
+          <div className="rounded-xl bg-gray-900 px-4 py-3 text-center text-sm text-white shadow-lg">
+            {toast}
+          </div>
         </div>
       )}
     </div>

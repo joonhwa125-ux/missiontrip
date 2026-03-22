@@ -88,19 +88,35 @@ export function useRealtime(
   return channelsRef;
 }
 
-// broadcast 메시지 전송 헬퍼
+// CR-001: broadcast 전용 persistent 채널 관리
+// 매 호출마다 채널 생성/해제를 반복하지 않고, 채널을 Map에 캐싱하여 재사용
 export function useBroadcast() {
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
+  const channelMapRef = useRef(new Map<string, RealtimeChannel>());
+
+  useEffect(() => {
+    const supabase = supabaseRef.current;
+    const map = channelMapRef.current;
+    return () => {
+      map.forEach((ch) => supabase.removeChannel(ch));
+      map.clear();
+    };
+  }, []);
 
   const broadcast = useCallback(
     async (channelName: string, event: string, payload: Record<string, unknown>) => {
-      const channel = supabase.channel(channelName);
-      await channel.subscribe();
+      const map = channelMapRef.current;
+      let channel = map.get(channelName);
+
+      if (!channel) {
+        channel = supabaseRef.current.channel(channelName);
+        channel.subscribe();
+        map.set(channelName, channel);
+      }
+
       await channel.send({ type: "broadcast", event, payload });
-      await channel.unsubscribe();
-      supabase.removeChannel(channel);
     },
-    [supabase]
+    []
   );
 
   return { broadcast };

@@ -16,7 +16,9 @@ import { submitReport } from "@/actions/report";
 import type { OfflinePendingCheckin, OfflinePendingReport, Schedule } from "@/lib/types";
 
 export function useOfflineSync() {
-  const [isOnline, setIsOnline] = useState(true);
+  const [isOnline, setIsOnline] = useState(
+    () => typeof navigator !== "undefined" ? navigator.onLine : true
+  );
   const [pendingCount, setPendingCount] = useState(0);
 
   // 대기 중 동기화: 체크인 → 보고 순서

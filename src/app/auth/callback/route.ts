@@ -51,8 +51,12 @@ export async function GET(request: Request) {
 
   // 도메인 제한
   if (!user?.email?.endsWith(ALLOWED_EMAIL_DOMAIN)) {
+    // signOut()이 기존 response.cookies에 세션 삭제 쿠키를 설정함
+    // 새 NextResponse를 반환하면 해당 쿠키가 전달되지 않아 세션이 남음
+    // → 기존 response의 Location 헤더만 변경하여 세션 삭제 쿠키를 함께 전달
     await supabase.auth.signOut();
-    return NextResponse.redirect(`${origin}/login?error=unauthorized`);
+    response.headers.set("location", `${origin}/login?error=unauthorized`);
+    return response;
   }
 
   return response;

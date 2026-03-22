@@ -17,12 +17,17 @@ export async function submitReport(
 
   const { data: userData } = await supabase
     .from("users")
-    .select("id, role")
+    .select("id, role, group_id")
     .eq("email", user.email)
     .single();
 
   if (!userData || !["leader", "admin"].includes(userData.role)) {
     return { ok: false, error: "권한이 없어요" };
+  }
+
+  // 조장은 자신의 조만 보고 가능 (다른 조 보고 위조 방지)
+  if (userData.role === "leader" && userData.group_id !== groupId) {
+    return { ok: false, error: "내 조의 보고만 할 수 있어요" };
   }
 
   const { error } = await supabase.from("group_reports").upsert(

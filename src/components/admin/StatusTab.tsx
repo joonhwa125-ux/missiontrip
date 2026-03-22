@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { getElapsedMinutes, cn } from "@/lib/utils";
 import { COPY } from "@/lib/constants";
 import AdminGroupDrillDown from "./AdminGroupDrillDown";
@@ -74,11 +74,11 @@ export default function StatusTab({
     return () => clearInterval(timer);
   }, [activeSchedule?.activated_at]);
 
-  const checkedIds = new Set(checkIns.map((c) => c.user_id));
-  const absentIds = new Set(checkIns.filter((c) => c.is_absent).map((c) => c.user_id));
-  const reportMap = new Map(reports.map((r) => [r.group_id, r]));
+  const checkedIds = useMemo(() => new Set(checkIns.map((c) => c.user_id)), [checkIns]);
+  const absentIds = useMemo(() => new Set(checkIns.filter((c) => c.is_absent).map((c) => c.user_id)), [checkIns]);
+  const reportMap = useMemo(() => new Map(reports.map((r) => [r.group_id, r])), [reports]);
 
-  const summaries = groups.map((g) => {
+  const summaries = useMemo(() => groups.map((g) => {
     const gMembers = members.filter((m) => m.group_id === g.id);
     const absentCount = gMembers.filter((m) => absentIds.has(m.id)).length;
     const checkedCount = gMembers.filter((m) => checkedIds.has(m.id) && !absentIds.has(m.id)).length;
@@ -86,27 +86,29 @@ export default function StatusTab({
     const badge = getBadge(totalCount, checkedCount, reportMap.has(g.id));
     const leader = gMembers.find((m) => m.role === "leader");
     return { group: g, gMembers, totalCount, checkedCount, badge, leader };
-  });
+  }), [groups, members, checkedIds, absentIds, reportMap]);
 
-  const busGroups = new Map<string, typeof summaries>();
-  for (const s of summaries) {
-    const bus = s.group.bus_name ?? "미배정";
-    if (!busGroups.has(bus)) busGroups.set(bus, []);
-    busGroups.get(bus)!.push(s);
-  }
-  const busEntries = Array.from(busGroups.entries()).sort((a, b) =>
-    a[0].localeCompare(b[0], "ko")
-  );
+  const busEntries = useMemo(() => {
+    const busGroups = new Map<string, typeof summaries>();
+    for (const s of summaries) {
+      const bus = s.group.bus_name ?? "미배정";
+      if (!busGroups.has(bus)) busGroups.set(bus, []);
+      busGroups.get(bus)!.push(s);
+    }
+    return Array.from(busGroups.entries()).sort((a, b) =>
+      a[0].localeCompare(b[0], "ko")
+    );
+  }, [summaries]);
 
-  const reportedCount = summaries.filter((s) => s.badge === "reported").length;
-  const inProgressCount = summaries.filter((s) =>
-    ["in_progress", "all_checked"].includes(s.badge)
-  ).length;
-  const notStartedCount = summaries.filter((s) => s.badge === "not_started").length;
+  const { reportedCount, inProgressCount, notStartedCount } = useMemo(() => ({
+    reportedCount: summaries.filter((s) => s.badge === "reported").length,
+    inProgressCount: summaries.filter((s) => ["in_progress", "all_checked"].includes(s.badge)).length,
+    notStartedCount: summaries.filter((s) => s.badge === "not_started").length,
+  }), [summaries]);
 
-  const totalChecked = members.filter(
+  const totalChecked = useMemo(() => members.filter(
     (m) => checkedIds.has(m.id) && !absentIds.has(m.id)
-  ).length;
+  ).length, [members, checkedIds, absentIds]);
 
   return (
     <div className="px-4 py-4">

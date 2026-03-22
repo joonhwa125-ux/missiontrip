@@ -59,6 +59,7 @@ export default async function AdminPage() {
 
   return (
     <AdminView
+      key={activeSchedule?.id ?? "no-schedule"}
       currentUser={{ id: currentUser.id }}
       groups={(groups as Group[]) ?? []}
       members={members ?? []}

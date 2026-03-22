@@ -45,15 +45,17 @@ export async function createCheckin(
     }
   }
 
-  const { error } = await supabase.from("check_ins").insert({
-    user_id: userId,
-    schedule_id: scheduleId,
-    checked_by: actor.role as "leader" | "admin",
-    checked_by_user_id: actor.id,
-  });
+  const { error } = await supabase.from("check_ins").upsert(
+    {
+      user_id: userId,
+      schedule_id: scheduleId,
+      checked_by: actor.role as "leader" | "admin",
+      checked_by_user_id: actor.id,
+    },
+    { onConflict: "user_id,schedule_id", ignoreDuplicates: true }
+  );
 
-  if (error && error.code !== "23505") {
-    // 23505 = unique violation → 이미 체크인, 무시
+  if (error) {
     return { ok: false, error: "체크인 처리 중 오류가 발생했어요" };
   }
 

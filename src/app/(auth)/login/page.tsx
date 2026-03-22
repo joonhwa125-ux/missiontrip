@@ -95,7 +95,13 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense>
+    <Suspense
+      fallback={
+        <main className="flex min-h-screen items-center justify-center bg-app-bg">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-main-action border-t-transparent" aria-label="로딩 중" />
+        </main>
+      }
+    >
       <LoginContent />
     </Suspense>
   );

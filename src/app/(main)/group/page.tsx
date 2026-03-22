@@ -98,6 +98,7 @@ export default async function GroupPage() {
 
   return (
     <GroupView
+      key={activeSchedule?.id ?? "no-schedule"}
       currentUser={{ id: currentUser.id, group_id: currentUser.group_id }}
       groupName={group?.name ?? "내 조"}
       members={members ?? []}

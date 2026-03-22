@@ -25,14 +25,53 @@ export function extractSheetId(url: string): string | null {
   return match ? match[1] : null;
 }
 
-// CSV 문자열 → 2D 배열
+// CSV 문자열 → 2D 배열 (RFC 4180 준수 — 따옴표 내 콤마/줄바꿈 처리)
 export function parseCsv(csv: string): string[][] {
-  return csv
-    .trim()
-    .split("\n")
-    .map((row) =>
-      row.split(",").map((cell) => cell.trim().replace(/^"|"$/g, ""))
-    );
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let inQuotes = false;
+  const text = csv.trim();
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') {
+          // 이스케이프된 따옴표 ("")
+          field += '"';
+          i++;
+        } else {
+          // 따옴표 필드 종료
+          inQuotes = false;
+        }
+      } else {
+        field += ch;
+      }
+    } else {
+      if (ch === '"') {
+        inQuotes = true;
+      } else if (ch === ",") {
+        row.push(field.trim());
+        field = "";
+      } else if (ch === "\r" || ch === "\n") {
+        if (ch === "\r" && text[i + 1] === "\n") i++; // CRLF 처리
+        row.push(field.trim());
+        field = "";
+        if (row.some((c) => c)) rows.push(row);
+        row = [];
+      } else {
+        field += ch;
+      }
+    }
+  }
+
+  // 마지막 필드/행 처리
+  row.push(field.trim());
+  if (row.some((c) => c)) rows.push(row);
+
+  return rows;
 }
 
 // 참가자 시트 파싱 (4컬럼: 이름, 전화번호, 역할, 소속조)

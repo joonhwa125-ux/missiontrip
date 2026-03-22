@@ -4,7 +4,7 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mx-auto w-full max-w-lg min-h-screen bg-app-bg">
+    <div className="mx-auto flex w-full max-w-lg flex-col min-h-screen bg-app-bg">
       {children}
     </div>
   );

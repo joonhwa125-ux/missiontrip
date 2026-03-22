@@ -65,6 +65,22 @@
 
 > 상세 내용: `docs/stability-fixes.md` 참조
 
+## 코드 리뷰 (2026-03-22)
+
+| 항목 | 상태 | 비고 |
+|---|---|---|
+| [CR-001] useBroadcast 채널 생성/해제 반복 | **Critical** | 현장 broadcast 실패 원인 |
+| [CR-002] window.location.reload() 남용 | **Critical** | router.refresh() 전환 필요 |
+| [CR-003] 전체 현황 인라인 표시 (PRD 불일치) | **Critical** | 버튼 → 바텀시트로 변경 |
+| [CR-004] updateUserRole RLS 정책 누락 | **Critical** | 조장 권한 변경 조용히 실패 |
+| [CR-005] uncheckedCount 불참 계산 오류 | **Critical** | 보고 N명 수치 부정확 |
+| [CR-006] 오프라인 배너 z-index 충돌 | **Critical** | iPhone safe-area 겹침 |
+| [CR-007] checkin unique violation 에러 코드 | **Critical** | Supabase 에러 코드 불일치 |
+| [CR-008~019] Major 12건 | **Major** | pb-safe, stale prop, 뒤로가기 등 |
+| [CR-020~028] Minor 9건 | **Minor** | 터치 타겟, 중복 코드, 색상 토큰 등 |
+
+> 상세 내용: `docs/code-review.md` 참조
+
 ## Phase 2: 추가 기능
 
 | 항목 | 상태 | 비고 |
