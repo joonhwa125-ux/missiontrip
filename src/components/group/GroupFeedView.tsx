@@ -1,9 +1,17 @@
 "use client";
 
+import { useState } from "react";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { formatTime, cn, getScheduleStatus } from "@/lib/utils";
 import { COPY } from "@/lib/constants";
 import type { Schedule, CheckIn, Group, GroupMember } from "@/lib/types";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 type Member = GroupMember;
 
@@ -38,6 +46,7 @@ export default function GroupFeedView({
   onEnterCheckin,
 }: Props) {
   const { isOnline, pendingCount } = useOfflineSync();
+  const [statusOpen, setStatusOpen] = useState(false);
 
   const todayDay =
     activeSchedule?.day_number ??
@@ -50,9 +59,24 @@ export default function GroupFeedView({
     <div className="flex-1 overflow-y-auto">
       {/* 오늘 일정 타임라인 */}
       <div className="px-4 py-4">
-        <h2 className="mb-3 text-sm font-bold text-muted-foreground">
-          {todayDay}일차 일정
-        </h2>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-sm font-bold text-muted-foreground">
+            {todayDay}일차 일정
+          </h2>
+          <button
+            onClick={() => activeSchedule && setStatusOpen(true)}
+            disabled={!activeSchedule}
+            className={cn(
+              "min-h-11 rounded-lg px-2 text-xs font-medium focus-visible:ring-2 focus-visible:ring-main-action",
+              activeSchedule
+                ? "text-gray-700"
+                : "text-muted-foreground opacity-50"
+            )}
+            aria-label="전체 현황 보기"
+          >
+            {activeSchedule ? "전체 현황 >" : "진행 중인 일정이 없어요"}
+          </button>
+        </div>
         <div className="space-y-2">
           {todaySchedules.map((s) => (
             <ScheduleCard
@@ -72,22 +96,22 @@ export default function GroupFeedView({
         </div>
       </div>
 
-      {/* 전체 조 현황 (활성 일정 있을 때만) */}
-      {activeSchedule && (
-        <div className="px-4 pb-6">
-          <h2 className="mb-2 text-sm font-bold text-muted-foreground">
-            전체 현황
-          </h2>
-          <p className="mb-3 text-xs text-muted-foreground">
-            {activeSchedule.title} 기준
-          </p>
+      {/* 전체 조 현황 바텀시트 */}
+      <Dialog open={statusOpen} onOpenChange={setStatusOpen}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>전체 현황</DialogTitle>
+            <DialogDescription>
+              {activeSchedule?.title} 기준
+            </DialogDescription>
+          </DialogHeader>
           <GroupStatusGrid
             allGroups={allGroups}
             allCheckIns={allCheckIns}
             allMembers={allMembers}
           />
-        </div>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* 오프라인 배너 (하단 고정) */}
       {!isOnline && (

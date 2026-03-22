@@ -1,8 +1,6 @@
-// 참가자 셀프 체크인 화면 — Phase 2 구현 예정
+import { redirect } from "next/navigation";
+
+// 조원 셀프 체크인 기능 미제공 — /no-access로 리다이렉트
 export default function CheckinPage() {
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-app-bg">
-      <p className="text-muted-foreground">참가자 체크인 화면 (Phase 2 구현 예정)</p>
-    </main>
-  );
+  redirect("/no-access");
 }
