@@ -59,24 +59,9 @@ export default function GroupFeedView({
     <div className="flex-1 overflow-y-auto">
       {/* 오늘 일정 타임라인 */}
       <div className="px-4 py-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-bold text-muted-foreground">
-            {todayDay}일차 일정
-          </h2>
-          <button
-            onClick={() => activeSchedule && setStatusOpen(true)}
-            disabled={!activeSchedule}
-            className={cn(
-              "min-h-11 rounded-lg px-2 text-xs font-medium focus-visible:ring-2 focus-visible:ring-main-action",
-              activeSchedule
-                ? "text-gray-700"
-                : "text-muted-foreground opacity-50"
-            )}
-            aria-label="전체 현황 보기"
-          >
-            {activeSchedule ? "전체 현황 >" : "진행 중인 일정이 없어요"}
-          </button>
-        </div>
+        <h2 className="mb-3 text-sm font-bold text-muted-foreground">
+          {todayDay}일차 일정
+        </h2>
         <div className="space-y-2">
           {todaySchedules.map((s) => (
             <ScheduleCard
@@ -86,6 +71,7 @@ export default function GroupFeedView({
               checkIns={checkIns}
               scheduleCounts={scheduleCounts}
               onEnterCheckin={onEnterCheckin}
+              onStatusOpen={() => setStatusOpen(true)}
             />
           ))}
           {todaySchedules.length === 0 && (
@@ -134,12 +120,14 @@ function ScheduleCard({
   checkIns,
   scheduleCounts,
   onEnterCheckin,
+  onStatusOpen,
 }: {
   schedule: Schedule;
   members: Member[];
   checkIns: CheckIn[];
   scheduleCounts: Record<string, number>;
   onEnterCheckin: () => void;
+  onStatusOpen: () => void;
 }) {
   const status = getScheduleStatus(schedule);
   const timeDisplay = schedule.scheduled_time
@@ -150,35 +138,48 @@ function ScheduleCard({
   if (status === "active") {
     const checked = checkIns.filter((c) => !c.is_absent).length;
     return (
-      <button
-        onClick={onEnterCheckin}
+      <div
         className={cn(
-          "w-full rounded-2xl p-4 text-left",
-          "bg-main-action/20 ring-2 ring-main-action",
-          "min-h-11 focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2"
+          "rounded-2xl p-4",
+          "bg-main-action/20 ring-2 ring-main-action"
         )}
-        aria-label={`${schedule.title} 체크인 화면으로 이동`}
       >
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex-1">
-            <p className="font-medium">{schedule.title}</p>
-            {schedule.location && (
-              <p className="text-sm text-muted-foreground">{schedule.location}</p>
-            )}
-            {timeDisplay && (
-              <p className="mt-0.5 text-sm text-muted-foreground">{timeDisplay}</p>
-            )}
+        <button
+          onClick={onEnterCheckin}
+          className="w-full text-left min-h-11 focus-visible:ring-2 focus-visible:ring-main-action rounded-lg"
+          aria-label={`${schedule.title} 체크인 화면으로 이동`}
+        >
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex-1">
+              <p className="font-medium">{schedule.title}</p>
+              {schedule.location && (
+                <p className="text-sm text-muted-foreground">{schedule.location}</p>
+              )}
+              {timeDisplay && (
+                <p className="mt-0.5 text-sm text-muted-foreground">{timeDisplay}</p>
+              )}
+            </div>
+            <div className="flex flex-col items-end gap-1">
+              <span className="flex-shrink-0 rounded-full bg-main-action px-2 py-0.5 text-xs font-medium text-gray-900">
+                진행중
+              </span>
+              <span className="text-xs font-medium text-muted-foreground">
+                {checked}/{total}명
+              </span>
+            </div>
           </div>
-          <div className="flex flex-col items-end gap-1">
-            <span className="flex-shrink-0 rounded-full bg-main-action px-2 py-0.5 text-xs font-medium text-gray-900">
-              진행중
-            </span>
-            <span className="text-xs font-medium text-muted-foreground">
-              {checked}/{total}명
-            </span>
-          </div>
-        </div>
-      </button>
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onStatusOpen();
+          }}
+          className="mt-2 w-full min-h-11 rounded-xl bg-white/60 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
+          aria-label="전체 현황 보기"
+        >
+          전체 현황 보기 &gt;
+        </button>
+      </div>
     );
   }
 
