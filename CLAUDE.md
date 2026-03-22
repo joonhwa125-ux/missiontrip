@@ -523,8 +523,9 @@ NEXT_PUBLIC_TIMEZONE=Asia/Seoul               # 모든 시각 표시 KST 기준
 
 **진행중 카드:**
 - 노란 테두리(`#FEE500`) 강조 + '진행중' pill
-- 카드 내 정보: 일정명 + 장소 + 예정시각 + 경과시간(`activated_at`으로부터 로컬 타이머, 1분 간격)
-- **카드 내 요약 영역:** '보고 N/M조 · 확인 N/M명' 표시. **이 영역을 탭하면 바텀시트 열림** (KPI 드릴다운 패턴). 요약 영역에 [상세보기 >] 텍스트로 탭 가능함을 명시
+- 카드 내 정보: 일정명 + 장소 + 예정시각
+- **카드 내 Ring Gauge 지표:** 보고(초록 `#00C471`)와 확인(노란 `#FEE500`) 2개의 SVG 원형 프로그레스. 중앙에 퍼센트, 하단에 라벨(N/M). 비율을 시각적으로 즉시 전달
+- **[전체 현황 보기 >] 버튼:** 카드 하단에 분리된 버튼. 탭하면 바텀시트 열림. 조장 뷰와 동일한 `bg-white/60 rounded-xl` 스타일
 
 **대기 카드:**
 - 일반 표시 (예정 시각 + 장소) + [활성화] 버튼
@@ -720,7 +721,6 @@ src/actions/
 | 일정 활성화 | Server Action → RPC `activate_schedule` → broadcast |
 | 보고 영속화 | Server Action → group_reports UPSERT → broadcast |
 | 시간 변경 | Server Action → Schedules UPDATE `scheduled_time` → `schedule_updated` broadcast |
-| 경과 시간 | `Date.now() - activated_at` 실시간 카운트 (setInterval 1분), Polling 아님 — 로컬 타이머 |
 | 조 드릴다운 | 조 카드 탭 → 바텀시트: 미확인 인원 이름 + 전화 아이콘(`<a href="tel:">`) 리스트 |
 | 불참 처리 | 조장: 미완료 카드 [불참] 버튼 → 확인 모달 → INSERT (`is_absent=true, checked_by='leader'`). 관리자: 드릴다운에서 [불참] → INSERT (`is_absent=true, checked_by='admin'`). 조장은 자기 조원만 가능 |
 | 차량 그룹핑 | 현황 탭에서 `bus_name`으로 조 카드를 차량별 섹션으로 묶어 표시 |
