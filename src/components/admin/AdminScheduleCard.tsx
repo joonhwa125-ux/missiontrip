@@ -62,20 +62,24 @@ export default function AdminScheduleCard({
               <span>{elapsed}분 경과</span>
             </div>
           </div>
-          <span className="flex-shrink-0 rounded-full bg-main-action px-2 py-0.5 text-xs font-bold">
-            진행중
-          </span>
+          <div className="flex flex-col items-end gap-1">
+            <span className="flex-shrink-0 rounded-full bg-main-action px-2 py-0.5 text-xs font-bold text-gray-900">
+              진행중
+            </span>
+            <span className="text-xs font-medium text-muted-foreground">
+              보고 {reportedCount}/{totalGroups}조
+            </span>
+            <span className="text-xs font-medium text-muted-foreground">
+              확인 {checkedCount}/{totalMembers}명
+            </span>
+          </div>
         </div>
         <button
           onClick={onSummaryTap}
-          className="mt-3 w-full min-h-11 rounded-xl bg-white/60 px-3 py-2 text-left text-sm focus-visible:ring-2 focus-visible:ring-main-action"
-          aria-label="진행중 일정 상세보기"
+          className="mt-2 w-full min-h-11 rounded-xl bg-white/60 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
+          aria-label="전체 현황 보기"
         >
-          <span className="font-medium">
-            보고 {reportedCount}/{totalGroups}조 · 확인{" "}
-            {checkedCount}/{totalMembers}명
-          </span>
-          <span className="ml-2 text-muted-foreground">[상세보기 &gt;]</span>
+          전체 현황 보기 &gt;
         </button>
       </div>
     );
@@ -144,19 +148,31 @@ export default function AdminScheduleCard({
             </p>
           )}
         </div>
-        <span className="flex-shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-muted-foreground">
-          완료
-        </span>
+        <div className="flex flex-col items-end gap-1">
+          <span className="flex-shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+            완료
+          </span>
+          <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+            <svg
+              className="h-3 w-3 text-complete-check"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={3}
+              aria-hidden="true"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            {checkedCount}/{totalMembers}명
+          </span>
+        </div>
       </div>
       <button
         onClick={onSummaryTap}
-        className="mt-3 w-full min-h-11 rounded-xl bg-gray-50 px-3 py-2 text-left text-sm focus-visible:ring-2 focus-visible:ring-main-action"
-        aria-label="완료 일정 상세보기"
+        className="mt-2 w-full min-h-11 rounded-xl bg-gray-50 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action"
+        aria-label="완료 일정 현황 보기"
       >
-        <span className="font-medium">
-          &#10003; {checkedCount}/{totalMembers}명
-        </span>
-        <span className="ml-2 text-muted-foreground">[상세보기 &gt;]</span>
+        현황 보기 &gt;
       </button>
     </div>
   );
