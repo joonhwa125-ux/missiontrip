@@ -104,7 +104,10 @@ export default function AdminBottomSheet({
 
   return (
     <>
-      <Dialog open={schedule !== null} onOpenChange={(o) => !o && onClose()}>
+      <Dialog open={schedule !== null} onOpenChange={(o) => {
+        if (!o && drillGroup) return;
+        if (!o) onClose();
+      }}>
         <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{schedule?.title} 현황</DialogTitle>
