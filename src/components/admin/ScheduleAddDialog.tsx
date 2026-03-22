@@ -99,7 +99,7 @@ export default function ScheduleAddDialog({
               type="time"
               value={newTime}
               onChange={(e) => setNewTime(e.target.value)}
-              className="w-full rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+              className={`w-full rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action ${!newTime ? "text-transparent focus:text-foreground" : ""}`}
               aria-label="예정 시각 (선택)"
             />
             {!newTime && (
