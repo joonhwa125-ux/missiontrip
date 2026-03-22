@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
-import { formatTime, cn, getScheduleStatus } from "@/lib/utils";
+import { formatTime, cn, getScheduleStatus, sortSchedulesByStatus, getDefaultDay } from "@/lib/utils";
+import DayTabs from "@/components/common/DayTabs";
 import { COPY } from "@/lib/constants";
 import type { Schedule, CheckIn, Group, GroupMember } from "@/lib/types";
 import {
@@ -48,22 +49,19 @@ export default function GroupFeedView({
   const { isOnline, pendingCount } = useOfflineSync();
   const [statusOpen, setStatusOpen] = useState(false);
 
-  const todayDay =
-    activeSchedule?.day_number ??
-    schedules.find((s) => s.activated_at)?.day_number ??
-    1;
-
-  const todaySchedules = schedules.filter((s) => s.day_number === todayDay);
+  const days = Array.from(new Set(schedules.map((s) => s.day_number))).sort();
+  const [selectedDay, setSelectedDay] = useState(() => getDefaultDay(schedules));
+  const daySchedules = sortSchedulesByStatus(
+    schedules.filter((s) => s.day_number === selectedDay)
+  );
 
   return (
     <div className="flex-1 overflow-y-auto">
-      {/* 오늘 일정 타임라인 */}
+      {/* 일차 탭 + 일정 타임라인 */}
+      <DayTabs days={days} selected={selectedDay} onChange={setSelectedDay} />
       <div className="px-4 py-4">
-        <h2 className="mb-3 text-sm font-bold text-muted-foreground">
-          {todayDay}일차 일정
-        </h2>
         <div className="space-y-2">
-          {todaySchedules.map((s) => (
+          {daySchedules.map((s) => (
             <ScheduleCard
               key={s.id}
               schedule={s}
@@ -74,7 +72,7 @@ export default function GroupFeedView({
               onStatusOpen={() => setStatusOpen(true)}
             />
           ))}
-          {todaySchedules.length === 0 && (
+          {daySchedules.length === 0 && (
             <p className="py-4 text-center text-sm text-muted-foreground">
               {COPY.emptySchedule}
             </p>

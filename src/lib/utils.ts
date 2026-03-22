@@ -41,3 +41,23 @@ export function getScheduleStatus(schedule: Schedule): ScheduleStatus {
   if (schedule.activated_at) return "completed";
   return "waiting";
 }
+
+// 일정을 상태별 정렬: active(0) > waiting(1) > completed(2), 동일 상태면 sort_order
+const STATUS_ORDER: Record<ScheduleStatus, number> = { active: 0, waiting: 1, completed: 2 };
+
+export function sortSchedulesByStatus(schedules: Schedule[]): Schedule[] {
+  return [...schedules].sort((a, b) => {
+    const diff = STATUS_ORDER[getScheduleStatus(a)] - STATUS_ORDER[getScheduleStatus(b)];
+    return diff !== 0 ? diff : a.sort_order - b.sort_order;
+  });
+}
+
+// 활성 일정의 day_number 반환 (없으면 가장 최근 활성화된 일정, 그것도 없으면 1)
+export function getDefaultDay(schedules: Schedule[]): number {
+  const active = schedules.find((s) => s.is_active);
+  if (active) return active.day_number;
+  const lastActivated = [...schedules]
+    .filter((s) => s.activated_at)
+    .sort((a, b) => new Date(b.activated_at!).getTime() - new Date(a.activated_at!).getTime());
+  return lastActivated[0]?.day_number ?? 1;
+}

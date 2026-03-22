@@ -35,26 +35,34 @@ export default async function AdminPage() {
       .order("sort_order"),
   ]);
 
-  let checkIns: { user_id: string; is_absent: boolean; checked_at: string }[] = [];
-  let reports: {
-    group_id: string;
-    pending_count: number;
-    reported_at: string;
-  }[] = [];
+  // 활성화된 적 있는 모든 일정의 checkIns + reports (바텀시트용)
+  const activatedIds = ((schedules as Schedule[]) ?? [])
+    .filter((s) => s.activated_at)
+    .map((s) => s.id);
 
-  if (activeSchedule) {
-    const [{ data: ci }, { data: rp }] = await Promise.all([
+  type CiRow = { schedule_id: string; user_id: string; is_absent: boolean; checked_at: string };
+  type RpRow = { schedule_id: string; group_id: string; pending_count: number; reported_at: string };
+
+  const checkInsMap: Record<string, CiRow[]> = {};
+  const reportsMap: Record<string, RpRow[]> = {};
+
+  if (activatedIds.length > 0) {
+    const [{ data: allCi }, { data: allRp }] = await Promise.all([
       supabase
         .from("check_ins")
-        .select("user_id, is_absent, checked_at")
-        .eq("schedule_id", activeSchedule.id),
+        .select("schedule_id, user_id, is_absent, checked_at")
+        .in("schedule_id", activatedIds),
       supabase
         .from("group_reports")
-        .select("group_id, pending_count, reported_at")
-        .eq("schedule_id", activeSchedule.id),
+        .select("schedule_id, group_id, pending_count, reported_at")
+        .in("schedule_id", activatedIds),
     ]);
-    checkIns = ci ?? [];
-    reports = rp ?? [];
+    for (const ci of allCi ?? []) {
+      (checkInsMap[ci.schedule_id] ??= []).push(ci);
+    }
+    for (const rp of allRp ?? []) {
+      (reportsMap[rp.schedule_id] ??= []).push(rp);
+    }
   }
 
   return (
@@ -65,8 +73,8 @@ export default async function AdminPage() {
       members={members ?? []}
       activeSchedule={(activeSchedule as Schedule) ?? null}
       schedules={(schedules as Schedule[]) ?? []}
-      initialCheckIns={checkIns}
-      initialReports={reports}
+      initialCheckInsMap={checkInsMap}
+      initialReportsMap={reportsMap}
     />
   );
 }

@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, type SetStateAction } from "react";
 import { useRouter } from "next/navigation";
 import { useRealtime } from "@/hooks/useRealtime";
-import { cn } from "@/lib/utils";
-import StatusTab from "./StatusTab";
-import ScheduleTab from "./ScheduleTab";
+import { sortSchedulesByStatus, getDefaultDay } from "@/lib/utils";
+import DayTabs from "@/components/common/DayTabs";
+import AdminScheduleList from "./AdminScheduleList";
+import AdminBottomSheet from "./AdminBottomSheet";
+import ScheduleAddDialog from "./ScheduleAddDialog";
+import TimeEditDialog from "./TimeEditDialog";
 import type { Group, Schedule, AdminMember, AdminCheckIn } from "@/lib/types";
 
-type Member = AdminMember;
-type CheckIn = AdminCheckIn;
 interface Report {
   group_id: string;
   pending_count: number;
@@ -19,39 +20,40 @@ interface Report {
 interface Props {
   currentUser: { id: string };
   groups: Group[];
-  members: Member[];
+  members: AdminMember[];
   activeSchedule: Schedule | null;
   schedules: Schedule[];
-  initialCheckIns: CheckIn[];
-  initialReports: Report[];
+  initialCheckInsMap: Record<string, AdminCheckIn[]>;
+  initialReportsMap: Record<string, Report[]>;
 }
-
-type TabName = "status" | "schedule";
-
-const TABS: { key: TabName; label: string }[] = [
-  { key: "status", label: "현황" },
-  { key: "schedule", label: "일정" },
-];
 
 export default function AdminView({
   groups,
   members: initialMembers,
   activeSchedule,
   schedules: initialSchedules,
-  initialCheckIns,
-  initialReports,
+  initialCheckInsMap,
+  initialReportsMap,
 }: Props) {
   const router = useRouter();
-  const [tab, setTab] = useState<TabName>("status");
   const [schedules, setSchedules] = useState(initialSchedules);
   const [members, setMembers] = useState(initialMembers);
-  const [checkIns, setCheckIns] = useState(initialCheckIns);
-  const [reports, setReports] = useState(initialReports);
+  const [checkInsMap, setCheckInsMap] = useState(initialCheckInsMap);
+  const [reportsMap, setReportsMap] = useState(initialReportsMap);
   const [toast, setToast] = useState<string | null>(null);
 
-  const showToast = useCallback((msg: string) => {
-    setToast(msg);
-  }, []);
+  // 일차 탭
+  const days = Array.from(new Set(schedules.map((s) => s.day_number))).sort();
+  const [selectedDay, setSelectedDay] = useState(() => getDefaultDay(schedules));
+
+  // 바텀시트 대상 일정
+  const [bottomSheetSchedule, setBottomSheetSchedule] = useState<Schedule | null>(null);
+
+  // 다이얼로그
+  const [addOpen, setAddOpen] = useState(false);
+  const [timeEditTarget, setTimeEditTarget] = useState<Schedule | null>(null);
+
+  const showToast = useCallback((msg: string) => setToast(msg), []);
 
   useEffect(() => {
     if (!toast) return;
@@ -59,6 +61,7 @@ export default function AdminView({
     return () => clearTimeout(timer);
   }, [toast]);
 
+  // Realtime 구독
   useRealtime(null, true, {
     onScheduleActivated: () => router.refresh(),
     onScheduleUpdated: ({ schedule_id, scheduled_time }) => {
@@ -68,82 +71,110 @@ export default function AdminView({
       showToast("일정 시간이 변경되었어요");
     },
     onCheckinUpdated: ({ user_id, action }) => {
-      setCheckIns((prev) => {
+      if (!activeSchedule) return;
+      setCheckInsMap((prev) => {
+        const sid = activeSchedule.id;
+        const list = prev[sid] ?? [];
         if (action === "insert") {
-          if (prev.some((c) => c.user_id === user_id)) return prev;
-          return [...prev, { user_id, is_absent: false, checked_at: new Date().toISOString() }];
+          if (list.some((c) => c.user_id === user_id)) return prev;
+          return { ...prev, [sid]: [...list, { user_id, is_absent: false, checked_at: new Date().toISOString() }] };
         }
-        return prev.filter((c) => c.user_id !== user_id);
+        return { ...prev, [sid]: list.filter((c) => c.user_id !== user_id) };
       });
     },
     onGroupReported: ({ group_id, pending_count }) => {
-      setReports((prev) => {
-        const idx = prev.findIndex((r) => r.group_id === group_id);
-        const newReport = {
-          group_id,
-          pending_count,
-          reported_at: new Date().toISOString(),
-        };
+      if (!activeSchedule) return;
+      setReportsMap((prev) => {
+        const sid = activeSchedule.id;
+        const list = prev[sid] ?? [];
+        const newReport = { group_id, pending_count, reported_at: new Date().toISOString() };
+        const idx = list.findIndex((r) => r.group_id === group_id);
         if (idx >= 0) {
-          const updated = [...prev];
+          const updated = [...list];
           updated[idx] = newReport;
-          return updated;
+          return { ...prev, [sid]: updated };
         }
-        return [...prev, newReport];
+        return { ...prev, [sid]: [...list, newReport] };
       });
     },
   });
 
+  // 현재 일차의 정렬된 일정
+  const daySchedules = sortSchedulesByStatus(
+    schedules.filter((s) => s.day_number === selectedDay)
+  );
+
+  // 바텀시트용 checkIns 업데이터 (특정 schedule_id)
+  const handleBottomSheetCheckInsChange = useCallback(
+    (action: SetStateAction<AdminCheckIn[]>) => {
+      if (!bottomSheetSchedule) return;
+      const sid = bottomSheetSchedule.id;
+      setCheckInsMap((prev) => {
+        const current = prev[sid] ?? [];
+        const next = typeof action === "function" ? action(current) : action;
+        return { ...prev, [sid]: next };
+      });
+    },
+    [bottomSheetSchedule]
+  );
+
+  const isBottomSheetReadOnly = bottomSheetSchedule
+    ? !bottomSheetSchedule.is_active
+    : false;
+
   return (
     <div className="flex min-h-full flex-col">
-      {/* 헤더 + 탭 */}
-      <header className="bg-main-action px-4 pt-6 pb-0">
-        <h1 className="mb-3 text-xl font-bold">미션트립 관리자</h1>
-        <div role="tablist" className="flex">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              role="tab"
-              aria-selected={tab === t.key}
-              onClick={() => setTab(t.key)}
-              className={cn(
-                "flex-1 border-b-2 py-2.5 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-ring",
-                tab === t.key
-                  ? "border-gray-900 text-gray-900"
-                  : "border-transparent text-gray-700"
-              )}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </header>
-
-      {/* 탭 콘텐츠 */}
-      <div role="tabpanel" className="flex-1">
-        {tab === "status" && (
-          <StatusTab
-            groups={groups}
-            members={members}
-            activeSchedule={activeSchedule}
-            checkIns={checkIns}
-            reports={reports}
-            onMembersChange={setMembers}
-            onCheckInsChange={setCheckIns}
-          />
-        )}
-        {tab === "schedule" && (
-          <ScheduleTab
-            schedules={schedules}
-            onSchedulesChange={setSchedules}
-            onToast={showToast}
-            onRefresh={() => router.refresh()}
-            checkIns={checkIns}
-            totalMemberCount={members.length}
-            activeSchedule={activeSchedule}
-          />
-        )}
+      {/* 일차 탭 (제목 헤더 없음 — HTML <title>로 접근성 충족) */}
+      <div className="bg-main-action">
+        <DayTabs days={days} selected={selectedDay} onChange={setSelectedDay} />
       </div>
+
+      {/* 일정 카드 목록 */}
+      <div role="tabpanel" className="flex-1">
+        <AdminScheduleList
+          schedules={daySchedules}
+          allSchedules={schedules}
+          checkInsMap={checkInsMap}
+          reportsMap={reportsMap}
+          groups={groups}
+          members={members}
+          activeSchedule={activeSchedule}
+          onBottomSheet={setBottomSheetSchedule}
+          onTimeEdit={setTimeEditTarget}
+          onToast={showToast}
+          onRefresh={() => router.refresh()}
+          onAddOpen={() => setAddOpen(true)}
+        />
+      </div>
+
+      {/* 바텀시트 — 전체 현황 */}
+      <AdminBottomSheet
+        schedule={bottomSheetSchedule}
+        groups={groups}
+        members={members}
+        checkIns={bottomSheetSchedule ? (checkInsMap[bottomSheetSchedule.id] ?? []) : []}
+        reports={bottomSheetSchedule ? (reportsMap[bottomSheetSchedule.id] ?? []) : []}
+        isReadOnly={isBottomSheetReadOnly}
+        onClose={() => setBottomSheetSchedule(null)}
+        onMembersChange={setMembers}
+        onCheckInsChange={handleBottomSheetCheckInsChange}
+      />
+
+      {/* 일정 추가 다이얼로그 */}
+      <ScheduleAddDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        schedules={schedules}
+        onRefresh={() => router.refresh()}
+      />
+
+      {/* 시간 수정 다이얼로그 */}
+      <TimeEditDialog
+        schedule={timeEditTarget}
+        onClose={() => setTimeEditTarget(null)}
+        onSchedulesChange={(updater) => setSchedules(updater)}
+        onToast={showToast}
+      />
 
       {/* 토스트 */}
       {toast && (
