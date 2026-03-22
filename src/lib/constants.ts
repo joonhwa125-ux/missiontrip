@@ -59,6 +59,7 @@ export const COPY = {
   totalCount: (checked: number, total: number) => `${checked} / ${total}명 탑승 완료`,
   allComplete: (groupName: string) => `${groupName} 전원 탑승 완료!`,
   reportButtonComplete: "우리 조 다 탔어요! 보고하기",
+  reportButtonDone: "보고 완료!",
   reportButtonPending: (n: number) => `${n}명 남았어요`,
   offline: (n: number) => `오프라인 상태예요. ${n}건 저장 중 — 연결되면 자동으로 보낼게요`,
 } as const;

@@ -47,6 +47,7 @@ export default function GroupCheckinView({
   const [notice, setNotice] = useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = useState<Member | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
+  const [reported, setReported] = useState(false);
   const [, startTransition] = useTransition();
 
   const { isOnline, pendingCount, addPending } = useOfflineSync();
@@ -120,6 +121,7 @@ export default function GroupCheckinView({
     if (!cancelTarget || !schedule) return;
     const userId = cancelTarget.id;
     setCancelTarget(null);
+    setReported(false);
     setCheckIns((prev) => prev.filter((c) => c.user_id !== userId));
     startTransition(async () => {
       const res = await deleteCheckin(userId, schedule.id);
@@ -136,6 +138,7 @@ export default function GroupCheckinView({
     startTransition(async () => {
       const res = await submitReport(currentUser.group_id, schedule.id, unchecked);
       if (res.ok) {
+        setReported(true);
         await broadcast(CHANNEL_ADMIN, EVENT_GROUP_REPORTED, {
           group_id: currentUser.group_id,
           pending_count: unchecked,
@@ -230,31 +233,33 @@ export default function GroupCheckinView({
       </div>
 
       {/* 전원 완료 축하 화면 */}
-      {allComplete ? (
-        <div className="flex flex-1 flex-col items-center justify-center px-6 py-12 text-center">
+      {allComplete && (
+        <div className="flex flex-col items-center px-6 py-8 text-center">
           <div className="mb-4 text-6xl" aria-hidden="true">
             🎉
           </div>
           <h2 className="mb-2 text-2xl font-bold">{COPY.allComplete(groupName)}</h2>
-          <p className="mb-8 text-muted-foreground">모두 탑승했어요! 보고해주세요.</p>
+          <p className="text-muted-foreground">
+            {reported ? "보고 완료! 수고하셨어요." : "모두 탑승했어요! 보고해주세요."}
+          </p>
         </div>
-      ) : (
-        /* 조원 카드 리스트 */
-        <ul
-          className="flex flex-col gap-2 px-4 pb-36 pt-3"
-          aria-label="조원 탑승 현황"
-        >
-          {sorted.map((m) => (
-            <MemberCard
-              key={m.id}
-              user={m}
-              checkIn={checkIns.find((c) => c.user_id === m.id) ?? null}
-              onCheckin={handleCheckin}
-              onCancel={setCancelTarget}
-            />
-          ))}
-        </ul>
       )}
+
+      {/* 조원 카드 리스트 — 전원 완료 시에도 취소 가능하도록 항상 표시 */}
+      <ul
+        className="flex flex-col gap-2 px-4 pb-36 pt-3"
+        aria-label="조원 탑승 현황"
+      >
+        {sorted.map((m) => (
+          <MemberCard
+            key={m.id}
+            user={m}
+            checkIn={checkIns.find((c) => c.user_id === m.id) ?? null}
+            onCheckin={handleCheckin}
+            onCancel={setCancelTarget}
+          />
+        ))}
+      </ul>
 
       {/* 오프라인 배너 (하단 고정) */}
       {!isOnline && (
@@ -273,12 +278,18 @@ export default function GroupCheckinView({
           onClick={() => (allComplete ? handleReport() : setReportOpen(true))}
           className={cn(
             "w-full min-h-11 rounded-2xl py-4 text-base font-bold transition-colors focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2",
-            allComplete ? "bg-main-action" : "bg-gray-100 text-gray-700"
+            reported
+              ? "bg-complete-card text-[#27500A]"
+              : allComplete
+                ? "bg-main-action"
+                : "bg-gray-100 text-gray-700"
           )}
         >
-          {allComplete
-            ? COPY.reportButtonComplete
-            : COPY.reportButtonPending(uncheckedCount)}
+          {reported
+            ? COPY.reportButtonDone
+            : allComplete
+              ? COPY.reportButtonComplete
+              : COPY.reportButtonPending(uncheckedCount)}
         </button>
       </div>
 
