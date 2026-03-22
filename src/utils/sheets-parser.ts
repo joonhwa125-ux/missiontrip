@@ -7,6 +7,8 @@ import type {
 } from "@/lib/types";
 import {
   ALLOWED_EMAIL_DOMAIN,
+  NO_LOGIN_EMAIL_DOMAIN,
+  MEMBER_EMAIL_PREFIX,
   MIN_DAY_NUMBER,
   MAX_DAY_NUMBER,
 } from "@/lib/constants";
@@ -16,6 +18,12 @@ const ROLE_MAP: Record<string, UserRole> = {
   조장: "leader",
   관리자: "admin",
 };
+
+// Google Sheets URL에서 Sheet ID 추출
+export function extractSheetId(url: string): string | null {
+  const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+  return match ? match[1] : null;
+}
 
 // CSV 문자열 → 2D 배열
 export function parseCsv(csv: string): string[][] {
@@ -27,88 +35,96 @@ export function parseCsv(csv: string): string[][] {
     );
 }
 
-// 조구성 시트 파싱
-export function parseGroupsSheet(rows: string[][]): {
+// 참가자 시트 파싱 (4컬럼: 이름, 전화번호, 역할, 소속조)
+// groups는 소속조 고유값에서 자동 추출
+export function parseUsersSheet(rows: string[][]): {
+  users: ParsedUser[];
   groups: ParsedGroup[];
   errors: ValidationError[];
 } {
-  const groups: ParsedGroup[] = [];
-  const errors: ValidationError[] = [];
-
-  for (let i = 1; i < rows.length; i++) {
-    const row = rows[i];
-    if (!row || row.every((c) => !c)) continue;
-
-    const name = row[0]?.trim();
-    const busName = row[1]?.trim() || null;
-
-    if (!name) {
-      errors.push({ sheet: "groups", row: i + 1, field: "조이름", message: "조 이름이 없어요" });
-      continue;
-    }
-
-    groups.push({ name, bus_name: busName });
-  }
-
-  return { groups, errors };
-}
-
-// 참가자 시트 파싱
-export function parseUsersSheet(
-  rows: string[][],
-  knownGroupNames: Set<string>
-): { users: ParsedUser[]; errors: ValidationError[] } {
   const users: ParsedUser[] = [];
   const errors: ValidationError[] = [];
-  const emailSet = new Set<string>();
+  const leaderEmailSet = new Set<string>();
+  const groupNameSet = new Set<string>();
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     if (!row || row.every((c) => !c)) continue;
 
     const name = row[0]?.trim();
-    const email = row[1]?.trim().toLowerCase();
-    const phone = row[2]?.trim() || null;
-    const roleRaw = row[3]?.trim();
-    const groupName = row[4]?.trim();
+    const phone = row[1]?.trim() || null;
+    const roleRaw = row[2]?.trim();
+    const groupName = row[3]?.trim();
 
-    // 이메일 형식
-    if (!email || !email.includes("@")) {
-      errors.push({ sheet: "users", row: i + 1, field: "이메일", message: "이메일 형식이 올바르지 않아요" });
+    // 이름 필수
+    if (!name) {
+      errors.push({
+        sheet: "users",
+        row: i + 1,
+        field: "이름",
+        message: "이름이 없어요",
+      });
       continue;
     }
-    if (!email.endsWith(ALLOWED_EMAIL_DOMAIN)) {
-      errors.push({ sheet: "users", row: i + 1, field: "이메일", message: `${ALLOWED_EMAIL_DOMAIN} 도메인만 허용돼요` });
-      continue;
-    }
-
-    // 이메일 중복
-    if (emailSet.has(email)) {
-      errors.push({ sheet: "users", row: i + 1, field: "이메일", message: "이메일이 중복되어 있어요" });
-      continue;
-    }
-    emailSet.add(email);
 
     // 역할값
     const role = ROLE_MAP[roleRaw];
     if (!role) {
-      errors.push({ sheet: "users", row: i + 1, field: "역할", message: "역할은 조원/조장/관리자만 가능해요" });
+      errors.push({
+        sheet: "users",
+        row: i + 1,
+        field: "역할",
+        message: "역할은 조원/조장/관리자만 가능해요",
+      });
       continue;
     }
 
-    // 소속조 존재
-    if (!knownGroupNames.has(groupName)) {
-      errors.push({ sheet: "users", row: i + 1, field: "소속조", message: "조구성에 없는 조 이름이에요" });
+    // 소속조 필수
+    if (!groupName) {
+      errors.push({
+        sheet: "users",
+        row: i + 1,
+        field: "소속조",
+        message: "소속조가 없어요",
+      });
       continue;
     }
+
+    // 이메일 자동 생성
+    let email: string;
+    if (role === "leader" || role === "admin") {
+      email = `${name.toLowerCase()}${ALLOWED_EMAIL_DOMAIN}`;
+      // 리더/관리자 이메일 중복 검사
+      if (leaderEmailSet.has(email)) {
+        errors.push({
+          sheet: "users",
+          row: i + 1,
+          field: "이름",
+          message: `${email} 이메일이 중복되어 있어요`,
+        });
+        continue;
+      }
+      leaderEmailSet.add(email);
+    } else {
+      email = `${MEMBER_EMAIL_PREFIX}.${name}.${i}${NO_LOGIN_EMAIL_DOMAIN}`;
+    }
+
+    // 소속조 수집
+    groupNameSet.add(groupName);
 
     users.push({ name, email, phone, role, group_name: groupName });
   }
 
-  return { users, errors };
+  // 소속조 고유값 → ParsedGroup[] (name = bus_name)
+  const groups: ParsedGroup[] = Array.from(groupNameSet).map((gn) => ({
+    name: gn,
+    bus_name: gn,
+  }));
+
+  return { users, groups, errors };
 }
 
-// 일정 시트 파싱
+// 일정 시트 파싱 (5컬럼: 일차, 순서, 일정명, 장소, 예정시각)
 export function parseSchedulesSheet(rows: string[][]): {
   schedules: ParsedSchedule[];
   errors: ValidationError[];
@@ -126,21 +142,28 @@ export function parseSchedulesSheet(rows: string[][]): {
     const location = row[3]?.trim() || null;
     const scheduledTimeRaw = row[4]?.trim() || null;
 
-    if (isNaN(dayNumber) || dayNumber < MIN_DAY_NUMBER || dayNumber > MAX_DAY_NUMBER) {
-      errors.push({ sheet: "schedules", row: i + 1, field: "일차", message: `일차는 ${MIN_DAY_NUMBER}~${MAX_DAY_NUMBER}만 가능해요` });
+    if (
+      isNaN(dayNumber) ||
+      dayNumber < MIN_DAY_NUMBER ||
+      dayNumber > MAX_DAY_NUMBER
+    ) {
+      errors.push({
+        sheet: "schedules",
+        row: i + 1,
+        field: "일차",
+        message: `일차는 ${MIN_DAY_NUMBER}~${MAX_DAY_NUMBER}만 가능해요`,
+      });
       continue;
     }
 
     if (!title) {
-      errors.push({ sheet: "schedules", row: i + 1, field: "일정명", message: "일정명이 없어요" });
+      errors.push({
+        sheet: "schedules",
+        row: i + 1,
+        field: "일정명",
+        message: "일정명이 없어요",
+      });
       continue;
-    }
-
-    // HH:MM → ISO 변환 (날짜 부분은 미정이라 null 처리)
-    let scheduledTime: string | null = null;
-    if (scheduledTimeRaw) {
-      // 간단한 HH:MM 형식이면 그대로 저장 (DB에서 timestamptz)
-      scheduledTime = scheduledTimeRaw;
     }
 
     schedules.push({
@@ -148,7 +171,7 @@ export function parseSchedulesSheet(rows: string[][]): {
       sort_order: isNaN(sortOrder) ? i : sortOrder,
       title,
       location,
-      scheduled_time: scheduledTime,
+      scheduled_time: scheduledTimeRaw,
     });
   }
 

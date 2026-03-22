@@ -25,8 +25,12 @@ export const MEMBER_CARD_MIN_HEIGHT = 72; // px — 조원 카드 최소 높이
 
 // 참가 규모
 export const EXPECTED_TOTAL_MEMBERS = 200;
-export const EXPECTED_GROUP_COUNT = 20;
-export const EXPECTED_MEMBERS_PER_GROUP = 10;
+export const EXPECTED_GROUP_COUNT = 10;
+export const EXPECTED_LEADER_COUNT = 18;
+
+// 이메일 자동 생성 (setup 파싱용)
+export const NO_LOGIN_EMAIL_DOMAIN = "@nologin.internal";
+export const MEMBER_EMAIL_PREFIX = "_member";
 
 // 일차 범위
 export const MIN_DAY_NUMBER = 1;

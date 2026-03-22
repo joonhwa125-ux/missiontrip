@@ -92,21 +92,42 @@ const supabase = createServerClient(
 
 ---
 
-## TSG-002: (템플릿) 다음 이슈 기록용
+## TSG-002: Vercel Production 브랜치 불일치로 배포 미반영
 
-**일시:**
-**심각도:** Low / Medium / High / Critical
-**영향 범위:**
+**일시:** 2026-03-22
+**심각도:** Medium — 코드 push 후 프로덕션에 반영 안 됨
+**영향 범위:** 전체 배포
 
 ### 증상
 
+1. `master` 브랜치에 push
+2. Vercel Deployments에서 빌드 완료 표시
+3. 사이트 접속 시 이전 코드 그대로 — 변경사항 미반영
+4. 강제 새로고침(Ctrl+Shift+R)해도 동일
+
 ### 근본 원인
+
+- Git 기본 브랜치를 `master`로 통일했지만, **Vercel Production 브랜치는 `main`**으로 설정되어 있었음
+- `master`로 push하면 Vercel에서 **Preview** 배포만 생성
+- 프로덕션 도메인은 여전히 `main` 브랜치의 마지막 배포를 서빙
 
 ### 해결
 
+- Vercel Dashboard → Settings → Environments → Production 클릭
+- Branch Tracking을 `main` → `master`로 변경 후 Save
+- 빈 커밋 push로 새 Production 배포 트리거
+
 ### 교훈
 
+- Git 브랜치와 Vercel Production 브랜치는 **별개 설정**. 한쪽만 바꾸면 불일치 발생
+- Vercel Deployments 목록에서 **Production vs Preview 라벨**을 반드시 확인
+- 배포 후 반영이 안 되면 첫 번째로 브랜치 설정을 의심할 것
+
 ### 진단 체크리스트
+
+- [ ] Vercel Dashboard → Deployments에서 최신 커밋이 "Production"인지 "Preview"인지 확인
+- [ ] Settings → Environments → Production의 Branch Tracking이 올바른 브랜치인지 확인
+- [ ] `git branch -a`로 로컬/리모트 브랜치 상태 확인
 
 ---
 

@@ -98,7 +98,7 @@ export interface ActionResult<T = void> {
 // /setup 파싱 데이터
 export interface ParsedGroup {
   name: string;
-  bus_name: string | null;
+  bus_name: string;
 }
 
 export interface ParsedUser {
@@ -125,7 +125,7 @@ export interface SetupPreviewData {
 }
 
 export interface ValidationError {
-  sheet: "groups" | "users" | "schedules";
+  sheet: "users" | "schedules";
   row: number;
   field: string;
   message: string;
