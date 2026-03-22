@@ -9,7 +9,7 @@ import {
   EVENT_SCHEDULE_ACTIVATED,
   EVENT_SCHEDULE_UPDATED,
 } from "@/lib/constants";
-import { cn, formatTime, getScheduleStatus } from "@/lib/utils";
+import { cn, formatTime, parseKSTTime, getScheduleStatus } from "@/lib/utils";
 import type { Schedule } from "@/lib/types";
 import {
   Dialog,
@@ -132,12 +132,7 @@ export default function ScheduleTab({
   const handleTimeEdit = () => {
     if (!timeTarget || !timeValue) return;
     startTransition(async () => {
-      const [hh, mm] = timeValue.split(":");
-      const d = timeTarget.scheduled_time
-        ? new Date(timeTarget.scheduled_time)
-        : new Date();
-      d.setHours(parseInt(hh), parseInt(mm), 0, 0);
-      const iso = d.toISOString();
+      const iso = parseKSTTime(timeValue, timeTarget.scheduled_time);
       const res = await updateScheduleTime(timeTarget.id, iso);
       if (res.ok) {
         onSchedulesChange(
@@ -160,14 +155,10 @@ export default function ScheduleTab({
     startTransition(async () => {
       let scheduledTime: string | null = null;
       if (newTime) {
-        const [hh, mm] = newTime.split(":");
-        // 같은 day_number의 기존 일정 날짜를 참조하여 날짜 보존
         const sameDay = schedules.find(
           (s) => s.day_number === parseInt(newDay) && s.scheduled_time
         );
-        const d = sameDay ? new Date(sameDay.scheduled_time!) : new Date();
-        d.setHours(parseInt(hh), parseInt(mm), 0, 0);
-        scheduledTime = d.toISOString();
+        scheduledTime = parseKSTTime(newTime, sameDay?.scheduled_time);
       }
       const res = await createSchedule(
         newTitle.trim(),

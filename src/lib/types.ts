@@ -60,6 +60,13 @@ export interface CheckIn {
   is_absent: boolean;
 }
 
+/** 관리자 현황용 체크인 (경량) */
+export interface AdminCheckIn {
+  user_id: string;
+  is_absent: boolean;
+  checked_at?: string;
+}
+
 export interface GroupReport {
   id: string;
   group_id: string;

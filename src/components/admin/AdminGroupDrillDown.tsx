@@ -20,15 +20,10 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import type { Group, Schedule, AdminMember } from "@/lib/types";
+import type { Group, Schedule, AdminMember, AdminCheckIn } from "@/lib/types";
 
 type Member = AdminMember;
-
-interface CheckIn {
-  user_id: string;
-  is_absent: boolean;
-  checked_at?: string;
-}
+type CheckIn = AdminCheckIn;
 
 type ConfirmAction =
   | { type: "absent"; member: Member }
@@ -87,43 +82,6 @@ export default function AdminGroupDrillDown({
 
   if (!group) return null;
 
-  return (
-    <>
-      <Dialog open={!!group} onOpenChange={(o) => !o && onClose()}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{group.name}</DialogTitle>
-          </DialogHeader>
-          <DialogDescription aria-live="polite">
-            {checkedCount}/{totalCount}명 확인
-          </DialogDescription>
-          <ul className="space-y-2">
-            {sorted.map((m) => (
-              <MemberRow
-                key={m.id}
-                member={m}
-                checkin={checkedMap.get(m.id) ?? null}
-                activeSchedule={activeSchedule}
-                onCheckin={() => handleCheckin(m)}
-                onAbsent={() => setConfirm({ type: "absent", member: m })}
-                onCancel={() => setConfirm({ type: "cancel", member: m })}
-                onPromote={() => setConfirm({ type: "promote", member: m })}
-                onDemote={() => setConfirm({ type: "demote", member: m })}
-              />
-            ))}
-          </ul>
-        </DialogContent>
-      </Dialog>
-
-      {/* 확인 모달 */}
-      <ConfirmDialog
-        action={confirm}
-        onClose={() => setConfirm(null)}
-        onConfirm={() => handleConfirm(confirm)}
-      />
-    </>
-  );
-
   function handleCheckin(member: Member) {
     if (!activeSchedule) return;
     startTransition(async () => {
@@ -136,16 +94,6 @@ export default function AdminGroupDrillDown({
         await broadcastCheckin(member.group_id, member.id, "insert");
       }
     });
-  }
-
-  function handleConfirm(action: ConfirmAction | null) {
-    if (!action) return;
-    setConfirm(null);
-
-    if (action.type === "absent") handleAbsent(action.member);
-    if (action.type === "cancel") handleCancel(action.member);
-    if (action.type === "promote") handleRoleChange(action.member, "leader");
-    if (action.type === "demote") handleRoleChange(action.member, "member");
   }
 
   function handleAbsent(member: Member) {
@@ -184,6 +132,16 @@ export default function AdminGroupDrillDown({
     });
   }
 
+  function handleConfirm(action: ConfirmAction | null) {
+    if (!action) return;
+    setConfirm(null);
+
+    if (action.type === "absent") handleAbsent(action.member);
+    if (action.type === "cancel") handleCancel(action.member);
+    if (action.type === "promote") handleRoleChange(action.member, "leader");
+    if (action.type === "demote") handleRoleChange(action.member, "member");
+  }
+
   async function broadcastCheckin(groupId: string, userId: string, action: "insert" | "delete") {
     const payload = {
       user_id: userId,
@@ -195,6 +153,43 @@ export default function AdminGroupDrillDown({
       broadcast(CHANNEL_ADMIN, EVENT_CHECKIN_UPDATED, payload),
     ]);
   }
+
+  return (
+    <>
+      <Dialog open={!!group} onOpenChange={(o) => !o && onClose()}>
+        <DialogContent className="max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{group.name}</DialogTitle>
+          </DialogHeader>
+          <DialogDescription aria-live="polite">
+            {checkedCount}/{totalCount}명 확인
+          </DialogDescription>
+          <ul className="space-y-2">
+            {sorted.map((m) => (
+              <MemberRow
+                key={m.id}
+                member={m}
+                checkin={checkedMap.get(m.id) ?? null}
+                activeSchedule={activeSchedule}
+                onCheckin={() => handleCheckin(m)}
+                onAbsent={() => setConfirm({ type: "absent", member: m })}
+                onCancel={() => setConfirm({ type: "cancel", member: m })}
+                onPromote={() => setConfirm({ type: "promote", member: m })}
+                onDemote={() => setConfirm({ type: "demote", member: m })}
+              />
+            ))}
+          </ul>
+        </DialogContent>
+      </Dialog>
+
+      {/* 확인 모달 */}
+      <ConfirmDialog
+        action={confirm}
+        onClose={() => setConfirm(null)}
+        onConfirm={() => handleConfirm(confirm)}
+      />
+    </>
+  );
 }
 
 // 인원 행 컴포넌트

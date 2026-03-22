@@ -46,6 +46,8 @@ export default function GroupView({
   const [schedules, setSchedules] = useState(initialSchedules);
   const [checkIns, setCheckIns] = useState<CheckIn[]>(initialCheckIns);
   const [toast, setToast] = useState<string | null>(null);
+  // CR-009: activeSchedule을 state로 관리 — 체크인 뷰에서도 Realtime 갱신 반영
+  const [currentSchedule, setCurrentSchedule] = useState(activeSchedule);
 
   // CR-010: 뒤로가기 히스토리 관리
   const viewRef = useRef(view);
@@ -71,11 +73,21 @@ export default function GroupView({
 
   // Realtime 구독 — GroupView 레벨 (feed <-> checkin 전환 시에도 유지)
   useRealtime(currentUser.group_id, false, {
-    onScheduleActivated: ({ title }) => {
+    onScheduleActivated: ({ schedule_id, title }) => {
       if (viewRef.current === "checkin") {
         showToast(`새로운 일정이 시작되었어요: ${title}`);
+        setCurrentSchedule((prev) => ({
+          id: schedule_id,
+          title,
+          location: prev?.location ?? null,
+          day_number: prev?.day_number ?? 1,
+          sort_order: prev?.sort_order ?? 0,
+          scheduled_time: prev?.scheduled_time ?? null,
+          is_active: true,
+          activated_at: new Date().toISOString(),
+          created_at: prev?.created_at ?? new Date().toISOString(),
+        }));
       } else {
-        // CR-002: router.refresh() + key prop으로 컴포넌트 리마운트
         router.refresh();
       }
     },
@@ -86,7 +98,7 @@ export default function GroupView({
       showToast("일정 시간이 변경되었어요");
     },
     onCheckinUpdated: ({ user_id, action }) => {
-      if (!activeSchedule) return;
+      if (!currentSchedule) return;
       setCheckIns((prev) => {
         if (action === "insert") {
           if (prev.some((c) => c.user_id === user_id)) return prev;
@@ -95,7 +107,7 @@ export default function GroupView({
             {
               id: `rt-${user_id}`,
               user_id,
-              schedule_id: activeSchedule.id,
+              schedule_id: currentSchedule.id,
               checked_at: new Date().toISOString(),
               checked_by: "self" as const,
               checked_by_user_id: null,
@@ -125,7 +137,7 @@ export default function GroupView({
       {view === "feed" ? (
         <GroupFeedView
           schedules={schedules}
-          activeSchedule={activeSchedule}
+          activeSchedule={currentSchedule}
           members={members}
           checkIns={checkIns}
           scheduleCounts={scheduleCounts}
@@ -139,7 +151,7 @@ export default function GroupView({
           currentUser={currentUser}
           groupName={groupName}
           members={members}
-          activeSchedule={activeSchedule}
+          activeSchedule={currentSchedule}
           checkIns={checkIns}
           setCheckIns={setCheckIns}
           onBack={handleBack}

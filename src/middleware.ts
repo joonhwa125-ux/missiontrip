@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 import { ALLOWED_EMAIL_DOMAIN, ROLE_ROUTES } from "@/lib/constants";
-import { createServerClient } from "@supabase/ssr";
 import type { UserRole } from "@/lib/types";
 
 // 인증 불필요 경로
@@ -41,21 +40,10 @@ export async function middleware(request: NextRequest) {
   const needsRoleCheck = pathname === "/" || pathname.startsWith("/setup");
 
   if (needsRoleCheck) {
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll: () => request.cookies.getAll(),
-          setAll: () => {},
-        },
-      }
-    );
-
     const { data: userData } = await supabase
       .from("users")
       .select("role")
-      .eq("email", user.email)
+      .eq("email", user.email ?? "")
       .maybeSingle();
 
     // 미등록 사용자

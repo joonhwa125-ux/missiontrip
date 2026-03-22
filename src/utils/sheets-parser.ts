@@ -74,7 +74,8 @@ export function parseCsv(csv: string): string[][] {
   return rows;
 }
 
-// 참가자 시트 파싱 (4컬럼: 이름, 전화번호, 역할, 소속조)
+// 참가자 시트 파싱 (5컬럼: 이름, 이메일, 전화번호, 역할, 소속조)
+// 이메일 컬럼이 비어있으면 자동 생성 (조장/관리자: name@도메인, 조원: nologin)
 // groups는 소속조 고유값에서 자동 추출
 export function parseUsersSheet(rows: string[][]): {
   users: ParsedUser[];
@@ -83,7 +84,7 @@ export function parseUsersSheet(rows: string[][]): {
 } {
   const users: ParsedUser[] = [];
   const errors: ValidationError[] = [];
-  const leaderEmailSet = new Set<string>();
+  const emailSet = new Set<string>();
   const groupNameSet = new Set<string>();
 
   for (let i = 1; i < rows.length; i++) {
@@ -91,9 +92,10 @@ export function parseUsersSheet(rows: string[][]): {
     if (!row || row.every((c) => !c)) continue;
 
     const name = row[0]?.trim();
-    const phone = row[1]?.trim() || null;
-    const roleRaw = row[2]?.trim();
-    const groupName = row[3]?.trim();
+    const emailRaw = row[1]?.trim() || null;
+    const phone = row[2]?.trim() || null;
+    const roleRaw = row[3]?.trim();
+    const groupName = row[4]?.trim();
 
     // 이름 필수
     if (!name) {
@@ -129,24 +131,37 @@ export function parseUsersSheet(rows: string[][]): {
       continue;
     }
 
-    // 이메일 자동 생성
+    // 이메일: 시트에 있으면 사용, 없으면 자동 생성
     let email: string;
-    if (role === "leader" || role === "admin") {
-      email = `${name.toLowerCase()}${ALLOWED_EMAIL_DOMAIN}`;
-      // 리더/관리자 이메일 중복 검사
-      if (leaderEmailSet.has(email)) {
+    if (emailRaw && emailRaw.includes("@")) {
+      email = emailRaw.toLowerCase();
+      // 도메인 검증 (조장/관리자만)
+      if ((role === "leader" || role === "admin") && !email.endsWith(ALLOWED_EMAIL_DOMAIN.toLowerCase())) {
         errors.push({
           sheet: "users",
           row: i + 1,
-          field: "이름",
-          message: `${email} 이메일이 중복되어 있어요`,
+          field: "이메일",
+          message: `조장/관리자는 ${ALLOWED_EMAIL_DOMAIN} 이메일이 필요해요`,
         });
         continue;
       }
-      leaderEmailSet.add(email);
+    } else if (role === "leader" || role === "admin") {
+      email = `${name.toLowerCase()}${ALLOWED_EMAIL_DOMAIN}`;
     } else {
       email = `${MEMBER_EMAIL_PREFIX}.${name}.${i}${NO_LOGIN_EMAIL_DOMAIN}`;
     }
+
+    // 이메일 중복 검사
+    if (emailSet.has(email)) {
+      errors.push({
+        sheet: "users",
+        row: i + 1,
+        field: "이메일",
+        message: `${email} 이메일이 중복되어 있어요`,
+      });
+      continue;
+    }
+    emailSet.add(email);
 
     // 소속조 수집
     groupNameSet.add(groupName);

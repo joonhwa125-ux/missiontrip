@@ -17,6 +17,14 @@ export function formatTime(iso: string): string {
   });
 }
 
+// HH:MM 입력을 KST 기준 ISO 문자열로 변환
+export function parseKSTTime(hhmm: string, referenceDate?: string | null): string {
+  const [hh, mm] = hhmm.split(":").map(Number);
+  const d = referenceDate ? new Date(referenceDate) : new Date();
+  d.setUTCHours(hh - 9, mm, 0, 0);
+  return d.toISOString();
+}
+
 // 경과 시간 (분 단위)
 export function getElapsedMinutes(from: string): number {
   return Math.floor((Date.now() - new Date(from).getTime()) / 60000);

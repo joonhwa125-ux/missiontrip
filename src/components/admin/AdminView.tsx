@@ -6,14 +6,10 @@ import { useRealtime } from "@/hooks/useRealtime";
 import { cn } from "@/lib/utils";
 import StatusTab from "./StatusTab";
 import ScheduleTab from "./ScheduleTab";
-import type { Group, Schedule, AdminMember } from "@/lib/types";
+import type { Group, Schedule, AdminMember, AdminCheckIn } from "@/lib/types";
 
 type Member = AdminMember;
-interface CheckIn {
-  user_id: string;
-  is_absent: boolean;
-  checked_at?: string;
-}
+type CheckIn = AdminCheckIn;
 interface Report {
   group_id: string;
   pending_count: number;

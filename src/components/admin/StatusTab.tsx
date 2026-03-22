@@ -4,14 +4,10 @@ import React, { useState, useEffect, useMemo } from "react";
 import { getElapsedMinutes, cn } from "@/lib/utils";
 import { COPY } from "@/lib/constants";
 import AdminGroupDrillDown from "./AdminGroupDrillDown";
-import type { Group, Schedule, GroupBadgeStatus, AdminMember } from "@/lib/types";
+import type { Group, Schedule, GroupBadgeStatus, AdminMember, AdminCheckIn } from "@/lib/types";
 
 type Member = AdminMember;
-interface CheckIn {
-  user_id: string;
-  is_absent: boolean;
-  checked_at?: string;
-}
+type CheckIn = AdminCheckIn;
 interface Report {
   group_id: string;
   pending_count: number;

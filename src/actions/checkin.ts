@@ -134,7 +134,7 @@ export async function syncOfflineCheckins(
   const supabase = createClient();
   const actor = await getCurrentUser();
 
-  if (!actor || actor.role !== "leader") {
+  if (!actor || !["leader", "admin"].includes(actor.role)) {
     return { ok: false, error: "권한이 없어요" };
   }
 
