@@ -60,6 +60,9 @@ export interface CheckIn {
   is_absent: boolean;
 }
 
+/** 관리자 현황용 보고 (경량) */
+export type AdminReport = Pick<GroupReport, "group_id" | "pending_count" | "reported_at">;
+
 /** 관리자 현황용 체크인 (경량) */
 export interface AdminCheckIn {
   user_id: string;

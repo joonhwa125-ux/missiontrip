@@ -4,18 +4,14 @@ import { useState, useEffect, useRef, useCallback, useTransition, useMemo } from
 import { activateSchedule } from "@/actions/schedule";
 import { useBroadcast } from "@/hooks/useRealtime";
 import { CHANNEL_GLOBAL, COPY, EVENT_SCHEDULE_ACTIVATED } from "@/lib/constants";
-import type { Schedule, AdminCheckIn, AdminMember, Group } from "@/lib/types";
+import type { Schedule, AdminCheckIn, AdminMember, AdminReport, Group } from "@/lib/types";
 import AdminScheduleCard from "@/components/admin/AdminScheduleCard";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter, DialogClose,
 } from "@/components/ui/dialog";
 
-interface Report {
-  group_id: string;
-  pending_count: number;
-  reported_at: string;
-}
+type Report = AdminReport;
 
 interface Props {
   schedules: Schedule[];

@@ -57,6 +57,17 @@ export default function GroupCheckinView({
   const { isOnline, pendingCount, addPending, addPendingReport } = useOfflineSync();
   const { broadcast } = useBroadcast();
 
+  const broadcastCheckin = useCallback(
+    async (userId: string, action: "insert" | "delete") => {
+      const payload = { user_id: userId, schedule_id: activeSchedule?.id ?? "", action };
+      await Promise.all([
+        broadcast(`${CHANNEL_GROUP_PREFIX}${currentUser.group_id}`, EVENT_CHECKIN_UPDATED, payload),
+        broadcast(CHANNEL_ADMIN, EVENT_CHECKIN_UPDATED, payload),
+      ]);
+    },
+    [activeSchedule, currentUser.group_id, broadcast]
+  );
+
   const handleCheckin = useCallback(
     async (userId: string) => {
       if (!activeSchedule) return;
@@ -90,18 +101,14 @@ export default function GroupCheckinView({
       startTransition(async () => {
         const res = await createCheckin(userId, activeSchedule.id);
         if (res.ok) {
-          const payload = { user_id: userId, schedule_id: activeSchedule.id, action: "insert" as const };
-          await Promise.all([
-            broadcast(`${CHANNEL_GROUP_PREFIX}${currentUser.group_id}`, EVENT_CHECKIN_UPDATED, payload),
-            broadcast(CHANNEL_ADMIN, EVENT_CHECKIN_UPDATED, payload),
-          ]);
+          await broadcastCheckin(userId, "insert");
         } else {
           setCheckIns((prev) => prev.filter((c) => c.id !== temp.id));
           showToast(res.error ?? "체크인 처리 중 오류가 발생했어요.");
         }
       });
     },
-    [activeSchedule, isOnline, addPending, currentUser.id, currentUser.group_id, broadcast, setCheckIns, showToast]
+    [activeSchedule, isOnline, addPending, currentUser.id, broadcastCheckin, setCheckIns, showToast]
   );
 
   const handleCancelConfirm = useCallback(async () => {
@@ -118,11 +125,7 @@ export default function GroupCheckinView({
     startTransition(async () => {
       const res = await deleteCheckin(userId, activeSchedule.id);
       if (res.ok) {
-        const payload = { user_id: userId, schedule_id: activeSchedule.id, action: "delete" as const };
-        await Promise.all([
-          broadcast(`${CHANNEL_GROUP_PREFIX}${currentUser.group_id}`, EVENT_CHECKIN_UPDATED, payload),
-          broadcast(CHANNEL_ADMIN, EVENT_CHECKIN_UPDATED, payload),
-        ]);
+        await broadcastCheckin(userId, "delete");
       } else {
         // 서버 에러 시 낙관적 업데이트 롤백
         if (removed) {
@@ -131,7 +134,7 @@ export default function GroupCheckinView({
         showToast(res.error ?? "취소 처리 중 오류가 발생했어요.");
       }
     });
-  }, [cancelTarget, activeSchedule, currentUser.group_id, broadcast, setCheckIns, showToast]);
+  }, [cancelTarget, activeSchedule, broadcastCheckin, setCheckIns, showToast]);
 
   const handleAbsentConfirm = useCallback(async () => {
     if (!absentTarget || !activeSchedule) return;
@@ -151,17 +154,13 @@ export default function GroupCheckinView({
     startTransition(async () => {
       const res = await markAbsent(userId, activeSchedule.id);
       if (res.ok) {
-        const payload = { user_id: userId, schedule_id: activeSchedule.id, action: "insert" as const };
-        await Promise.all([
-          broadcast(`${CHANNEL_GROUP_PREFIX}${currentUser.group_id}`, EVENT_CHECKIN_UPDATED, payload),
-          broadcast(CHANNEL_ADMIN, EVENT_CHECKIN_UPDATED, payload),
-        ]);
+        await broadcastCheckin(userId, "insert");
       } else {
         setCheckIns((prev) => prev.filter((c) => c.id !== temp.id));
         showToast(res.error ?? "불참 처리 중 오류가 발생했어요.");
       }
     });
-  }, [absentTarget, activeSchedule, currentUser.id, currentUser.group_id, broadcast, setCheckIns, showToast]);
+  }, [absentTarget, activeSchedule, currentUser.id, broadcastCheckin, setCheckIns, showToast]);
 
   const handleReport = useCallback(async () => {
     if (!activeSchedule) return;

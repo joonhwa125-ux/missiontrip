@@ -3,6 +3,25 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import type { ActionResult, OfflinePendingCheckin } from "@/lib/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+/** 조장의 자기 조원 접근 권한 검증. 실패 시 ActionResult 반환, 통과 시 null */
+async function validateGroupAccess(
+  supabase: SupabaseClient,
+  actor: { role: string; group_id: string },
+  targetUserId: string
+): Promise<ActionResult | null> {
+  if (actor.role !== "leader") return null;
+  const { data } = await supabase
+    .from("users")
+    .select("group_id")
+    .eq("id", targetUserId)
+    .single();
+  if (!data || data.group_id !== actor.group_id) {
+    return { ok: false, error: "자기 조원만 처리할 수 있어요" };
+  }
+  return null;
+}
 
 // 체크인 INSERT (조장/관리자 대리 체크인)
 export async function createCheckin(
@@ -16,18 +35,8 @@ export async function createCheckin(
     return { ok: false, error: "권한이 없어요" };
   }
 
-  // 조장은 자기 조원만 체크인 가능
-  if (actor.role === "leader") {
-    const { data: targetUser } = await supabase
-      .from("users")
-      .select("group_id")
-      .eq("id", userId)
-      .single();
-
-    if (!targetUser || targetUser.group_id !== actor.group_id) {
-      return { ok: false, error: "자기 조원만 체크인할 수 있어요" };
-    }
-  }
+  const denied = await validateGroupAccess(supabase, actor, userId);
+  if (denied) return denied;
 
   const { error } = await supabase.from("check_ins").upsert(
     {
@@ -58,18 +67,8 @@ export async function deleteCheckin(
     return { ok: false, error: "권한이 없어요" };
   }
 
-  // 조장은 자기 조원만 취소 가능
-  if (actor.role === "leader") {
-    const { data: targetUser } = await supabase
-      .from("users")
-      .select("group_id")
-      .eq("id", userId)
-      .single();
-
-    if (!targetUser || targetUser.group_id !== actor.group_id) {
-      return { ok: false, error: "자기 조원만 취소할 수 있어요" };
-    }
-  }
+  const denied = await validateGroupAccess(supabase, actor, userId);
+  if (denied) return denied;
 
   const { error } = await supabase
     .from("check_ins")
@@ -96,18 +95,8 @@ export async function markAbsent(
     return { ok: false, error: "권한이 없어요" };
   }
 
-  // 조장은 자기 조원만 처리 가능
-  if (actor.role === "leader") {
-    const { data: targetUser } = await supabase
-      .from("users")
-      .select("group_id")
-      .eq("id", userId)
-      .single();
-
-    if (!targetUser || targetUser.group_id !== actor.group_id) {
-      return { ok: false, error: "자기 조원만 불참 처리할 수 있어요" };
-    }
-  }
+  const denied = await validateGroupAccess(supabase, actor, userId);
+  if (denied) return denied;
 
   const { error } = await supabase.from("check_ins").upsert(
     {

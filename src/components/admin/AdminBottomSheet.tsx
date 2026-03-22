@@ -17,13 +17,10 @@ import type {
   GroupBadgeStatus,
   AdminMember,
   AdminCheckIn,
+  AdminReport,
 } from "@/lib/types";
 
-interface Report {
-  group_id: string;
-  pending_count: number;
-  reported_at: string;
-}
+type Report = AdminReport;
 
 interface Props {
   schedule: Schedule | null;

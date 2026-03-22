@@ -9,16 +9,11 @@ import AdminScheduleList from "./AdminScheduleList";
 import AdminBottomSheet from "./AdminBottomSheet";
 import ScheduleAddDialog from "./ScheduleAddDialog";
 import TimeEditDialog from "./TimeEditDialog";
-import type { Group, Schedule, AdminMember, AdminCheckIn } from "@/lib/types";
+import type { Group, Schedule, AdminMember, AdminCheckIn, AdminReport } from "@/lib/types";
 
-interface Report {
-  group_id: string;
-  pending_count: number;
-  reported_at: string;
-}
+type Report = AdminReport;
 
 interface Props {
-  currentUser: { id: string };
   groups: Group[];
   members: AdminMember[];
   activeSchedule: Schedule | null;
