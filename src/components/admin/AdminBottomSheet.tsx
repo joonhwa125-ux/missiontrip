@@ -127,7 +127,7 @@ export default function AdminBottomSheet({
                     <button
                       key={group.id}
                       onClick={() => setDrillGroup(group)}
-                      className="rounded-2xl bg-white p-4 text-left focus-visible:ring-2 focus-visible:ring-main-action"
+                      className="rounded-2xl border border-gray-200 bg-white p-4 text-left transition-colors active:bg-gray-50 focus-visible:ring-2 focus-visible:ring-main-action"
                       aria-label={`${group.name} 상세 보기`}
                     >
                       <div className="mb-2 flex items-center justify-between gap-1">
@@ -169,9 +169,10 @@ export default function AdminBottomSheet({
                           style={{ width: `${progress}%` }}
                         />
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {checkedCount} / {totalCount}명
-                      </p>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{checkedCount} / {totalCount}명</span>
+                        <span aria-hidden="true">&rsaquo;</span>
+                      </div>
                     </button>
                   );
                 })}
