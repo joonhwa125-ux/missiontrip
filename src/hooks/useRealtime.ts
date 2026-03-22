@@ -8,7 +8,6 @@ import {
   CHANNEL_GROUP_PREFIX,
   EVENT_SCHEDULE_ACTIVATED,
   EVENT_SCHEDULE_UPDATED,
-  EVENT_NOTICE,
   EVENT_CHECKIN_UPDATED,
   EVENT_GROUP_REPORTED,
 } from "@/lib/constants";
@@ -17,7 +16,6 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 interface RealtimeCallbacks {
   onScheduleActivated?: (payload: { schedule_id: string; title: string }) => void;
   onScheduleUpdated?: (payload: { schedule_id: string; scheduled_time: string }) => void;
-  onNotice?: (payload: { message: string }) => void;
   onCheckinUpdated?: (payload: { user_id: string; schedule_id: string; action: "insert" | "delete" }) => void;
   onGroupReported?: (payload: { group_id: string; pending_count: number }) => void;
 }
@@ -30,6 +28,12 @@ export function useRealtime(
 ) {
   const channelsRef = useRef<RealtimeChannel[]>([]);
 
+  // 항상 최신 콜백을 ref로 유지 — deps 없이 매 렌더 후 갱신해 스테일 클로저 방지
+  const callbacksRef = useRef(callbacks);
+  useEffect(() => {
+    callbacksRef.current = callbacks;
+  });
+
   useEffect(() => {
     const supabase = createClient();
     const channels: RealtimeChannel[] = [];
@@ -38,13 +42,10 @@ export function useRealtime(
     const globalChannel = supabase
       .channel(CHANNEL_GLOBAL)
       .on("broadcast", { event: EVENT_SCHEDULE_ACTIVATED }, ({ payload }) => {
-        callbacks.onScheduleActivated?.(payload);
+        callbacksRef.current.onScheduleActivated?.(payload);
       })
       .on("broadcast", { event: EVENT_SCHEDULE_UPDATED }, ({ payload }) => {
-        callbacks.onScheduleUpdated?.(payload);
-      })
-      .on("broadcast", { event: EVENT_NOTICE }, ({ payload }) => {
-        callbacks.onNotice?.(payload);
+        callbacksRef.current.onScheduleUpdated?.(payload);
       })
       .subscribe();
 
@@ -55,19 +56,22 @@ export function useRealtime(
       const groupChannel = supabase
         .channel(`${CHANNEL_GROUP_PREFIX}${groupId}`)
         .on("broadcast", { event: EVENT_CHECKIN_UPDATED }, ({ payload }) => {
-          callbacks.onCheckinUpdated?.(payload);
+          callbacksRef.current.onCheckinUpdated?.(payload);
         })
         .subscribe();
 
       channels.push(groupChannel);
     }
 
-    // admin 채널 — 관리자
+    // admin 채널 — 관리자 (보고 + 체크인 업데이트 수신)
     if (isAdmin) {
       const adminChannel = supabase
         .channel(CHANNEL_ADMIN)
         .on("broadcast", { event: EVENT_GROUP_REPORTED }, ({ payload }) => {
-          callbacks.onGroupReported?.(payload);
+          callbacksRef.current.onGroupReported?.(payload);
+        })
+        .on("broadcast", { event: EVENT_CHECKIN_UPDATED }, ({ payload }) => {
+          callbacksRef.current.onCheckinUpdated?.(payload);
         })
         .subscribe();
 
@@ -79,7 +83,6 @@ export function useRealtime(
     return () => {
       channels.forEach((ch) => supabase.removeChannel(ch));
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupId, isAdmin]);
 
   return channelsRef;
@@ -94,6 +97,7 @@ export function useBroadcast() {
       const channel = supabase.channel(channelName);
       await channel.subscribe();
       await channel.send({ type: "broadcast", event, payload });
+      await channel.unsubscribe();
       supabase.removeChannel(channel);
     },
     [supabase]

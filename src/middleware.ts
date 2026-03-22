@@ -30,42 +30,49 @@ export async function middleware(request: NextRequest) {
     );
   }
 
-  // 역할 기반 라우팅 — DB에서 role 조회
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll: () => {},
-      },
-    }
-  );
+  // DB 조회가 필요한 경로만 role 확인
+  // - 루트("/") → 역할별 홈으로 리다이렉트
+  // - /setup → admin만 접근 허용
+  // 그 외(/group, /admin, /checkin)는 서버 컴포넌트에서 role 검증 처리 (DB N+1 방지)
+  const needsRoleCheck = pathname === "/" || pathname.startsWith("/setup");
 
-  const { data: userData } = await supabase
-    .from("users")
-    .select("role")
-    .eq("email", user.email)
-    .single();
-
-  // 미등록 사용자
-  if (!userData) {
-    return NextResponse.redirect(
-      new URL("/login?error=not-registered", request.url)
+  if (needsRoleCheck) {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll: () => request.cookies.getAll(),
+          setAll: () => {},
+        },
+      }
     );
-  }
 
-  const role = userData.role as UserRole;
-  const homeRoute = ROLE_ROUTES[role];
+    const { data: userData } = await supabase
+      .from("users")
+      .select("role")
+      .eq("email", user.email)
+      .maybeSingle();
 
-  // /setup 은 admin만 허용
-  if (pathname.startsWith("/setup") && role !== "admin") {
-    return NextResponse.redirect(new URL(homeRoute, request.url));
-  }
+    // 미등록 사용자
+    if (!userData) {
+      return NextResponse.redirect(
+        new URL("/login?error=not-registered", request.url)
+      );
+    }
 
-  // 루트 접속 → 역할별 홈으로 리다이렉트
-  if (pathname === "/") {
-    return NextResponse.redirect(new URL(homeRoute, request.url));
+    const role = userData.role as UserRole;
+    const homeRoute = ROLE_ROUTES[role];
+
+    // /setup 은 admin만 허용
+    if (pathname.startsWith("/setup") && role !== "admin") {
+      return NextResponse.redirect(new URL(homeRoute, request.url));
+    }
+
+    // 루트 접속 → 역할별 홈으로 리다이렉트
+    if (pathname === "/") {
+      return NextResponse.redirect(new URL(homeRoute, request.url));
+    }
   }
 
   return supabaseResponse;

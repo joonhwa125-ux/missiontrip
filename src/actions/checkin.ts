@@ -9,12 +9,12 @@ async function getCurrentUser() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user?.email) return null;
 
   const { data } = await supabase
     .from("users")
     .select("id, role, group_id")
-    .eq("email", user.email!)
+    .eq("email", user.email)
     .single();
 
   return data;
@@ -30,6 +30,19 @@ export async function createCheckin(
 
   if (!actor || !["leader", "admin"].includes(actor.role)) {
     return { ok: false, error: "권한이 없어요" };
+  }
+
+  // 조장은 자기 조원만 체크인 가능
+  if (actor.role === "leader") {
+    const { data: targetUser } = await supabase
+      .from("users")
+      .select("group_id")
+      .eq("id", userId)
+      .single();
+
+    if (!targetUser || targetUser.group_id !== actor.group_id) {
+      return { ok: false, error: "자기 조원만 체크인할 수 있어요" };
+    }
   }
 
   const { error } = await supabase.from("check_ins").insert({
@@ -59,6 +72,19 @@ export async function deleteCheckin(
     return { ok: false, error: "권한이 없어요" };
   }
 
+  // 조장은 자기 조원만 취소 가능
+  if (actor.role === "leader") {
+    const { data: targetUser } = await supabase
+      .from("users")
+      .select("group_id")
+      .eq("id", userId)
+      .single();
+
+    if (!targetUser || targetUser.group_id !== actor.group_id) {
+      return { ok: false, error: "자기 조원만 취소할 수 있어요" };
+    }
+  }
+
   const { error } = await supabase
     .from("check_ins")
     .delete()
@@ -67,6 +93,49 @@ export async function deleteCheckin(
 
   if (error) {
     return { ok: false, error: "취소 처리 중 오류가 발생했어요" };
+  }
+
+  return { ok: true };
+}
+
+// 불참 처리 INSERT (is_absent=true)
+export async function markAbsent(
+  userId: string,
+  scheduleId: string
+): Promise<ActionResult> {
+  const supabase = createClient();
+  const actor = await getCurrentUser();
+
+  if (!actor || !["leader", "admin"].includes(actor.role)) {
+    return { ok: false, error: "권한이 없어요" };
+  }
+
+  // 조장은 자기 조원만 처리 가능
+  if (actor.role === "leader") {
+    const { data: targetUser } = await supabase
+      .from("users")
+      .select("group_id")
+      .eq("id", userId)
+      .single();
+
+    if (!targetUser || targetUser.group_id !== actor.group_id) {
+      return { ok: false, error: "자기 조원만 불참 처리할 수 있어요" };
+    }
+  }
+
+  const { error } = await supabase.from("check_ins").upsert(
+    {
+      user_id: userId,
+      schedule_id: scheduleId,
+      checked_by: actor.role as "leader" | "admin",
+      checked_by_user_id: actor.id,
+      is_absent: true,
+    },
+    { onConflict: "user_id,schedule_id" }
+  );
+
+  if (error) {
+    return { ok: false, error: "불참 처리 중 오류가 발생했어요" };
   }
 
   return { ok: true };

@@ -8,12 +8,12 @@ async function requireAdmin() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user?.email) return null;
 
   const { data } = await supabase
     .from("users")
     .select("id, role")
-    .eq("email", user.email!)
+    .eq("email", user.email)
     .single();
 
   return data?.role === "admin" ? data : null;
@@ -50,14 +50,14 @@ export async function createSchedule(
 
   const supabase = createClient();
 
-  // 같은 day 내 최대 sort_order 조회
+  // 같은 day 내 최대 sort_order 조회 (해당 day에 일정이 없을 수 있으므로 maybeSingle)
   const { data: existing } = await supabase
     .from("schedules")
     .select("sort_order")
     .eq("day_number", dayNumber)
     .order("sort_order", { ascending: false })
     .limit(1)
-    .single();
+    .maybeSingle();
 
   const nextOrder = existing ? existing.sort_order + 1 : 1;
 

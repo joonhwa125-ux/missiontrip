@@ -52,6 +52,19 @@
 | Realtime 실시간 동기화 검증 | ⬜ 미시작 | 2개 브라우저로 broadcast 테스트 |
 | Vercel 배포 후 프로덕션 검증 | ⬜ 미시작 | 최신 코드 배포 + 동작 확인 |
 
+## 운영 안정성 수정 (2026-03-22)
+
+| 항목 | 상태 | 완료일 | 비고 |
+|---|---|---|---|
+| [FIX-001] useRealtime 콜백 스테일 클로저 | ✅ 완료 | 2026-03-22 | callbacksRef 패턴 도입 |
+| [FIX-002] 체크인/취소/보고 에러 토스트 | ✅ 완료 | 2026-03-22 | GroupCheckinView 에러 피드백 추가 |
+| [FIX-003] Middleware DB N+1 최적화 | ✅ 완료 | 2026-03-22 | / 와 /setup 경로에서만 role 조회 |
+| [FIX-004] schedule.ts .maybeSingle() | ✅ 완료 | 2026-03-22 | 즉흥 일정 추가 시 0건 day 처리 |
+| [FIX-005] offline.ts try-catch | ✅ 완료 | 2026-03-22 | QuotaExceededError 처리 + boolean 반환 |
+| [FIX-006] iOS Safari dvh + safe-area | ✅ 완료 | 2026-03-22 | viewportFit=cover, pb-safe, 100dvh override |
+
+> 상세 내용: `docs/stability-fixes.md` 참조
+
 ## Phase 2: 추가 기능
 
 | 항목 | 상태 | 비고 |

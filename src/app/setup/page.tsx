@@ -8,7 +8,7 @@ export default async function SetupPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (!user?.email) {
     redirect("/login");
   }
 
@@ -16,7 +16,7 @@ export default async function SetupPage() {
   const { data: dbUser } = await supabase
     .from("users")
     .select("role")
-    .eq("email", user.email!)
+    .eq("email", user.email)
     .single();
 
   if (!dbUser || dbUser.role !== "admin") {

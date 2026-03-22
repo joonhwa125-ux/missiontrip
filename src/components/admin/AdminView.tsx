@@ -5,17 +5,18 @@ import { useRealtime } from "@/hooks/useRealtime";
 import { cn } from "@/lib/utils";
 import StatusTab from "./StatusTab";
 import ScheduleTab from "./ScheduleTab";
-import NoticeTab from "./NoticeTab";
 import type { Group, Schedule } from "@/lib/types";
 
 interface Member {
   id: string;
   name: string;
   phone: string | null;
+  role: string;
   group_id: string;
 }
 interface CheckIn {
   user_id: string;
+  is_absent: boolean;
 }
 interface Report {
   group_id: string;
@@ -33,12 +34,11 @@ interface Props {
   initialReports: Report[];
 }
 
-type TabName = "status" | "schedule" | "notice";
+type TabName = "status" | "schedule";
 
 const TABS: { key: TabName; label: string }[] = [
   { key: "status", label: "현황" },
   { key: "schedule", label: "일정" },
-  { key: "notice", label: "공지" },
 ];
 
 export default function AdminView({
@@ -51,7 +51,7 @@ export default function AdminView({
 }: Props) {
   const [tab, setTab] = useState<TabName>("status");
   const [schedules, setSchedules] = useState(initialSchedules);
-  const [checkIns] = useState(initialCheckIns);
+  const [checkIns, setCheckIns] = useState(initialCheckIns);
   const [reports, setReports] = useState(initialReports);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -67,6 +67,15 @@ export default function AdminView({
         prev.map((s) => (s.id === schedule_id ? { ...s, scheduled_time } : s))
       );
       showToast("일정 시간이 변경되었어요");
+    },
+    onCheckinUpdated: ({ user_id, action }) => {
+      setCheckIns((prev) => {
+        if (action === "insert") {
+          if (prev.some((c) => c.user_id === user_id)) return prev;
+          return [...prev, { user_id, is_absent: false }];
+        }
+        return prev.filter((c) => c.user_id !== user_id);
+      });
     },
     onGroupReported: ({ group_id, pending_count }) => {
       setReports((prev) => {
@@ -129,13 +138,12 @@ export default function AdminView({
             onToast={showToast}
           />
         )}
-        {tab === "notice" && <NoticeTab />}
       </div>
 
       {/* 토스트 */}
       {toast && (
         <div
-          className="fixed bottom-6 left-4 right-4 rounded-xl bg-gray-900 px-4 py-3 text-center text-sm text-white shadow-lg"
+          className="fixed bottom-[max(1.5rem,_env(safe-area-inset-bottom))] left-4 right-4 rounded-xl bg-gray-900 px-4 py-3 text-center text-sm text-white shadow-lg"
           role="status"
           aria-live="polite"
         >

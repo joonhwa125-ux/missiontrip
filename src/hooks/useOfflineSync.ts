@@ -5,32 +5,51 @@ import {
   getPendingCheckins,
   savePendingCheckin,
   clearPendingCheckins,
+  getPendingReports,
+  savePendingReport,
+  clearPendingReports,
   cacheActiveSchedule,
   getCachedActiveSchedule,
 } from "@/utils/offline";
 import { syncOfflineCheckins } from "@/actions/checkin";
-import type { OfflinePendingCheckin, Schedule } from "@/lib/types";
+import { submitReport } from "@/actions/report";
+import type { OfflinePendingCheckin, OfflinePendingReport, Schedule } from "@/lib/types";
 
 export function useOfflineSync() {
   const [isOnline, setIsOnline] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
 
-  // 대기 중 체크인 동기화 — useEffect보다 먼저 선언해야 의존성 참조 가능
+  // 대기 중 동기화: 체크인 → 보고 순서
   const syncPending = useCallback(async () => {
-    const pending = getPendingCheckins();
-    if (pending.length === 0) return;
-
-    const result = await syncOfflineCheckins(pending);
-    if (result.ok) {
-      clearPendingCheckins();
-      setPendingCount(0);
+    // 1. 체크인 sync
+    const pendingCheckins = getPendingCheckins();
+    if (pendingCheckins.length > 0) {
+      const result = await syncOfflineCheckins(pendingCheckins);
+      if (result.ok) {
+        clearPendingCheckins();
+      }
     }
+
+    // 2. 보고 sync (체크인 완료 후)
+    const pendingReports = getPendingReports();
+    if (pendingReports.length > 0) {
+      let allOk = true;
+      for (const report of pendingReports) {
+        const res = await submitReport(report.group_id, report.schedule_id, report.pending_count);
+        if (!res.ok) allOk = false;
+      }
+      if (allOk) {
+        clearPendingReports();
+      }
+    }
+
+    setPendingCount(getPendingCheckins().length + getPendingReports().length);
   }, []);
 
   // 온라인/오프라인 상태 감지
   useEffect(() => {
     setIsOnline(navigator.onLine);
-    setPendingCount(getPendingCheckins().length);
+    setPendingCount(getPendingCheckins().length + getPendingReports().length);
 
     function handleOnline() {
       setIsOnline(true);
@@ -51,9 +70,17 @@ export function useOfflineSync() {
   }, [syncPending]);
 
   // 오프라인 체크인 저장
-  const addPending = useCallback((item: OfflinePendingCheckin) => {
-    savePendingCheckin(item);
-    setPendingCount(getPendingCheckins().length);
+  const addPending = useCallback((item: OfflinePendingCheckin): boolean => {
+    const saved = savePendingCheckin(item);
+    setPendingCount(getPendingCheckins().length + getPendingReports().length);
+    return saved;
+  }, []);
+
+  // 오프라인 보고 저장
+  const addPendingReport = useCallback((item: OfflinePendingReport): boolean => {
+    const saved = savePendingReport(item);
+    setPendingCount(getPendingCheckins().length + getPendingReports().length);
+    return saved;
   }, []);
 
   // 활성 일정 캐싱/복원
@@ -69,6 +96,7 @@ export function useOfflineSync() {
     isOnline,
     pendingCount,
     addPending,
+    addPendingReport,
     syncPending,
     cacheSchedule,
     getCachedSchedule,

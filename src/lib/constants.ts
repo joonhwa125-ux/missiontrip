@@ -5,6 +5,7 @@ export const ALLOWED_EMAIL_DOMAIN = process.env.ALLOWED_EMAIL_DOMAIN ?? "@linkag
 
 // 오프라인 스토리지 키
 export const OFFLINE_PENDING_KEY = "mtrip_pending";
+export const OFFLINE_PENDING_REPORTS_KEY = "mtrip_pending_reports";
 export const ACTIVE_SCHEDULE_KEY = "mtrip_active_schedule";
 
 // Realtime 채널명
@@ -15,7 +16,6 @@ export const CHANNEL_GROUP_PREFIX = "group:";
 // Realtime 이벤트 타입
 export const EVENT_SCHEDULE_ACTIVATED = "schedule_activated";
 export const EVENT_SCHEDULE_UPDATED = "schedule_updated";
-export const EVENT_NOTICE = "notice";
 export const EVENT_CHECKIN_UPDATED = "checkin_updated";
 export const EVENT_GROUP_REPORTED = "group_reported";
 
@@ -48,7 +48,6 @@ export const COLORS = {
   mainAction: "#FEE500",
   completeCard: "#EAF3DE",
   completeCheck: "#00C471",
-  noticeBanner: "#E6F1FB",
   offlineBanner: "#F1EFE8",
   progressBadge: "#FAEEDA",
   appBg: "#F5F3EF",
@@ -56,7 +55,7 @@ export const COLORS = {
 
 // UI 문구 (PRD 8.2)
 export const COPY = {
-  notChecked: "아직 안 보여요",
+  notChecked: "확인 전",
   checked: (time: string) => `${time} 탑승 완료`,
   checkinButton: "탔어요!",
   cancelButton: "취소",
@@ -65,5 +64,6 @@ export const COPY = {
   reportButtonComplete: "우리 조 다 탔어요! 보고하기",
   reportButtonDone: "보고 완료!",
   reportButtonPending: (n: number) => `${n}명 남았어요`,
+  absent: "불참",
   offline: (n: number) => `오프라인 상태예요. ${n}건 저장 중 — 연결되면 자동으로 보낼게요`,
 } as const;

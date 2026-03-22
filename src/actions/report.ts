@@ -13,12 +13,12 @@ export async function submitReport(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "로그인이 필요해요" };
+  if (!user?.email) return { ok: false, error: "로그인이 필요해요" };
 
   const { data: userData } = await supabase
     .from("users")
     .select("id, role")
-    .eq("email", user.email!)
+    .eq("email", user.email)
     .single();
 
   if (!userData || !["leader", "admin"].includes(userData.role)) {

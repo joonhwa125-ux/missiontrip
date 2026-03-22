@@ -10,6 +10,8 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
+  // iOS Safari safe-area(홈 인디케이터) 여백 활성화
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

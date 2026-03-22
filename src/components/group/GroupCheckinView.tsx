@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback, useTransition } from "react";
+import { useState, useCallback, useTransition, useEffect } from "react";
 import { useRealtime, useBroadcast } from "@/hooks/useRealtime";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
-import { createCheckin, deleteCheckin } from "@/actions/checkin";
+import { createCheckin, deleteCheckin, markAbsent } from "@/actions/checkin";
 import { submitReport } from "@/actions/report";
 import MemberCard from "./MemberCard";
 import {
@@ -17,6 +17,8 @@ import {
 import {
   COPY,
   CHANNEL_ADMIN,
+  CHANNEL_GROUP_PREFIX,
+  EVENT_CHECKIN_UPDATED,
   EVENT_GROUP_REPORTED,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -44,14 +46,25 @@ export default function GroupCheckinView({
 }: Props) {
   const [schedule, setSchedule] = useState(activeSchedule);
   const [checkIns, setCheckIns] = useState<CheckIn[]>(initialCheckIns);
-  const [notice, setNotice] = useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = useState<Member | null>(null);
+  const [absentTarget, setAbsentTarget] = useState<Member | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [reported, setReported] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
-  const { isOnline, pendingCount, addPending } = useOfflineSync();
+  const { isOnline, pendingCount, addPending, addPendingReport } = useOfflineSync();
   const { broadcast } = useBroadcast();
+
+  const showToast = useCallback((msg: string) => {
+    setToast(msg);
+  }, []);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3500);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   useRealtime(currentUser.group_id, false, {
     onScheduleActivated: () => window.location.reload(),
@@ -60,7 +73,6 @@ export default function GroupCheckinView({
         prev?.id === schedule_id ? { ...prev, scheduled_time } : prev
       );
     },
-    onNotice: ({ message }) => setNotice(message),
     onCheckinUpdated: ({ user_id, action }) => {
       if (!schedule) return;
       setCheckIns((prev) => {
@@ -76,6 +88,7 @@ export default function GroupCheckinView({
               checked_by: "self",
               checked_by_user_id: null,
               offline_pending: false,
+              is_absent: false,
             },
           ];
         }
@@ -95,26 +108,40 @@ export default function GroupCheckinView({
         checked_by: "leader",
         checked_by_user_id: currentUser.id,
         offline_pending: !isOnline,
+        is_absent: false,
       };
       setCheckIns((prev) => [...prev.filter((c) => c.user_id !== userId), temp]);
 
       if (!isOnline) {
-        addPending({
+        const saved = addPending({
           user_id: userId,
           schedule_id: schedule.id,
           checked_by: "leader",
           checked_by_user_id: currentUser.id,
           checked_at: temp.checked_at,
         });
+        if (!saved) {
+          setCheckIns((prev) => prev.filter((c) => c.id !== temp.id));
+          showToast("저장 공간이 부족해요. 기기 저장소를 확인해주세요.");
+        }
         return;
       }
 
       startTransition(async () => {
         const res = await createCheckin(userId, schedule.id);
-        if (!res.ok) setCheckIns((prev) => prev.filter((c) => c.id !== temp.id));
+        if (res.ok) {
+          const payload = { user_id: userId, schedule_id: schedule.id, action: "insert" as const };
+          await Promise.all([
+            broadcast(`${CHANNEL_GROUP_PREFIX}${currentUser.group_id}`, EVENT_CHECKIN_UPDATED, payload),
+            broadcast(CHANNEL_ADMIN, EVENT_CHECKIN_UPDATED, payload),
+          ]);
+        } else {
+          setCheckIns((prev) => prev.filter((c) => c.id !== temp.id));
+          showToast(res.error ?? "체크인 처리 중 오류가 발생했어요.");
+        }
       });
     },
-    [schedule, isOnline, addPending, currentUser.id]
+    [schedule, isOnline, addPending, currentUser.id, currentUser.group_id, broadcast]
   );
 
   const handleCancelConfirm = useCallback(async () => {
@@ -125,9 +152,48 @@ export default function GroupCheckinView({
     setCheckIns((prev) => prev.filter((c) => c.user_id !== userId));
     startTransition(async () => {
       const res = await deleteCheckin(userId, schedule.id);
-      if (!res.ok) window.location.reload();
+      if (res.ok) {
+        const payload = { user_id: userId, schedule_id: schedule.id, action: "delete" as const };
+        await Promise.all([
+          broadcast(`${CHANNEL_GROUP_PREFIX}${currentUser.group_id}`, EVENT_CHECKIN_UPDATED, payload),
+          broadcast(CHANNEL_ADMIN, EVENT_CHECKIN_UPDATED, payload),
+        ]);
+      } else {
+        showToast(res.error ?? "취소 처리 중 오류가 발생했어요.");
+        window.location.reload();
+      }
     });
-  }, [cancelTarget, schedule]);
+  }, [cancelTarget, schedule, currentUser.group_id, broadcast]);
+
+  const handleAbsentConfirm = useCallback(async () => {
+    if (!absentTarget || !schedule) return;
+    const userId = absentTarget.id;
+    setAbsentTarget(null);
+    const temp: CheckIn = {
+      id: `absent-${userId}`,
+      user_id: userId,
+      schedule_id: schedule.id,
+      checked_at: new Date().toISOString(),
+      checked_by: "leader",
+      checked_by_user_id: currentUser.id,
+      offline_pending: false,
+      is_absent: true,
+    };
+    setCheckIns((prev) => [...prev.filter((c) => c.user_id !== userId), temp]);
+    startTransition(async () => {
+      const res = await markAbsent(userId, schedule.id);
+      if (res.ok) {
+        const payload = { user_id: userId, schedule_id: schedule.id, action: "insert" as const };
+        await Promise.all([
+          broadcast(`${CHANNEL_GROUP_PREFIX}${currentUser.group_id}`, EVENT_CHECKIN_UPDATED, payload),
+          broadcast(CHANNEL_ADMIN, EVENT_CHECKIN_UPDATED, payload),
+        ]);
+      } else {
+        setCheckIns((prev) => prev.filter((c) => c.id !== temp.id));
+        showToast(res.error ?? "불참 처리 중 오류가 발생했어요.");
+      }
+    });
+  }, [absentTarget, schedule, currentUser.id, currentUser.group_id, broadcast]);
 
   const handleReport = useCallback(async () => {
     if (!schedule) return;
@@ -135,6 +201,21 @@ export default function GroupCheckinView({
       (m) => !checkIns.some((c) => c.user_id === m.id)
     ).length;
     setReportOpen(false);
+
+    if (!isOnline) {
+      const saved = addPendingReport({
+        group_id: currentUser.group_id,
+        schedule_id: schedule.id,
+        pending_count: unchecked,
+      });
+      if (saved) {
+        setReported(true);
+      } else {
+        showToast("저장 공간이 부족해요. 기기 저장소를 확인해주세요.");
+      }
+      return;
+    }
+
     startTransition(async () => {
       const res = await submitReport(currentUser.group_id, schedule.id, unchecked);
       if (res.ok) {
@@ -143,37 +224,32 @@ export default function GroupCheckinView({
           group_id: currentUser.group_id,
           pending_count: unchecked,
         });
+      } else {
+        showToast(res.error ?? "보고 처리 중 오류가 발생했어요. 다시 시도해주세요.");
       }
     });
-  }, [schedule, members, checkIns, currentUser.group_id, broadcast]);
+  }, [schedule, members, checkIns, currentUser.group_id, broadcast, isOnline, addPendingReport]);
 
   const checkedIds = new Set(checkIns.map((c) => c.user_id));
-  const uncheckedCount = members.filter((m) => !checkedIds.has(m.id)).length;
+  const absentIds = new Set(checkIns.filter((c) => c.is_absent).map((c) => c.user_id));
+  const uncheckedCount = members.filter(
+    (m) => !checkedIds.has(m.id)
+  ).length;
   const allComplete = members.length > 0 && uncheckedCount === 0;
-  const sorted = [...members].sort(
-    (a, b) => Number(checkedIds.has(a.id)) - Number(checkedIds.has(b.id))
-  );
+  // 정렬: 미확인 → 불참 → 완료
+  const sorted = [...members].sort((a, b) => {
+    const aChecked = checkedIds.has(a.id);
+    const bChecked = checkedIds.has(b.id);
+    const aAbsent = absentIds.has(a.id);
+    const bAbsent = absentIds.has(b.id);
+    // 미확인(0) < 불참(1) < 완료(2)
+    const aOrder = aChecked ? (aAbsent ? 1 : 2) : 0;
+    const bOrder = bChecked ? (bAbsent ? 1 : 2) : 0;
+    return aOrder - bOrder;
+  });
 
   return (
-    <div className="flex min-h-screen flex-col bg-app-bg">
-      {/* 공지 배너 */}
-      {notice && (
-        <div
-          role="alert"
-          aria-live="polite"
-          className="flex items-start gap-2 bg-notice-banner px-4 py-3"
-        >
-          <p className="flex-1 text-sm">{notice}</p>
-          <button
-            onClick={() => setNotice(null)}
-            className="flex min-h-11 min-w-11 items-center justify-center text-lg"
-            aria-label="공지 닫기"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
+    <div className="flex flex-1 flex-col">
       {/* 상단 바 */}
       <header className="bg-white px-4 py-4 shadow-sm">
         <h1 className="text-lg font-bold">{schedule?.title ?? "대기 중"}</h1>
@@ -187,20 +263,23 @@ export default function GroupCheckinView({
         <div className="flex gap-2 overflow-x-auto px-4 py-3">
           {sorted.map((m) => {
             const checked = checkedIds.has(m.id);
+            const absent = absentIds.has(m.id);
             return (
               <div key={m.id} className="relative flex-shrink-0">
                 <div
                   className={cn(
                     "flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold",
-                    checked
-                      ? "bg-main-action"
-                      : "border-2 border-dashed border-gray-300 bg-gray-100"
+                    absent
+                      ? "bg-gray-200 text-gray-400"
+                      : checked
+                        ? "bg-main-action"
+                        : "border-2 border-dashed border-gray-300 bg-gray-100"
                   )}
-                  aria-label={`${m.name} ${checked ? "탑승 완료" : "미탑승"}`}
+                  aria-label={`${m.name} ${absent ? "불참" : checked ? "탑승 완료" : "미탑승"}`}
                 >
                   {m.name.charAt(0)}
                 </div>
-                {checked && (
+                {checked && !absent && (
                   <span
                     className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-complete-check"
                     aria-hidden="true"
@@ -257,6 +336,7 @@ export default function GroupCheckinView({
             checkIn={checkIns.find((c) => c.user_id === m.id) ?? null}
             onCheckin={handleCheckin}
             onCancel={setCancelTarget}
+            onAbsent={setAbsentTarget}
           />
         ))}
       </ul>
@@ -272,8 +352,8 @@ export default function GroupCheckinView({
         </div>
       )}
 
-      {/* 보고 버튼 — 항상 활성 */}
-      <div className="fixed bottom-0 left-0 right-0 border-t bg-white p-4">
+      {/* 보고 버튼 — 항상 활성, 탭 바 위에 위치 */}
+      <div className="fixed bottom-12 left-0 right-0 border-t bg-white px-4 py-3">
         <button
           onClick={() => (allComplete ? handleReport() : setReportOpen(true))}
           className={cn(
@@ -292,6 +372,17 @@ export default function GroupCheckinView({
               : COPY.reportButtonPending(uncheckedCount)}
         </button>
       </div>
+
+      {/* 에러 토스트 */}
+      {toast && (
+        <div
+          className="fixed bottom-24 left-4 right-4 z-50 rounded-xl bg-gray-900 px-4 py-3 text-center text-sm text-white shadow-lg"
+          role="alert"
+          aria-live="assertive"
+        >
+          {toast}
+        </div>
+      )}
 
       {/* 취소 확인 모달 */}
       <Dialog
@@ -314,6 +405,32 @@ export default function GroupCheckinView({
               className="min-h-11 flex-1 rounded-xl bg-red-500 text-sm font-medium text-white focus-visible:ring-2 focus-visible:ring-red-500"
             >
               취소할게요
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 불참 확인 모달 */}
+      <Dialog
+        open={!!absentTarget}
+        onOpenChange={(o) => !o && setAbsentTarget(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>불참 처리할까요?</DialogTitle>
+          </DialogHeader>
+          <p className="text-center text-sm text-muted-foreground">
+            {absentTarget?.name}님을 불참 처리해요. 탑승 카운트에서 제외돼요.
+          </p>
+          <DialogFooter>
+            <DialogClose className="min-h-11 flex-1 rounded-xl bg-gray-100 text-sm font-medium">
+              아니요
+            </DialogClose>
+            <button
+              onClick={handleAbsentConfirm}
+              className="min-h-11 flex-1 rounded-xl bg-gray-700 text-sm font-medium text-white focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              불참 처리
             </button>
           </DialogFooter>
         </DialogContent>

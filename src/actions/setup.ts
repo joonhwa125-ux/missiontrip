@@ -21,12 +21,12 @@ async function requireAdmin(): Promise<{ id: string } | null> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user?.email) return null;
 
   const { data } = await supabase
     .from("users")
     .select("id, role")
-    .eq("email", user.email!)
+    .eq("email", user.email)
     .single();
 
   return data?.role === "admin" ? data : null;

@@ -73,7 +73,6 @@ src/
 
 ### 절대 금지 사항
 - `text-decoration: line-through` (완료 카드)
-- 공지 배너에 `#FEE500` (노란색) 사용
 - 오프라인 배너 상단 배치
 - Polling 방식 (Realtime broadcast만 사용)
 - 보고 버튼 `disabled` 처리
@@ -134,7 +133,7 @@ src/
 | 역할 | 인원 | 핵심 행동 | 앱 사용 |
 |---|---|---|---|
 | 조장 | 18명 | 조원 카드 탭탭탭으로 체크인 처리, 최종 보고 | 필수 |
-| 총괄 관리자 | 1~2명 | 일정 활성화, 전체 현황 모니터링, 공지 발송 | 필수 |
+| 총괄 관리자 | 1~2명 | 일정 활성화, 전체 현황 모니터링 | 필수 |
 | 참가자 (조원) | 약 180명 | 셀프 체크인 (선택), 현황 확인 | 선택 |
 
 ---
@@ -178,21 +177,32 @@ if (!user.email?.endsWith(ALLOWED_DOMAIN)) {
 > Supabase Dashboard 수동 입력 대신, `/setup` 페이지에서 Google Sheets 데이터를 일괄 동기화한다.
 > 조 이름 → UUID 매핑을 시스템이 자동 처리하므로 사람이 UUID를 다룰 일이 없다.
 
-**Google Sheets 구조 (3개 시트):**
+**Google Sheets 구조 (2개 시트):**
+
+> 조구성 시트는 삭제. 참가자 시트의 "소속조" 컬럼에서 고유값을 자동 추출하여 Groups를 생성한다.
+> 이메일 컬럼도 삭제. 역할에 따라 시스템이 자동 생성한다.
 
 | 시트명 | 컬럼 | 예시 |
 |---|---|---|
-| 조구성 | 조이름, 차량 | 1조, 1호차 |
-| 참가자 | 이름, 이메일, 전화번호, 역할(조원/조장/관리자), 소속조 | 홍길동, hong@linkagelab.co.kr, 010-1234-5678, 조장, 1조 |
+| 참가자 | 이름, 전화번호, 역할(조원/조장/관리자), 소속조 | 홍길동, 010-1234-5678, 조장, 1조 |
 | 일정 | 일차, 순서, 일정명, 장소, 예정시각 | 1, 1, 김포공항 탑승 게이트 집결, 국내선 3번 게이트, 08:30 |
+
+**이메일 자동 생성 규칙:**
+- 조장/관리자 → `{이름}@linkagelab.co.kr` (LDAP 계정명 = 이름 컬럼)
+- 조원 → `_member.{이름}.{행번호}@nologin.internal` (로그인 불필요, 식별용 placeholder)
+- 조장/관리자 이메일 중복 시 검증 오류 (동명이인 대응 필요)
+
+**조(Groups) 자동 추출:**
+- 참가자 시트의 "소속조" 컬럼 고유값 → `Groups` 테이블 자동 INSERT
+- `name = bus_name` (조 = 버스 1:1 매핑)
 
 **동기화 흐름:**
 
-1. 관리자가 `/setup`에서 Google Sheet URL 입력 (또는 CSV 파일 업로드)
-2. 시스템이 시트 데이터를 파싱 + 검증 (이메일 형식, 도메인, 역할값, 조 존재 여부)
+1. 관리자가 `/setup`에서 Google Sheet URL 입력 + GID 2개 (참가자, 일정) (또는 CSV 파일 2개 업로드)
+2. 시스템이 2개 시트 데이터를 파싱 + 검증 (역할값, 이름 필수, 소속조 필수, 조장 이메일 중복, 조당 조장 존재)
 3. 미리보기 화면에서 데이터 확인 → [DB에 반영] 버튼
-4. Groups → Users → Schedules 순서로 트랜잭션 INSERT
-5. 결과 요약 표시 (성공/실패/중복 건수)
+4. Groups → Users → Schedules 순서로 UPSERT
+5. 결과 요약 표시 (조 N개, 참가자 N명, 일정 N개)
 
 **Google Sheets 읽기 방식:**
 - 시트를 "링크가 있는 모든 사용자에게 공개 (뷰어)" 설정
@@ -201,8 +211,7 @@ if (!user.email?.endsWith(ALLOWED_DOMAIN)) {
 
 **재동기화 지원:**
 - 출발 전 참가자 변경 시 재실행 가능
-- 기존 데이터와 비교: 신규 → INSERT, 변경 → UPDATE, 삭제된 행 → 표시만 (자동 삭제 안 함)
-- 재동기화 전 변경사항 diff 미리보기 제공
+- UPSERT로 처리: 신규 → INSERT, 기존 → UPDATE (`onConflict: "email"` / `"name"` / `"day_number,sort_order"`)
 
 ---
 
@@ -267,6 +276,10 @@ CREATE UNIQUE INDEX idx_one_active_schedule
 | checked_by | text | CHECK IN ('self','leader','admin') | 셀프 / 조장대리 / 관리자 |
 | checked_by_user_id | uuid | FK → Users.id, nullable | 체크인 처리한 사용자 (조장/관리자 추적) |
 | offline_pending | boolean | default false, NOT NULL | 오프라인 미sync 여부 |
+| is_absent | boolean | default false, NOT NULL | 불참 처리 여부 (조장·관리자 설정 가능) |
+
+> `is_absent = true`인 체크인은 "불참"으로 표시. 탑승 카운트에서 제외하되 "확인 완료"로 처리하여 전원 완료를 차단하지 않는다.
+> 조장은 자기 조원의 불참 처리 가능. 관리자는 전체 인원 불참 처리 가능. 불참 처리된 인원은 조장 카드에 "불참" 텍스트로 표시.
 
 **필수 DB 제약:**
 
@@ -435,7 +448,6 @@ ALLOWED_EMAIL_DOMAIN=@linkagelab.co.kr        # 도메인 제한
 
 #### 4.2.1 화면 구성 (위→아래)
 
-- **공지 배너 (`#E6F1FB` 파란색):** 관리자 공지 수신 시 상단 표시. X 버튼으로 닫기
 - **상단 바:** 현재 활성 일정명 + 장소
 - **이니셜 동그라미 행:** 조원 전원 이니셜 원 + 완료/전체 카운트
 - **조원 카드 리스트:** 미완료 상단, 완료 하단 자동 정렬
@@ -450,8 +462,9 @@ ALLOWED_EMAIL_DOMAIN=@linkagelab.co.kr        # 도메인 제한
 #### 4.2.3 조원 카드 스펙
 
 - 카드 최소 높이: **72px** (KWCAG 2.5.5)
-- **미완료:** 흰 배경 + '아직 안 보여요' + 빈 원(점선) + [탔어요!] 버튼(`#FEE500`)
+- **미완료:** 흰 배경 + '확인 전' + 빈 원(점선) + [탔어요!] 버튼(`#FEE500`) + [불참] 텍스트 버튼(회색, 44px 터치 영역 확보)
 - **완료:** 연초록(`#EAF3DE`) 배경 + 'HH:MM 탑승 완료' + 초록 체크 원 + [취소] 버튼(회색)
+- **불참:** 회색(`bg-gray-100`) 배경 + '불참' 텍스트 + [취소] 버튼(회색)
 - 완료 카드 하단 자동 이동: `sort((a,b) => Number(a.checked) - Number(b.checked))`
 
 #### 4.2.4 탭탭탭 흐름
@@ -471,25 +484,40 @@ ALLOWED_EMAIL_DOMAIN=@linkagelab.co.kr        # 도메인 제한
 - 미완료 시: '[N]명이 아직이에요. 그래도 보고할까요?' 확인 모달
 - Realtime `'admin'` 채널로 `{type:'group_reported', group_id, pending_count}` broadcast
 
+#### 4.2.7 하단 탭 네비게이션 — 2탭 구조
+
+> 조장 화면은 **[체크인] / [일정]** 2탭으로 구성. 기본 탭은 [체크인].
+
+**[체크인] 탭 (기본):** 4.2.1~4.2.6의 기존 체크인 화면 그대로.
+
+**[일정] 탭:** 읽기 전용. 조장이 일정과 전체 현황을 파악하는 화면.
+
+- **오늘 일정 타임라인:** `day_number`가 오늘인 일정 목록. 각 일정에 예정 시각(HH:MM) + 장소 + 상태(완료/진행중/대기) 표시. 진행중 일정 강조(노란 배경). Realtime으로 `schedule_activated`, `schedule_updated` 수신 시 자동 갱신
+- **전체 조 현황 (읽기 전용):** 현재 활성 일정 기준 전체 조 프로그레스 바 + 상태 배지(보고완료/전원확인/진행중/시작전). **같은 차량(`bus_name`) 조는 시각적으로 묶어 표시.** 드릴다운(미탑승자 명단) 없음 — 관리자 전용
+> 조장이 [일정] 탭에서 할 수 있는 것은 **확인**뿐이다. 일정 활성화, 시간 변경 등 조작은 관리자 전용. 불참 처리는 [체크인] 탭에서 자기 조원에 한해 가능.
+
 ---
 
-### 4.3 관리자 화면 (`/admin`) — 3탭 구조
+### 4.3 관리자 화면 (`/admin`) — 2탭 구조
 
-> 탭 구성: **현황 / 일정 / 공지**. 헤더 배경색 `#FEE500`.
+> 탭 구성: **현황 / 일정**. 헤더 배경색 `#FEE500`. 일반 공지는 카카오워크로 대체.
 
 #### 4.3.1 [현황] 탭
 
 - **경과 시간 표시:** 활성 일정의 `activated_at`으로부터 경과 시간을 상단에 실시간 표시 (예: '23분 경과')
-- 상단 요약: 보고완료 / 진행중 / 미시작 카드 3개
+- 상단 요약: 보고완료 / 진행중 / 시작전 카드 3개
+- **차량별 그룹핑:** 조 그리드를 `bus_name`으로 묶어 표시. "1호차" 섹션 아래 해당 차량의 조 카드들을 나열. TF장이 "이 차량 출발 가능?" 판단에 활용
 - 조별 그리드 (2열): 프로그레스 바 + 완료/전체 수 + 상태 배지
-- **조 카드 드릴다운:** 조 카드 탭 → 바텀시트로 해당 조 미확인 인원 이름 목록 표시 (이름 + 전화번호). 전원 완료 시 '전원 확인 완료' 표시
+- **조 카드에 조장 표시:** 조장 이름 + 전화 아이콘(`<a href="tel:">` + `aria-label="조장에게 전화"`, 44x44px). 긴급 시 TF장→조장 즉시 연락
+- **조 카드 드릴다운:** 조 카드 탭 → 바텀시트로 해당 조 미확인 인원 이름 목록 표시 (이름 + 전화 아이콘). 전원 완료 시 '전원 확인 완료' 표시
+- **불참 처리:** 드릴다운 내 미탑승 인원 옆 [불참] 버튼. 탭 → '불참 처리할까요?' 확인 모달 → `check_ins` INSERT (`is_absent=true, checked_by='admin'`). 불참 인원은 조장 카드에 '불참' 텍스트 표시, 탑승 카운트에서 제외하되 전원 완료를 차단하지 않음
 
 | 상태 | 배지 | 배경 | 텍스트 | 조건 |
 |---|---|---|---|---|
 | 보고완료 | 보고완료 | `#EAF3DE` | `#27500A` | 전원 체크인 + 보고 완료 |
 | 전원확인 | 전원확인 | `#FEE500` | `#3C1E1E` | 전원 체크인, 보고 미완 |
 | 진행중 | 진행중 | `#FAEEDA` | `#633806` | 1명+ 체크인, 미완료 있음 |
-| 미시작 | 미시작 | bg-secondary | gray-tertiary | 체크인 0명 |
+| 시작전 | 시작전 | bg-secondary | gray-tertiary | 체크인 0명 |
 
 #### 4.3.2 [일정] 탭
 
@@ -499,11 +527,6 @@ ALLOWED_EMAIL_DOMAIN=@linkagelab.co.kr        # 도메인 제한
 - **예정 시각 표시:** 각 일정에 `scheduled_time`이 있으면 `HH:MM` 표시
 - **시간 수정:** 일정 카드 탭 → 시간 수정 입력 (시:분 picker) → DB 업데이트 → `schedule_updated` broadcast → 전체 화면에 '일정 시간이 변경되었어요' 토스트
 - [+ 일정 추가]: 일정명(필수), 장소(선택), 일차(필수), 예정시각(선택) — 4개 필드
-
-#### 4.3.3 [공지] 탭
-
-- 텍스트 입력 + [전체 공지 보내기] → `'global'` 채널 `notice` broadcast
-- 파란색(`#E6F1FB`) 배너로 전체 화면에 표시
 
 ---
 
@@ -517,8 +540,8 @@ ALLOWED_EMAIL_DOMAIN=@linkagelab.co.kr        # 도메인 제한
   - [Google Sheet URL 입력] 텍스트 필드 + [불러오기] 버튼
   - 또는 [CSV 파일 업로드] 버튼 (대안)
 - **Step 2 — 미리보기 + 검증:**
-  - 3개 탭(조구성 / 참가자 / 일정)으로 파싱된 데이터 표시
-  - 검증 오류 행은 빨간 하이라이트 + 오류 메시지 (예: "이메일 형식 오류", "조 이름 불일치")
+  - 2개 탭(참가자 / 일정)으로 파싱된 데이터 표시. 조 목록은 참가자 탭 상단에 자동 추출된 조 요약으로 표시
+  - 검증 오류 행은 빨간 하이라이트 + 오류 메시지
   - 요약: 조 N개, 참가자 N명(조장 N, 조원 N, 관리자 N), 일정 N개
 - **Step 3 — 반영:**
   - [DB에 반영] 버튼 → 확인 모달 "기존 데이터를 덮어씁니다. 계속할까요?"
@@ -529,12 +552,13 @@ ALLOWED_EMAIL_DOMAIN=@linkagelab.co.kr        # 도메인 제한
 
 | 검증 항목 | 조건 | 오류 메시지 |
 |---|---|---|
-| 이메일 형식 | `@` 포함 + 도메인 일치 | 이메일 형식이 올바르지 않아요 |
-| 이메일 중복 | 시트 내 중복 없음 | 이메일이 중복되어 있어요 |
+| 이름 필수 | 이름 컬럼 비어있지 않음 | 이름이 없어요 |
 | 역할값 | 조원/조장/관리자 중 하나 | 역할은 조원/조장/관리자만 가능해요 |
-| 소속조 존재 | 조구성 시트의 조이름과 일치 | 조구성에 없는 조 이름이에요 |
-| 조장 수 | 조당 최소 1명 | [N]조에 조장이 없어요 |
+| 소속조 필수 | 소속조 컬럼 비어있지 않음 | 소속조가 없어요 |
+| 조장/관리자 이메일 중복 | 자동 생성된 이메일 중복 없음 | {이메일} 이메일이 중복되어 있어요 |
+| 조장 수 | 조당 최소 1명 | {조이름}에 조장이 없어요 |
 | 일차 범위 | 1~3 | 일차는 1~3만 가능해요 |
+| 일정명 필수 | 일정명 비어있지 않음 | 일정명이 없어요 |
 
 #### 4.4.3 데이터 리셋
 
@@ -557,7 +581,6 @@ ALLOWED_EMAIL_DOMAIN=@linkagelab.co.kr        # 도메인 제한
 |---|---|---|---|---|
 | `global` | `schedule_activated` | 관리자 일정 활성화 | 전체 | 일정명 갱신 + 토스트 |
 | `global` | `schedule_updated` | 관리자 일정 시간 변경 | 전체 | 예정 시각 갱신 + '일정 시간이 변경되었어요' 토스트 |
-| `global` | `notice` | 관리자 공지 | 전체 | 파란 배너 표시 |
 | `group:{group_id}` | `checkin_updated` | 조원 셀프 체크인 | 해당 조장 | 카드 즉시 업데이트 |
 | `admin` | `group_reported` | 조장 보고 | 관리자 | 배지 '보고완료' 전환 |
 
@@ -567,6 +590,7 @@ ALLOWED_EMAIL_DOMAIN=@linkagelab.co.kr        # 도메인 제한
 
 - INSERT 실패 → 낙관적 업데이트 + 오프라인 아이콘
 - `localStorage 'mtrip_pending'`에 `{user_id, schedule_id, checked_by, checked_at}` 저장
+- **보고도 오프라인 큐 포함:** `localStorage 'mtrip_pending_reports'`에 `{group_id, schedule_id, pending_count}` 저장. 온라인 복귀 시 체크인 sync 완료 후 보고 sync 순서로 처리
 - 하단 배너: '오프라인 상태예요. N건 저장 중 — 연결되면 자동으로 보낼게요'
 - `window.addEventListener('online', sync)` → `INSERT ON CONFLICT DO NOTHING`
 - 활성 일정: `localStorage 'mtrip_active_schedule'`에 캐싱
@@ -599,7 +623,6 @@ ALLOWED_EMAIL_DOMAIN=@linkagelab.co.kr        # 도메인 제한
 | 메인 액션 | `#FEE500` | [탔어요!], 보고 버튼, 관리자 헤더 |
 | 완료 카드 | `#EAF3DE` | 완료 조원 카드 배경 |
 | 완료 체크 | `#00C471` | 체크 원, 이니셜 완료 점 |
-| 공지 배너 | `#E6F1FB` | 상단 공지 배너 |
 | 오프라인 | `#F1EFE8` | 하단 오프라인 배너 |
 | 진행중 배지 | `#FAEEDA` | 진행중 배지 배경 |
 | 앱 배경 | `#F5F3EF` | 전체 화면 배경 |
@@ -608,13 +631,14 @@ ALLOWED_EMAIL_DOMAIN=@linkagelab.co.kr        # 도메인 제한
 
 | 상황 | 문구 |
 |---|---|
-| 미완료 | 아직 안 보여요 |
+| 미완료 | 확인 전 |
 | 완료 | HH:MM 탑승 완료 |
 | 체크인 버튼 | 탔어요! |
 | 전체 카운트 | N / M명 탑승 완료 |
 | 전원 완료 | [조명] 전원 탑승 완료! |
 | 보고 (완료) | 우리 조 다 탔어요! 보고하기 |
 | 보고 (미완료) | N명 남았어요 |
+| 불참 | 불참 |
 | 오프라인 | 오프라인 상태예요. N건 저장 중 — 연결되면 자동으로 보낼게요 |
 
 ---
@@ -631,8 +655,7 @@ src/actions/
 ├── checkin.ts        # 체크인 CRUD
 ├── schedule.ts       # 일정 활성화/추가
 ├── report.ts         # 조장 보고
-├── setup.ts          # Google Sheets 동기화, 데이터 리셋
-└── notice.ts         # 공지 이력 저장 (선택)
+└── setup.ts          # Google Sheets 동기화, 데이터 리셋
 ```
 
 | Action | 함수명 | 권한 | 설명 |
@@ -644,7 +667,10 @@ src/actions/
 | schedule.ts | `createSchedule(title, location, dayNumber, scheduledTime?)` | admin | 즉흥 일정 INSERT |
 | schedule.ts | `updateScheduleTime(scheduleId, scheduledTime)` | admin | 예정 시각 변경 + broadcast |
 | report.ts | `submitReport(groupId, scheduleId, pendingCount)` | leader | group_reports UPSERT + broadcast |
-| setup.ts | `importFromGoogleSheet(sheetId)` | admin | 3개 시트 파싱 → 검증 → 일괄 INSERT |
+| setup.ts | `previewFromGoogleSheet(sheetId, gids)` | admin | 2개 시트(참가자, 일정) CSV fetch → 파싱 → 검증 → 미리보기 |
+| setup.ts | `previewFromCsv(usersCsv, schedulesCsv)` | admin | CSV 2개 직접 업로드 → 파싱 → 검증 → 미리보기 |
+| setup.ts | `importToDatabase(data)` | admin | 미리보기 데이터 → Groups/Users/Schedules UPSERT |
+| checkin.ts | `markAbsent(userId, scheduleId)` | leader, admin | 불참 처리 INSERT (`is_absent=true`) + broadcast. 조장은 자기 조원만 |
 | setup.ts | `resetAllData()` | admin | 전체 데이터 초기화 (FK 역순 삭제) |
 
 ### 9.2 핵심 구현 지시
@@ -662,7 +688,12 @@ src/actions/
 | 보고 영속화 | Server Action → group_reports UPSERT → broadcast |
 | 시간 변경 | Server Action → Schedules UPDATE `scheduled_time` → `schedule_updated` broadcast |
 | 경과 시간 | `Date.now() - activated_at` 실시간 카운트 (setInterval 1분), Polling 아님 — 로컬 타이머 |
-| 조 드릴다운 | 조 카드 탭 → 바텀시트: 미확인 인원 이름+전화번호 리스트 |
+| 조 드릴다운 | 조 카드 탭 → 바텀시트: 미확인 인원 이름 + 전화 아이콘(`<a href="tel:">`) 리스트 |
+| 불참 처리 | 조장: 미완료 카드 [불참] 버튼 → 확인 모달 → INSERT (`is_absent=true, checked_by='leader'`). 관리자: 드릴다운에서 [불참] → INSERT (`is_absent=true, checked_by='admin'`). 조장은 자기 조원만 가능 |
+| 차량 그룹핑 | 현황 탭에서 `bus_name`으로 조 카드를 차량별 섹션으로 묶어 표시 |
+| 조장 연락처 | 조 카드에 조장 이름 + 전화 아이콘. 전화 아이콘은 `<a href="tel:">` + `aria-label` |
+| 오프라인 보고 | 보고도 `localStorage 'mtrip_pending_reports'`에 큐잉. 온라인 복귀 시 체크인→보고 순서로 sync |
+| 불참 카드 스타일 | 조장 화면에서 불참 인원: 회색 배경 + '불참' 텍스트. 탑승 카운트에서 제외 |
 
 ---
 
@@ -678,7 +709,7 @@ src/actions/
 | **Phase 1** | OAuth + 도메인 차단 + 역할 라우팅 | 최고 |
 | **Phase 1** | 조장 체크인 (탭탭탭 + 이니셜 + 완료카드) | 최고 |
 | **Phase 1** | 전원 완료 축하 + 보고 (group_reports 영속화) | 최고 |
-| **Phase 1** | 관리자 3탭 (현황/일정/공지) | 최고 |
+| **Phase 1** | 관리자 2탭 (현황/일정) | 최고 |
 | **Phase 1** | 즉흥 일정 추가 | 최고 |
 | **Phase 1** | Realtime 동기화 | 최고 |
 | **Phase 1** | 오프라인 대응 | 최고 |

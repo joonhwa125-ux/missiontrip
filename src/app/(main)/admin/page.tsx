@@ -26,7 +26,7 @@ export default async function AdminPage() {
     { data: schedules },
   ] = await Promise.all([
     supabase.from("groups").select("*").order("name"),
-    supabase.from("users").select("id, name, phone, group_id").order("name"),
+    supabase.from("users").select("id, name, phone, role, group_id").order("name"),
     supabase.from("schedules").select("*").eq("is_active", true).maybeSingle(),
     supabase
       .from("schedules")
@@ -35,7 +35,7 @@ export default async function AdminPage() {
       .order("sort_order"),
   ]);
 
-  let checkIns: { user_id: string }[] = [];
+  let checkIns: { user_id: string; is_absent: boolean }[] = [];
   let reports: {
     group_id: string;
     pending_count: number;
@@ -46,7 +46,7 @@ export default async function AdminPage() {
     const [{ data: ci }, { data: rp }] = await Promise.all([
       supabase
         .from("check_ins")
-        .select("user_id")
+        .select("user_id, is_absent")
         .eq("schedule_id", activeSchedule.id),
       supabase
         .from("group_reports")

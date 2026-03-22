@@ -14,7 +14,6 @@ const config: Config = {
         "main-action": "#FEE500",
         "complete-card": "#EAF3DE",
         "complete-check": "#00C471",
-        "notice-banner": "#E6F1FB",
         "offline-banner": "#F1EFE8",
         "progress-badge": "#FAEEDA",
         "app-bg": "#F5F3EF",

@@ -45,6 +45,7 @@ export interface CheckIn {
   checked_by: CheckedBy;
   checked_by_user_id: string | null;
   offline_pending: boolean;
+  is_absent: boolean;
 }
 
 export interface GroupReport {
@@ -68,7 +69,7 @@ export type GroupBadgeStatus =
   | "reported"     // 보고완료
   | "all_checked"  // 전원확인
   | "in_progress"  // 진행중
-  | "not_started"; // 미시작
+  | "not_started"; // 시작전
 
 export interface GroupStatusSummary {
   group: Group;
@@ -86,6 +87,13 @@ export interface OfflinePendingCheckin {
   checked_by: CheckedBy;
   checked_by_user_id: string;
   checked_at: string;
+}
+
+// 오프라인 대기 보고
+export interface OfflinePendingReport {
+  group_id: string;
+  schedule_id: string;
+  pending_count: number;
 }
 
 // Server Action 반환 타입
