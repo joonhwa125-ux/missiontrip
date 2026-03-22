@@ -17,7 +17,7 @@ export default async function GroupPage() {
     .eq("email", authUser.email!)
     .single();
 
-  if (!currentUser || currentUser.role !== "leader") redirect("/");
+  if (!currentUser || !["leader", "admin"].includes(currentUser.role)) redirect("/");
 
   const [{ data: group }, { data: members }, { data: activeSchedule }] =
     await Promise.all([
