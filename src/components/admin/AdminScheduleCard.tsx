@@ -21,6 +21,75 @@ interface Props {
   onTimeEdit: () => void;
 }
 
+// Mini Ring Gauge — SVG 원형 프로그레스
+function RingGauge({
+  value,
+  max,
+  label,
+  color,
+}: {
+  value: number;
+  max: number;
+  label: string;
+  color: string;
+}) {
+  const size = 48;
+  const strokeWidth = 4;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const ratio = max > 0 ? value / max : 0;
+  const offset = circumference * (1 - ratio);
+  const percent = max > 0 ? Math.round(ratio * 100) : 0;
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg
+          width={size}
+          height={size}
+          viewBox={`0 0 ${size} ${size}`}
+          aria-hidden="true"
+        >
+          {/* 배경 원 */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={strokeWidth}
+            className="text-gray-200"
+          />
+          {/* 프로그레스 원 */}
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            fill="none"
+            stroke={color}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            transform={`rotate(-90 ${size / 2} ${size / 2})`}
+            className="transition-all duration-500"
+          />
+        </svg>
+        {/* 중앙 퍼센트 */}
+        <span
+          className="absolute inset-0 flex items-center justify-center text-xs font-bold"
+          aria-label={`${label} ${value}/${max} (${percent}%)`}
+        >
+          {percent}%
+        </span>
+      </div>
+      <span className="text-xs text-muted-foreground">
+        {label} {value}/{max}
+      </span>
+    </div>
+  );
+}
+
 export default function AdminScheduleCard({
   schedule,
   checkIns,
@@ -62,21 +131,33 @@ export default function AdminScheduleCard({
               <span>{elapsed}분 경과</span>
             </div>
           </div>
-          <div className="flex flex-col items-end gap-1">
-            <span className="flex-shrink-0 rounded-full bg-main-action px-2 py-0.5 text-xs font-bold text-gray-900">
-              진행중
-            </span>
-            <span className="text-xs font-medium text-muted-foreground">
-              보고 {reportedCount}/{totalGroups}조
-            </span>
-            <span className="text-xs font-medium text-muted-foreground">
-              확인 {checkedCount}/{totalMembers}명
-            </span>
-          </div>
+          <span className="flex-shrink-0 rounded-full bg-main-action px-2 py-0.5 text-xs font-bold text-gray-900">
+            진행중
+          </span>
         </div>
+
+        {/* Ring Gauge 지표 */}
+        <div
+          className="mt-3 flex items-center justify-center gap-8"
+          aria-live="polite"
+        >
+          <RingGauge
+            value={reportedCount}
+            max={totalGroups}
+            label="보고"
+            color="#00C471"
+          />
+          <RingGauge
+            value={checkedCount}
+            max={totalMembers}
+            label="확인"
+            color="#FEE500"
+          />
+        </div>
+
         <button
           onClick={onSummaryTap}
-          className="mt-2 w-full min-h-11 rounded-xl bg-white/60 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
+          className="mt-3 w-full min-h-11 rounded-xl bg-white/60 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
           aria-label="전체 현황 보기"
         >
           전체 현황 보기 &gt;
@@ -127,7 +208,10 @@ export default function AdminScheduleCard({
     );
   }
 
-  // completed
+  // completed — 완료 카드에도 작은 링 게이지 표시
+  const completedRatio = totalMembers > 0 ? checkedCount / totalMembers : 0;
+  const completedPercent = Math.round(completedRatio * 100);
+
   return (
     <div
       className="rounded-2xl bg-white p-4 opacity-55"
@@ -163,7 +247,7 @@ export default function AdminScheduleCard({
             >
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
-            {checkedCount}/{totalMembers}명
+            {completedPercent}% · {checkedCount}/{totalMembers}명
           </span>
         </div>
       </div>
