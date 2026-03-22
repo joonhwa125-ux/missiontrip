@@ -4,7 +4,6 @@ import { useState, useEffect, useRef, useCallback, useTransition, useMemo } from
 import { activateSchedule } from "@/actions/schedule";
 import { useBroadcast } from "@/hooks/useRealtime";
 import { CHANNEL_GLOBAL, COPY, EVENT_SCHEDULE_ACTIVATED } from "@/lib/constants";
-import { getElapsedMinutes } from "@/lib/utils";
 import type { Schedule, AdminCheckIn, AdminMember, Group } from "@/lib/types";
 import AdminScheduleCard from "@/components/admin/AdminScheduleCard";
 import {
@@ -51,7 +50,6 @@ export default function AdminScheduleList({
   const [, startTransition] = useTransition();
   const { broadcast } = useBroadcast();
   const [warningTarget, setWarningTarget] = useState<Schedule | null>(null);
-  const [elapsed, setElapsed] = useState(0);
   const autoAlertedRef = useRef<Set<string>>(new Set());
 
   const activeCheckIns = useMemo(
@@ -60,18 +58,6 @@ export default function AdminScheduleList({
   );
   const totalMemberCount = members.length;
 
-  // -- 경과 시간 추적 (60초 간격 로컬 타이머) --
-  useEffect(() => {
-    if (!activeSchedule?.activated_at) {
-      setElapsed(0);
-      return;
-    }
-    setElapsed(getElapsedMinutes(activeSchedule.activated_at));
-    const timer = setInterval(() => {
-      setElapsed(getElapsedMinutes(activeSchedule.activated_at!));
-    }, 60_000);
-    return () => clearInterval(timer);
-  }, [activeSchedule?.activated_at]);
 
   // -- 일정 활성화 Server Action --
   const handleActivate = useCallback(
@@ -136,7 +122,6 @@ export default function AdminScheduleList({
             reports={reportsMap[s.id] ?? []}
             groups={groups}
             members={members}
-            elapsed={s.is_active ? elapsed : 0}
             onSummaryTap={() => onBottomSheet(s)}
             onActivate={() => handleActivateClick(s)}
             onTimeEdit={() => onTimeEdit(s)}

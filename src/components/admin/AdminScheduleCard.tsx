@@ -15,7 +15,6 @@ interface Props {
   reports: Report[];
   groups: Group[];
   members: AdminMember[];
-  elapsed: number;
   onSummaryTap: () => void;
   onActivate: () => void;
   onTimeEdit: () => void;
@@ -96,7 +95,6 @@ export default function AdminScheduleCard({
   reports,
   groups,
   members,
-  elapsed,
   onSummaryTap,
   onActivate,
   onTimeEdit,
@@ -126,10 +124,11 @@ export default function AdminScheduleCard({
                 {schedule.location}
               </p>
             )}
-            <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-              {timeDisplay && <span>{timeDisplay}</span>}
-              <span>{elapsed}분 경과</span>
-            </div>
+            {timeDisplay && (
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {timeDisplay}
+              </p>
+            )}
           </div>
           <span className="flex-shrink-0 rounded-full bg-main-action px-2 py-0.5 text-xs font-bold text-gray-900">
             진행중
