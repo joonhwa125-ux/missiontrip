@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useMemo, useRef, type SetStateAction 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useRealtime } from "@/hooks/useRealtime";
-import { fetchScheduleCheckIns } from "@/actions/schedule";
+import { fetchScheduleCheckIns, debugCheckDbState } from "@/actions/schedule";
 import { sortSchedulesByStatus, getDefaultDay } from "@/lib/utils";
 import PageHeader from "@/components/common/PageHeader";
 import DayTabs from "@/components/common/DayTabs";
@@ -109,6 +109,30 @@ export default function AdminView({
   // 다이얼로그
   const [addOpen, setAddOpen] = useState(false);
   const [timeEditTarget, setTimeEditTarget] = useState<Schedule | null>(null);
+
+  // 임시 디버그: DB 상태 직접 확인 (문제 해결 후 제거)
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
+  const handleDebug = useCallback(async () => {
+    try {
+      const result = await debugCheckDbState();
+      const info = [
+        `[DB 진단 결과]`,
+        `활성 일정: ${result.activeSchedule?.title ?? "없음"} (id: ${result.activeSchedule?.id ?? "N/A"})`,
+        `activated_at: ${result.activeSchedule?.activated_at ?? "null"}`,
+        `DB check_ins: ${result.checkInCount}건`,
+        `DB reports: ${result.reportCount}건`,
+        `샘플: ${JSON.stringify(result.sampleCheckIns.slice(0, 2))}`,
+        `---`,
+        `[클라이언트 state]`,
+        `activeSchedule prop id: ${activeSchedule?.id ?? "null"}`,
+        `checkInsMap keys: ${Object.keys(checkInsMap).join(", ") || "비어있음"}`,
+        `현재 일정 checkIns: ${activeSchedule ? (checkInsMap[activeSchedule.id]?.length ?? 0) : 0}건`,
+      ].join("\n");
+      setDebugInfo(info);
+    } catch (e) {
+      setDebugInfo(`디버그 실패: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }, [activeSchedule, checkInsMap]);
 
   // 내 조 체크인 Sheet
   const [checkinSheetOpen, setCheckinSheetOpen] = useState(false);
@@ -280,6 +304,15 @@ export default function AdminView({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
               </svg>
             </button>
+            <button
+              onClick={handleDebug}
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-red-500 focus-visible:ring-2 focus-visible:ring-red-500"
+              aria-label="DB 진단"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+              </svg>
+            </button>
             <Link
               href="/setup"
               className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
@@ -372,6 +405,22 @@ export default function AdminView({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* 임시 디버그 패널 (문제 해결 후 제거) */}
+      {debugInfo && (
+        <div className="fixed inset-x-0 top-0 z-[60] mx-auto max-w-lg bg-black/90 p-4">
+          <div className="flex items-start justify-between gap-2">
+            <pre className="flex-1 whitespace-pre-wrap text-xs text-green-400">{debugInfo}</pre>
+            <button
+              onClick={() => setDebugInfo(null)}
+              className="min-h-11 min-w-11 text-white"
+              aria-label="디버그 닫기"
+            >
+              X
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 토스트 */}
       {toast && (

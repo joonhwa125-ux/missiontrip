@@ -44,6 +44,7 @@ export async function createCheckin(
       schedule_id: scheduleId,
       checked_by: actor.role as "leader" | "admin",
       checked_by_user_id: actor.id,
+      is_absent: false,
     },
     { onConflict: "user_id,schedule_id", ignoreDuplicates: true }
   );

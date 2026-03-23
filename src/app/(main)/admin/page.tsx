@@ -3,6 +3,10 @@ import { redirect } from "next/navigation";
 import AdminView from "@/components/admin/AdminView";
 import type { Group, Schedule } from "@/lib/types";
 
+// Next.js 서버 컴포넌트 캐싱 완전 차단 — 매 요청마다 fresh 데이터 보장
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function AdminPage() {
   // 인증 확인은 쿠키 기반 클라이언트
   const authClient = createClient();
@@ -39,8 +43,9 @@ export default async function AdminPage() {
   ]);
 
   // 활성화된 적 있는 모든 일정의 checkIns + reports (바텀시트용)
+  // 안전장치: is_active=true인데 activated_at=null인 엣지케이스 방어
   const activatedIds = ((schedules as Schedule[]) ?? [])
-    .filter((s) => s.activated_at)
+    .filter((s) => s.activated_at || s.is_active)
     .map((s) => s.id);
 
   type CiRow = { schedule_id: string; user_id: string; is_absent: boolean; checked_at: string };

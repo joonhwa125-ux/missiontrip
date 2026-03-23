@@ -105,12 +105,17 @@ export default function GroupCheckinView({
       }
 
       startTransition(async () => {
-        const res = await createCheckin(userId, activeSchedule.id);
-        if (res.ok) {
-          await broadcastCheckin(userId, "insert");
-        } else {
+        try {
+          const res = await createCheckin(userId, activeSchedule.id);
+          if (res.ok) {
+            await broadcastCheckin(userId, "insert");
+          } else {
+            setCheckIns((prev) => prev.filter((c) => c.id !== temp.id));
+            showToast(res.error ?? "체크인 처리 중 오류가 발생했어요.");
+          }
+        } catch {
           setCheckIns((prev) => prev.filter((c) => c.id !== temp.id));
-          showToast(res.error ?? "체크인 처리 중 오류가 발생했어요.");
+          showToast("서버 연결에 실패했어요. 다시 시도해주세요.");
         }
       });
     },
@@ -129,15 +134,17 @@ export default function GroupCheckinView({
       return prev.filter((c) => c.user_id !== userId);
     });
     startTransition(async () => {
-      const res = await deleteCheckin(userId, activeSchedule.id);
-      if (res.ok) {
-        await broadcastCheckin(userId, "delete");
-      } else {
-        // 서버 에러 시 낙관적 업데이트 롤백
-        if (removed) {
-          setCheckIns((prev) => [...prev, removed!]);
+      try {
+        const res = await deleteCheckin(userId, activeSchedule.id);
+        if (res.ok) {
+          await broadcastCheckin(userId, "delete");
+        } else {
+          if (removed) setCheckIns((prev) => [...prev, removed!]);
+          showToast(res.error ?? "취소 처리 중 오류가 발생했어요.");
         }
-        showToast(res.error ?? "취소 처리 중 오류가 발생했어요.");
+      } catch {
+        if (removed) setCheckIns((prev) => [...prev, removed!]);
+        showToast("서버 연결에 실패했어요. 다시 시도해주세요.");
       }
     });
   }, [cancelTarget, activeSchedule, broadcastCheckin, setCheckIns, showToast]);
@@ -158,12 +165,17 @@ export default function GroupCheckinView({
     };
     setCheckIns((prev) => [...prev.filter((c) => c.user_id !== userId), temp]);
     startTransition(async () => {
-      const res = await markAbsent(userId, activeSchedule.id);
-      if (res.ok) {
-        await broadcastCheckin(userId, "insert", true);
-      } else {
+      try {
+        const res = await markAbsent(userId, activeSchedule.id);
+        if (res.ok) {
+          await broadcastCheckin(userId, "insert", true);
+        } else {
+          setCheckIns((prev) => prev.filter((c) => c.id !== temp.id));
+          showToast(res.error ?? "불참 처리 중 오류가 발생했어요.");
+        }
+      } catch {
         setCheckIns((prev) => prev.filter((c) => c.id !== temp.id));
-        showToast(res.error ?? "불참 처리 중 오류가 발생했어요.");
+        showToast("서버 연결에 실패했어요. 다시 시도해주세요.");
       }
     });
   }, [absentTarget, activeSchedule, currentUser.id, broadcastCheckin, setCheckIns, showToast]);
@@ -191,22 +203,26 @@ export default function GroupCheckinView({
     }
 
     startTransition(async () => {
-      const res = await submitReport(currentUser.group_id, activeSchedule.id, unchecked);
-      if (res.ok) {
-        setReported(true);
-        onReported?.();
-        showToast(COPY.reportButtonDone);
-        const reportPayload = {
-          group_id: currentUser.group_id,
-          schedule_id: activeSchedule.id,
-          pending_count: unchecked,
-        };
-        await Promise.all([
-          broadcast(CHANNEL_GLOBAL, EVENT_GROUP_REPORTED, reportPayload),
-          broadcast(CHANNEL_ADMIN, EVENT_GROUP_REPORTED, reportPayload),
-        ]);
-      } else {
-        showToast(res.error ?? "보고 처리 중 오류가 발생했어요. 다시 시도해주세요.");
+      try {
+        const res = await submitReport(currentUser.group_id, activeSchedule.id, unchecked);
+        if (res.ok) {
+          setReported(true);
+          onReported?.();
+          showToast(COPY.reportButtonDone);
+          const reportPayload = {
+            group_id: currentUser.group_id,
+            schedule_id: activeSchedule.id,
+            pending_count: unchecked,
+          };
+          await Promise.all([
+            broadcast(CHANNEL_GLOBAL, EVENT_GROUP_REPORTED, reportPayload),
+            broadcast(CHANNEL_ADMIN, EVENT_GROUP_REPORTED, reportPayload),
+          ]);
+        } else {
+          showToast(res.error ?? "보고 처리 중 오류가 발생했어요. 다시 시도해주세요.");
+        }
+      } catch {
+        showToast("서버 연결에 실패했어요. 다시 시도해주세요.");
       }
     });
   }, [activeSchedule, members, checkIns, currentUser.group_id, broadcast, isOnline, addPendingReport, showToast]);

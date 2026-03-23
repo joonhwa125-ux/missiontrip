@@ -94,6 +94,49 @@ export async function fetchScheduleCheckIns(scheduleId: string): Promise<{
   };
 }
 
+// 진단용: 활성 일정의 DB 상태 직접 확인 (디버그 후 제거)
+export async function debugCheckDbState(): Promise<{
+  activeSchedule: { id: string; title: string; is_active: boolean; activated_at: string | null } | null;
+  checkInCount: number;
+  reportCount: number;
+  sampleCheckIns: { user_id: string; schedule_id: string; checked_at: string }[];
+}> {
+  const supabase = createServiceClient();
+
+  const { data: active } = await supabase
+    .from("schedules")
+    .select("id, title, is_active, activated_at")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (!active) {
+    return { activeSchedule: null, checkInCount: 0, reportCount: 0, sampleCheckIns: [] };
+  }
+
+  const [{ count: ciCount }, { count: rpCount }, { data: samples }] = await Promise.all([
+    supabase
+      .from("check_ins")
+      .select("*", { count: "exact", head: true })
+      .eq("schedule_id", active.id),
+    supabase
+      .from("group_reports")
+      .select("*", { count: "exact", head: true })
+      .eq("schedule_id", active.id),
+    supabase
+      .from("check_ins")
+      .select("user_id, schedule_id, checked_at")
+      .eq("schedule_id", active.id)
+      .limit(5),
+  ]);
+
+  return {
+    activeSchedule: active,
+    checkInCount: ciCount ?? 0,
+    reportCount: rpCount ?? 0,
+    sampleCheckIns: samples ?? [],
+  };
+}
+
 // 예정 시각 변경
 export async function updateScheduleTime(
   scheduleId: string,
