@@ -5,7 +5,7 @@ import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { formatTime, cn, getScheduleStatus, sortSchedulesByStatus, getDefaultDay } from "@/lib/utils";
 import DayTabs from "@/components/common/DayTabs";
 import { COPY } from "@/lib/constants";
-import type { Schedule, CheckIn, Group, GroupMember } from "@/lib/types";
+import type { Schedule, CheckIn, Group, GroupMember, GroupParty } from "@/lib/types";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +24,7 @@ interface AllMember {
 interface Props {
   schedules: Schedule[];
   activeSchedule: Schedule | null;
+  groupParty: GroupParty | null;
   members: Member[];
   checkIns: CheckIn[];
   scheduleCounts: Record<string, number>;
@@ -38,6 +39,7 @@ interface Props {
 export default function GroupFeedView({
   schedules,
   activeSchedule,
+  groupParty,
   members,
   checkIns,
   scheduleCounts,
@@ -49,10 +51,14 @@ export default function GroupFeedView({
   const { isOnline, pendingCount } = useOfflineSync();
   const [statusOpen, setStatusOpen] = useState(false);
 
-  const days = Array.from(new Set(schedules.map((s) => s.day_number))).sort();
-  const [selectedDay, setSelectedDay] = useState(() => getDefaultDay(schedules));
+  // scope 필터: 내 대(advance/rear) + 전체(all) 일정만 표시
+  const mySchedules = schedules.filter(
+    (s) => s.scope === "all" || !groupParty || s.scope === groupParty
+  );
+  const days = Array.from(new Set(mySchedules.map((s) => s.day_number))).sort();
+  const [selectedDay, setSelectedDay] = useState(() => getDefaultDay(mySchedules));
   const daySchedules = sortSchedulesByStatus(
-    schedules.filter((s) => s.day_number === selectedDay)
+    mySchedules.filter((s) => s.day_number === selectedDay)
   );
 
   return (

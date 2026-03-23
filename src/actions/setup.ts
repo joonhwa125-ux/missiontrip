@@ -111,7 +111,7 @@ export async function importToDatabase(
   const { data: insertedGroups, error: groupError } = await supabase
     .from("groups")
     .upsert(
-      data.groups.map((g) => ({ name: g.name, bus_name: g.bus_name })),
+      data.groups.map((g) => ({ name: g.name, bus_name: g.bus_name, party: g.party })),
       { onConflict: "name" }
     )
     .select("id, name");
@@ -165,6 +165,7 @@ export async function importToDatabase(
     location: s.location,
     day_number: s.day_number,
     sort_order: s.sort_order,
+    scope: s.scope,
     scheduled_time:
       s.scheduled_time && HH_MM_ONLY.test(s.scheduled_time)
         ? null

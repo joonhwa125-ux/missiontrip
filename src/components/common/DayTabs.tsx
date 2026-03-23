@@ -8,9 +8,10 @@ interface Props {
   selected: number;
   onChange: (day: number) => void;
   panelId?: string;
+  rightSlot?: React.ReactNode;
 }
 
-export default function DayTabs({ days, selected, onChange, panelId }: Props) {
+export default function DayTabs({ days, selected, onChange, panelId, rightSlot }: Props) {
   const tablistRef = useRef<HTMLDivElement>(null);
 
   const handleKeyDown = useCallback(
@@ -67,6 +68,11 @@ export default function DayTabs({ days, selected, onChange, panelId }: Props) {
           </button>
         );
       })}
+      {rightSlot && (
+        <div className="flex flex-shrink-0 items-center px-2">
+          {rightSlot}
+        </div>
+      )}
     </div>
   );
 }

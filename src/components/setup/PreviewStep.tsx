@@ -12,6 +12,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { SCOPE_LABEL } from "@/lib/constants";
 import type { SetupPreviewData } from "@/lib/types";
 
 interface Props {
@@ -70,14 +71,19 @@ export default function PreviewStep({
         조장 {leaderCount}명 / 조원 {memberCount}명 / 관리자 {adminCount}명
       </p>
 
-      {/* 조-차량 매핑 요약 */}
-      {data.groups.some((g) => g.bus_name !== g.name) && (
+      {/* 조-차량-선후발 매핑 요약 */}
+      {data.groups.some((g) => g.bus_name !== g.name || g.party) && (
         <div className="rounded-xl bg-white p-3">
-          <p className="mb-1 text-xs font-medium text-muted-foreground">차량 배정</p>
+          <p className="mb-1 text-xs font-medium text-muted-foreground">차량 배정 / 선후발</p>
           <div className="flex flex-wrap gap-1.5">
             {data.groups.map((g) => (
               <span key={g.name} className="rounded-lg bg-gray-50 px-2 py-1 text-xs">
                 {g.name} → {g.bus_name}
+                {g.party && (
+                  <span className="ml-1 rounded bg-gray-700 px-1 py-0.5 text-[0.5625rem] font-bold text-white">
+                    {g.party === "advance" ? "선발" : "후발"}
+                  </span>
+                )}
               </span>
             ))}
           </div>
@@ -148,6 +154,7 @@ export default function PreviewStep({
                 <th className="px-3 py-2">일정명</th>
                 <th className="px-3 py-2">장소</th>
                 <th className="px-3 py-2">시각</th>
+                <th className="px-3 py-2">대상</th>
               </tr>
             </thead>
             <tbody>
@@ -158,6 +165,9 @@ export default function PreviewStep({
                   <td className="px-3 py-2 font-medium">{s.title}</td>
                   <td className="px-3 py-2">{s.location ?? "-"}</td>
                   <td className="px-3 py-2">{s.scheduled_time ?? "-"}</td>
+                  <td className="px-3 py-2">
+                    {s.scope === "all" ? "전체" : (SCOPE_LABEL[s.scope] ?? s.scope)}
+                  </td>
                 </tr>
               ))}
             </tbody>

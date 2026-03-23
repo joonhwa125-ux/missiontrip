@@ -36,6 +36,25 @@ export const MEMBER_EMAIL_PREFIX = "_member";
 export const MIN_DAY_NUMBER = 1;
 export const MAX_DAY_NUMBER = 3;
 
+// 선후발 매핑 (CSV → DB)
+export const PARTY_MAP: Record<string, "advance" | "rear"> = {
+  선발: "advance",
+  후발: "rear",
+};
+
+// 일정 대상 매핑 (CSV → DB)
+export const SCOPE_MAP: Record<string, "all" | "advance" | "rear"> = {
+  전체: "all",
+  선발: "advance",
+  후발: "rear",
+};
+
+// 일정 대상 라벨 (DB → UI)
+export const SCOPE_LABEL: Record<string, string> = {
+  advance: "선발",
+  rear: "후발",
+};
+
 // 역할 라우팅
 export const ROLE_ROUTES = {
   leader: "/group",

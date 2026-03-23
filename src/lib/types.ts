@@ -3,11 +3,14 @@
 export type UserRole = "member" | "leader" | "admin";
 export type CheckedBy = "self" | "leader" | "admin";
 export type ScheduleStatus = "active" | "completed" | "waiting";
+export type GroupParty = "advance" | "rear";
+export type ScheduleScope = "all" | "advance" | "rear";
 
 export interface Group {
   id: string;
   name: string;
   bus_name: string | null;
+  party: GroupParty | null;
   created_at: string;
 }
 
@@ -44,6 +47,7 @@ export interface Schedule {
   day_number: number;
   sort_order: number;
   scheduled_time: string | null;
+  scope: ScheduleScope;
   is_active: boolean;
   activated_at: string | null;
   created_at: string;
@@ -129,6 +133,7 @@ export interface ActionResult<T = void> {
 export interface ParsedGroup {
   name: string;
   bus_name: string;
+  party: GroupParty | null;
 }
 
 export interface ParsedUser {
@@ -145,6 +150,7 @@ export interface ParsedSchedule {
   title: string;
   location: string | null;
   scheduled_time: string | null;
+  scope: ScheduleScope;
 }
 
 export interface SetupPreviewData {

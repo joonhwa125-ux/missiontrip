@@ -11,6 +11,8 @@ import {
   MEMBER_EMAIL_PREFIX,
   MIN_DAY_NUMBER,
   MAX_DAY_NUMBER,
+  PARTY_MAP,
+  SCOPE_MAP,
 } from "@/lib/constants";
 
 const ROLE_MAP: Record<string, UserRole> = {
@@ -82,9 +84,9 @@ export function parseCsv(csv: string): string[][] {
   return rows;
 }
 
-// 참가자 시트 파싱 (5컬럼: 이름, 전화번호, 역할, 소속조, 배정차량)
+// 참가자 시트 파싱 (6컬럼: 이름, 전화번호, 역할, 소속조, 배정차량, 선후발)
 // 이메일은 이름 기반 자동 생성 (조장/관리자: name@도메인, 조원: nologin)
-// groups는 소속조 고유값에서 자동 추출, bus_name은 배정차량 열에서 매핑
+// groups는 소속조 고유값에서 자동 추출, bus_name/party는 각 열에서 매핑
 export function parseUsersSheet(rows: string[][]): {
   users: ParsedUser[];
   groups: ParsedGroup[];
@@ -95,6 +97,8 @@ export function parseUsersSheet(rows: string[][]): {
   const emailSet = new Set<string>();
   // 조이름 → 배정차량 매핑 (같은 조의 첫 번째 배정차량값 사용)
   const groupBusMap = new Map<string, string>();
+  // 조이름 → 선후발 매핑 (같은 조의 첫 번째 값 사용)
+  const groupPartyMap = new Map<string, "advance" | "rear">();
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
@@ -105,6 +109,7 @@ export function parseUsersSheet(rows: string[][]): {
     const roleRaw = sanitizeText(row[2] ?? "");
     const groupName = sanitizeText(row[3] ?? "");
     const busName = row[4]?.trim() || null;
+    const partyRaw = sanitizeText(row[5] ?? "");
 
     // 이름 필수
     if (!name) {
@@ -164,19 +169,35 @@ export function parseUsersSheet(rows: string[][]): {
       groupBusMap.set(groupName, busName ?? groupName);
     }
 
+    // 소속조 → 선후발 매핑 수집 (첫 번째 값 우선)
+    if (partyRaw && !groupPartyMap.has(groupName)) {
+      const party = PARTY_MAP[partyRaw];
+      if (party) {
+        groupPartyMap.set(groupName, party);
+      } else if (partyRaw) {
+        errors.push({
+          sheet: "users",
+          row: i + 1,
+          field: "선후발",
+          message: `선후발은 선발/후발만 가능해요 (입력값: "${partyRaw}")`,
+        });
+      }
+    }
+
     users.push({ name, email, phone, role, group_name: groupName });
   }
 
-  // 소속조 고유값 → ParsedGroup[] (bus_name은 배정차량 열, 없으면 조이름)
+  // 소속조 고유값 → ParsedGroup[] (bus_name은 배정차량 열, party는 선후발 열)
   const groups: ParsedGroup[] = Array.from(groupBusMap.entries()).map(([gn, bn]) => ({
     name: gn,
     bus_name: bn,
+    party: groupPartyMap.get(gn) ?? null,
   }));
 
   return { users, groups, errors };
 }
 
-// 일정 시트 파싱 (5컬럼: 일차, 순서, 일정명, 장소, 예정시각)
+// 일정 시트 파싱 (6컬럼: 일차, 순서, 일정명, 장소, 예정시각, 대상)
 export function parseSchedulesSheet(rows: string[][]): {
   schedules: ParsedSchedule[];
   errors: ValidationError[];
@@ -193,6 +214,7 @@ export function parseSchedulesSheet(rows: string[][]): {
     const title = row[2]?.trim();
     const location = row[3]?.trim() || null;
     const scheduledTimeRaw = row[4]?.trim() || null;
+    const scopeRaw = sanitizeText(row[5] ?? "");
 
     if (
       isNaN(dayNumber) ||
@@ -218,12 +240,25 @@ export function parseSchedulesSheet(rows: string[][]): {
       continue;
     }
 
+    // 대상 (비어있으면 '전체')
+    const scope = scopeRaw ? SCOPE_MAP[scopeRaw] : "all";
+    if (!scope) {
+      errors.push({
+        sheet: "schedules",
+        row: i + 1,
+        field: "대상",
+        message: `대상은 전체/선발/후발만 가능해요 (입력값: "${scopeRaw}")`,
+      });
+      continue;
+    }
+
     schedules.push({
       day_number: dayNumber,
       sort_order: isNaN(sortOrder) ? i : sortOrder,
       title,
       location,
       scheduled_time: scheduledTimeRaw,
+      scope,
     });
   }
 

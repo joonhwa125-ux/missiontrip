@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRealtime } from "@/hooks/useRealtime";
 import GroupFeedView from "./GroupFeedView";
 import GroupCheckinView from "./GroupCheckinView";
-import type { Schedule, CheckIn, Group, GroupMember } from "@/lib/types";
+import type { Schedule, CheckIn, Group, GroupMember, GroupParty } from "@/lib/types";
 
 type Member = GroupMember;
 
@@ -17,6 +17,7 @@ interface AllMember {
 interface Props {
   currentUser: { id: string; group_id: string };
   groupName: string;
+  groupParty: GroupParty | null;
   members: Member[];
   activeSchedule: Schedule | null;
   initialCheckIns: CheckIn[];
@@ -32,6 +33,7 @@ type ViewMode = "feed" | "checkin";
 export default function GroupView({
   currentUser,
   groupName,
+  groupParty,
   members,
   activeSchedule,
   initialCheckIns,
@@ -83,6 +85,7 @@ export default function GroupView({
           day_number: prev?.day_number ?? 1,
           sort_order: prev?.sort_order ?? 0,
           scheduled_time: prev?.scheduled_time ?? null,
+          scope: prev?.scope ?? "all",
           is_active: true,
           activated_at: new Date().toISOString(),
           created_at: prev?.created_at ?? new Date().toISOString(),
@@ -138,6 +141,7 @@ export default function GroupView({
         <GroupFeedView
           schedules={schedules}
           activeSchedule={currentSchedule}
+          groupParty={groupParty}
           members={members}
           checkIns={checkIns}
           scheduleCounts={scheduleCounts}

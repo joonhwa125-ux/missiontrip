@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { createSchedule } from "@/actions/schedule";
 import { parseKSTTime } from "@/lib/utils";
-import type { Schedule } from "@/lib/types";
+import type { Schedule, ScheduleScope } from "@/lib/types";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +32,7 @@ export default function ScheduleAddDialog({
   const [newLocation, setNewLocation] = useState("");
   const [newDay, setNewDay] = useState("1");
   const [newTime, setNewTime] = useState("");
+  const [newScope, setNewScope] = useState<ScheduleScope>("all");
 
   const handleAdd = () => {
     if (!newTitle.trim()) return;
@@ -47,13 +48,15 @@ export default function ScheduleAddDialog({
         newTitle.trim(),
         newLocation.trim() || null,
         parseInt(newDay),
-        scheduledTime
+        scheduledTime,
+        newScope
       );
       if (res.ok) {
         setNewTitle("");
         setNewLocation("");
         setNewDay("1");
         setNewTime("");
+        setNewScope("all");
         onOpenChange(false);
         onRefresh();
       }
@@ -84,16 +87,28 @@ export default function ScheduleAddDialog({
             className="w-full rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
             aria-label="장소"
           />
-          <select
-            value={newDay}
-            onChange={(e) => setNewDay(e.target.value)}
-            className="w-full rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
-            aria-label="일차"
-          >
-            <option value="1">1일차</option>
-            <option value="2">2일차</option>
-            <option value="3">3일차</option>
-          </select>
+          <div className="grid grid-cols-2 gap-2">
+            <select
+              value={newDay}
+              onChange={(e) => setNewDay(e.target.value)}
+              className="w-full rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+              aria-label="일차"
+            >
+              <option value="1">1일차</option>
+              <option value="2">2일차</option>
+              <option value="3">3일차</option>
+            </select>
+            <select
+              value={newScope}
+              onChange={(e) => setNewScope(e.target.value as ScheduleScope)}
+              className="w-full rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+              aria-label="대상"
+            >
+              <option value="all">전체</option>
+              <option value="advance">선발</option>
+              <option value="rear">후발</option>
+            </select>
+          </div>
           <div className="relative">
             <input
               type="time"

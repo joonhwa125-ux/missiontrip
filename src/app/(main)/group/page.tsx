@@ -29,7 +29,7 @@ export default async function GroupPage() {
   ] = await Promise.all([
     supabase
       .from("groups")
-      .select("name")
+      .select("name, party")
       .eq("id", currentUser.group_id)
       .single(),
     supabase
@@ -101,6 +101,7 @@ export default async function GroupPage() {
       key={activeSchedule?.id ?? "no-schedule"}
       currentUser={{ id: currentUser.id, group_id: currentUser.group_id }}
       groupName={group?.name ?? "내 조"}
+      groupParty={group?.party ?? null}
       members={members ?? []}
       activeSchedule={activeSchedule ?? null}
       initialCheckIns={checkIns}

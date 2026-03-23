@@ -1,6 +1,7 @@
 "use client";
 
 import { formatTime, getScheduleStatus } from "@/lib/utils";
+import { SCOPE_LABEL } from "@/lib/constants";
 import type { Schedule, AdminCheckIn, AdminMember, Group } from "@/lib/types";
 
 interface Report {
@@ -34,6 +35,7 @@ export default function AdminScheduleCard({
   const timeDisplay = schedule.scheduled_time
     ? formatTime(schedule.scheduled_time)
     : null;
+  const scopeLabel = schedule.scope !== "all" ? SCOPE_LABEL[schedule.scope] : null;
 
   const checkedCount = checkIns.filter((c) => !c.is_absent).length;
   const totalMembers = members.length;
@@ -49,7 +51,14 @@ export default function AdminScheduleCard({
       >
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1">
-            <p className="font-medium">{schedule.title}</p>
+            <p className="font-medium">
+              {scopeLabel && (
+                <span className="mr-1 inline-block rounded bg-gray-700 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-white">
+                  {scopeLabel}
+                </span>
+              )}
+              {schedule.title}
+            </p>
             {schedule.location && (
               <p className="text-sm text-muted-foreground">
                 {schedule.location}
@@ -98,7 +107,14 @@ export default function AdminScheduleCard({
             className="flex-1 text-left rounded-lg focus-visible:ring-2 focus-visible:ring-main-action"
             aria-label={`${schedule.title} 시간 수정`}
           >
-            <p className="font-medium">{schedule.title}</p>
+            <p className="font-medium">
+              {scopeLabel && (
+                <span className="mr-1 inline-block rounded bg-gray-700 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-white">
+                  {scopeLabel}
+                </span>
+              )}
+              {schedule.title}
+            </p>
             {schedule.location && (
               <p className="text-sm text-muted-foreground">
                 {schedule.location}
@@ -136,7 +152,14 @@ export default function AdminScheduleCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
-          <p className="font-medium">{schedule.title}</p>
+          <p className="font-medium">
+            {scopeLabel && (
+              <span className="mr-1 inline-block rounded bg-gray-700 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-white">
+                {scopeLabel}
+              </span>
+            )}
+            {schedule.title}
+          </p>
           {schedule.location && (
             <p className="text-sm text-muted-foreground">
               {schedule.location}

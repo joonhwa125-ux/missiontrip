@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
-import type { ActionResult } from "@/lib/types";
+import type { ActionResult, ScheduleScope } from "@/lib/types";
 
 // 일정 활성화 (RPC — 트랜잭션으로 동시 활성화 방지)
 export async function activateSchedule(
@@ -28,7 +28,8 @@ export async function createSchedule(
   title: string,
   location: string | null,
   dayNumber: number,
-  scheduledTime: string | null
+  scheduledTime: string | null,
+  scope: ScheduleScope = "all"
 ): Promise<ActionResult<string>> {
   const admin = await requireAdmin();
   if (!admin) return { ok: false, error: "관리자 권한이 필요해요" };
@@ -54,6 +55,7 @@ export async function createSchedule(
       day_number: dayNumber,
       sort_order: nextOrder,
       scheduled_time: scheduledTime,
+      scope,
     })
     .select("id")
     .single();

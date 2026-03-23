@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import DataSourceStep from "./DataSourceStep";
 import PreviewStep from "./PreviewStep";
 import ImportResultStep from "./ImportResultStep";
@@ -47,7 +48,18 @@ export default function SetupWizard() {
   return (
     <div className="min-h-screen bg-app-bg">
       <header className="bg-main-action px-4 py-4">
-        <h1 className="text-lg font-bold">데이터 셋업</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-bold">데이터 셋업</h1>
+          <Link
+            href="/admin"
+            className="min-h-11 flex items-center gap-1 rounded-lg px-2 text-sm font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+            돌아가기
+          </Link>
+        </div>
         <p className="text-sm opacity-70">
           Step {step} / 3
         </p>

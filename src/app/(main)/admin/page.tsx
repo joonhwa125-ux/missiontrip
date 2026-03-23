@@ -13,7 +13,7 @@ export default async function AdminPage() {
 
   const { data: currentUser } = await supabase
     .from("users")
-    .select("id, role")
+    .select("id, role, group_id")
     .eq("email", authUser.email ?? "")
     .single();
 
@@ -68,6 +68,7 @@ export default async function AdminPage() {
   return (
     <AdminView
       key={activeSchedule?.id ?? "no-schedule"}
+      currentUser={{ id: currentUser.id, group_id: currentUser.group_id }}
       groups={(groups as Group[]) ?? []}
       members={members ?? []}
       activeSchedule={(activeSchedule as Schedule) ?? null}
