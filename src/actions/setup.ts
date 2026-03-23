@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import type {
@@ -182,6 +183,9 @@ export async function importToDatabase(
     return { ok: false, error: `일정 등록 실패: ${scheduleError.message}` };
   }
 
+  revalidatePath("/admin");
+  revalidatePath("/group");
+  revalidatePath("/setup");
   return {
     ok: true,
     data: {
@@ -227,6 +231,9 @@ export async function resetAllData(): Promise<ActionResult> {
     }
   }
 
+  revalidatePath("/admin");
+  revalidatePath("/group");
+  revalidatePath("/setup");
   return { ok: true };
 }
 
@@ -278,5 +285,7 @@ export async function updateUserRole(
     return { ok: false, error: "역할 변경 중 오류가 발생했어요" };
   }
 
+  revalidatePath("/admin");
+  revalidatePath("/group");
   return { ok: true };
 }

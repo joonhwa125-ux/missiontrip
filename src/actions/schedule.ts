@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import type { ActionResult, ScheduleScope } from "@/lib/types";
@@ -20,6 +21,8 @@ export async function activateSchedule(
     return { ok: false, error: "일정 활성화 중 오류가 발생했어요" };
   }
 
+  revalidatePath("/admin");
+  revalidatePath("/group");
   return { ok: true };
 }
 
@@ -64,7 +67,31 @@ export async function createSchedule(
     return { ok: false, error: "일정 추가 중 오류가 발생했어요" };
   }
 
+  revalidatePath("/admin");
+  revalidatePath("/group");
   return { ok: true, data: data.id };
+}
+
+// 특정 일정의 체크인 + 보고 데이터 조회 (바텀시트용)
+export async function fetchScheduleCheckIns(scheduleId: string): Promise<{
+  checkIns: { user_id: string; is_absent: boolean; checked_at: string }[];
+  reports: { group_id: string; pending_count: number; reported_at: string }[];
+}> {
+  const supabase = createServiceClient();
+  const [{ data: checkIns }, { data: reports }] = await Promise.all([
+    supabase
+      .from("check_ins")
+      .select("user_id, is_absent, checked_at")
+      .eq("schedule_id", scheduleId),
+    supabase
+      .from("group_reports")
+      .select("group_id, pending_count, reported_at")
+      .eq("schedule_id", scheduleId),
+  ]);
+  return {
+    checkIns: checkIns ?? [],
+    reports: reports ?? [],
+  };
 }
 
 // 예정 시각 변경
@@ -85,5 +112,7 @@ export async function updateScheduleTime(
     return { ok: false, error: "시간 변경 중 오류가 발생했어요" };
   }
 
+  revalidatePath("/admin");
+  revalidatePath("/group");
   return { ok: true };
 }

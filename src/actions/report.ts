@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import type { ActionResult } from "@/lib/types";
@@ -35,5 +36,7 @@ export async function submitReport(
     return { ok: false, error: "보고 처리 중 오류가 발생했어요" };
   }
 
+  revalidatePath("/admin");
+  revalidatePath("/group");
   return { ok: true };
 }

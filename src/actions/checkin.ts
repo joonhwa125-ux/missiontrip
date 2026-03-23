@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import type { ActionResult, OfflinePendingCheckin } from "@/lib/types";
@@ -51,6 +52,8 @@ export async function createCheckin(
     return { ok: false, error: "체크인 처리 중 오류가 발생했어요" };
   }
 
+  revalidatePath("/admin");
+  revalidatePath("/group");
   return { ok: true };
 }
 
@@ -79,6 +82,8 @@ export async function deleteCheckin(
     return { ok: false, error: "취소 처리 중 오류가 발생했어요" };
   }
 
+  revalidatePath("/admin");
+  revalidatePath("/group");
   return { ok: true };
 }
 
@@ -112,6 +117,8 @@ export async function markAbsent(
     return { ok: false, error: "불참 처리 중 오류가 발생했어요" };
   }
 
+  revalidatePath("/admin");
+  revalidatePath("/group");
   return { ok: true };
 }
 
@@ -134,5 +141,7 @@ export async function syncOfflineCheckins(
     return { ok: false, error: "동기화 중 오류가 발생했어요" };
   }
 
+  revalidatePath("/admin");
+  revalidatePath("/group");
   return { ok: true, data: data as number };
 }
