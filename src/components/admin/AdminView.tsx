@@ -72,19 +72,44 @@ export default function AdminView({
     setMembers(initialMembers);
   }
 
+  // mount 시 + activeSchedule 변경 시 서버에서 최신 체크인/보고 데이터 fetch
+  // 서버 컴포넌트의 initialCheckInsMap이 빈 상태로 전달될 수 있으므로 클라이언트에서 보완
+  useEffect(() => {
+    if (!activeSchedule) return;
+    let cancelled = false;
+    const fetchFresh = async () => {
+      try {
+        const { checkIns, reports } = await fetchScheduleCheckIns(activeSchedule.id);
+        if (cancelled) return;
+        setCheckInsMap((prev) => ({ ...prev, [activeSchedule.id]: checkIns }));
+        setReportsMap((prev) => ({ ...prev, [activeSchedule.id]: reports }));
+      } catch {
+        // fetch 실패 시 기존 state 유지
+      }
+    };
+    fetchFresh();
+    return () => { cancelled = true; };
+  }, [activeSchedule?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // 백그라운드 복귀 시 서버 데이터 갱신 (탭 전환 / 페이지 이동 후 stale 방지)
   useEffect(() => {
+    if (!activeSchedule) return;
     let hiddenAt = 0;
     const handleVisibility = () => {
       if (document.hidden) {
         hiddenAt = Date.now();
       } else if (hiddenAt && Date.now() - hiddenAt > 3000) {
+        // 서버 컴포넌트 re-render + 최신 데이터 직접 fetch
         router.refresh();
+        fetchScheduleCheckIns(activeSchedule.id).then(({ checkIns, reports }) => {
+          setCheckInsMap((prev) => ({ ...prev, [activeSchedule.id]: checkIns }));
+          setReportsMap((prev) => ({ ...prev, [activeSchedule.id]: reports }));
+        }).catch(() => {});
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
     return () => document.removeEventListener("visibilitychange", handleVisibility);
-  }, [router]);
+  }, [router, activeSchedule]);
 
   // 일차 탭
   const days = Array.from(new Set(schedules.map((s) => s.day_number))).sort();
