@@ -32,6 +32,7 @@ export function createClient() {
 
 // Service Role 클라이언트 — RLS 우회, Server Action/API Route 전용
 // @supabase/supabase-js 직접 사용: 쿠키 JWT 없이 service role key만으로 인증
+// Next.js 14 Data Cache 우회: fetch에 cache:'no-store' 강제 적용
 export function createServiceClient() {
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -40,6 +41,10 @@ export function createServiceClient() {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
+      },
+      global: {
+        fetch: (input, init) =>
+          fetch(input, { ...init, cache: "no-store" }),
       },
     }
   );
