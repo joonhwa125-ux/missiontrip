@@ -205,10 +205,20 @@ export async function resetAllData(): Promise<ActionResult> {
   ];
 
   for (const table of tables) {
-    const { error } = await supabase
+    let query = supabase
       .from(table)
       .delete()
       .neq("id", "00000000-0000-0000-0000-000000000000");
+
+    // 관리자 본인 레코드 + 소속 조 보존 — 삭제하면 미들웨어 역할 검사 실패
+    if (table === "users") {
+      query = query.neq("id", admin.id);
+    }
+    if (table === "groups") {
+      query = query.neq("id", admin.group_id);
+    }
+
+    const { error } = await query;
     if (error) {
       return { ok: false, error: `${table} 삭제 실패: ${error.message}` };
     }
