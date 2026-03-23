@@ -46,14 +46,18 @@ export default function SetupWizard() {
   };
 
   return (
-    <div className="min-h-screen bg-app-bg">
+    <div className="mx-auto min-h-screen max-w-2xl bg-app-bg">
       <PageHeader
         title="설정"
-        subtitle={`Step ${step} / 3`}
         backHref="/admin"
+        rightSlot={
+          <span className="text-sm font-medium opacity-70">
+            Step {step} / 3
+          </span>
+        }
       />
 
-      <main className="mx-auto max-w-2xl px-4 py-6">
+      <main className="px-4 py-6">
         {step === 1 && (
           <DataSourceStep onPreviewReady={handlePreviewReady} />
         )}
