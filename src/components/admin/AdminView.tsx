@@ -396,6 +396,13 @@ export default function AdminView({
               setCheckIns={setSheetCheckIns}
               onBack={closeCheckinSheet}
               showToast={showToast}
+              initialReported={
+                activeSchedule
+                  ? (reportsMap[activeSchedule.id] ?? []).some(
+                      (r) => r.group_id === currentUser.group_id
+                    )
+                  : false
+              }
             />
           </div>
         </DialogContent>

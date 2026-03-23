@@ -52,6 +52,7 @@ export default function GroupView({
   const [checkIns, setCheckIns] = useState<CheckIn[]>(initialCheckIns);
   const [allCheckInsState, setAllCheckInsState] = useState(allCheckIns);
   const [allReportsState, setAllReportsState] = useState(initialReports);
+  const [reported, setReported] = useState(initialReported);
   const [toast, setToast] = useState<string | null>(null);
   // CR-009: activeSchedule을 state로 관리 — 체크인 뷰에서도 Realtime 갱신 반영
   const [currentSchedule, setCurrentSchedule] = useState(activeSchedule);
@@ -180,6 +181,7 @@ export default function GroupView({
 
   // 보고 완료 시 allReportsState에 즉시 반영 (self-echo 미도달 대응)
   const handleReported = useCallback(() => {
+    setReported(true);
     setAllReportsState((prev) =>
       prev.some((r) => r.group_id === currentUser.group_id)
         ? prev
@@ -224,7 +226,7 @@ export default function GroupView({
           setCheckIns={setCheckIns}
           onBack={handleBack}
           showToast={showToast}
-          initialReported={initialReported}
+          initialReported={reported}
           onReported={handleReported}
         />
       )}
