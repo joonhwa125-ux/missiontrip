@@ -166,7 +166,7 @@ export default function AdminScheduleCard({
           </p>
           {schedule.location && (
             <p className="text-sm text-muted-foreground">
-              🚩 {schedule.title}
+              {schedule.title}
             </p>
           )}
           {timeDisplay && (
