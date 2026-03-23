@@ -40,7 +40,7 @@ export function useRealtime(
 
     // global 채널 — 전체 사용자
     const globalChannel = supabase
-      .channel(CHANNEL_GLOBAL)
+      .channel(CHANNEL_GLOBAL, { config: { broadcast: { self: true } } })
       .on("broadcast", { event: EVENT_SCHEDULE_ACTIVATED }, ({ payload }) => {
         callbacksRef.current.onScheduleActivated?.(payload);
       })
@@ -54,7 +54,7 @@ export function useRealtime(
     // group:{groupId} 채널 — 조장
     if (groupId) {
       const groupChannel = supabase
-        .channel(`${CHANNEL_GROUP_PREFIX}${groupId}`)
+        .channel(`${CHANNEL_GROUP_PREFIX}${groupId}`, { config: { broadcast: { self: true } } })
         .on("broadcast", { event: EVENT_CHECKIN_UPDATED }, ({ payload }) => {
           callbacksRef.current.onCheckinUpdated?.(payload);
         })
@@ -66,7 +66,7 @@ export function useRealtime(
     // admin 채널 — 관리자 (보고 + 체크인 업데이트 수신)
     if (isAdmin) {
       const adminChannel = supabase
-        .channel(CHANNEL_ADMIN)
+        .channel(CHANNEL_ADMIN, { config: { broadcast: { self: true } } })
         .on("broadcast", { event: EVENT_GROUP_REPORTED }, ({ payload }) => {
           callbacksRef.current.onGroupReported?.(payload);
         })
@@ -109,7 +109,7 @@ export function useBroadcast() {
       let channel = map.get(channelName);
 
       if (!channel) {
-        channel = supabaseRef.current.channel(channelName);
+        channel = supabaseRef.current.channel(channelName, { config: { broadcast: { self: true } } });
         await new Promise<void>((resolve) => {
           channel!.subscribe((status) => {
             if (status === "SUBSCRIBED" || status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
