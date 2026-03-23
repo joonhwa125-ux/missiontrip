@@ -268,11 +268,17 @@ export default function AdminView({
 
       {/* 내 조 체크인 Sheet (풀스크린 다이얼로그) */}
       <Dialog open={checkinSheetOpen} onOpenChange={(open) => { if (!open) closeCheckinSheet(); }}>
-        <DialogContent className="flex h-[100dvh] max-h-[100dvh] w-full max-w-lg flex-col gap-0 overflow-hidden rounded-none border-none p-0">
+        <DialogContent className="flex h-[100dvh] max-h-[100dvh] w-full max-w-lg flex-col gap-0 overflow-y-auto rounded-none border-none p-0">
           <GroupCheckinView
             currentUser={currentUser}
             groupName={adminGroupName}
-            members={adminMembers.map((m) => ({ id: m.id, name: m.name }))}
+            members={(() => {
+              const scope = activeSchedule?.scope;
+              const filtered = (!scope || scope === "all")
+                ? adminMembers
+                : adminMembers.filter((m) => m.party === scope);
+              return filtered.map((m) => ({ id: m.id, name: m.name, party: m.party }));
+            })()}
             activeSchedule={activeSchedule}
             checkIns={sheetCheckIns}
             setCheckIns={setSheetCheckIns}
