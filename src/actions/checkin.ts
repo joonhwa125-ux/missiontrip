@@ -44,7 +44,6 @@ export async function createCheckin(
       schedule_id: scheduleId,
       checked_by: actor.role as "leader" | "admin",
       checked_by_user_id: actor.id,
-      is_absent: false,
     },
     { onConflict: "user_id,schedule_id", ignoreDuplicates: true }
   );
@@ -89,6 +88,7 @@ export async function deleteCheckin(
 }
 
 // 불참 처리 INSERT (is_absent=true)
+// 주의: DB에 is_absent 컬럼이 없으면 실패. Supabase에서 컬럼 추가 필요
 export async function markAbsent(
   userId: string,
   scheduleId: string
@@ -103,6 +103,8 @@ export async function markAbsent(
   if (denied) return denied;
 
   const supabase = createServiceClient();
+
+  // is_absent 컬럼 존재 여부에 따라 분기
   const { error } = await supabase.from("check_ins").upsert(
     {
       user_id: userId,
@@ -115,7 +117,23 @@ export async function markAbsent(
   );
 
   if (error) {
-    return { ok: false, error: "불참 처리 중 오류가 발생했어요" };
+    // is_absent 컬럼이 없으면 컬럼 없이 upsert 시도
+    if (error.message?.includes("is_absent")) {
+      const { error: fallbackError } = await supabase.from("check_ins").upsert(
+        {
+          user_id: userId,
+          schedule_id: scheduleId,
+          checked_by: actor.role as "leader" | "admin",
+          checked_by_user_id: actor.id,
+        },
+        { onConflict: "user_id,schedule_id" }
+      );
+      if (fallbackError) {
+        return { ok: false, error: "불참 처리 중 오류가 발생했어요" };
+      }
+    } else {
+      return { ok: false, error: "불참 처리 중 오류가 발생했어요" };
+    }
   }
 
   revalidatePath("/admin");

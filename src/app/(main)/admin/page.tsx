@@ -58,7 +58,7 @@ export default async function AdminPage() {
     const [{ data: allCi }, { data: allRp }] = await Promise.all([
       supabase
         .from("check_ins")
-        .select("schedule_id, user_id, is_absent, checked_at")
+        .select("*")
         .in("schedule_id", activatedIds),
       supabase
         .from("group_reports")
@@ -66,7 +66,12 @@ export default async function AdminPage() {
         .in("schedule_id", activatedIds),
     ]);
     for (const ci of allCi ?? []) {
-      (checkInsMap[ci.schedule_id] ??= []).push(ci);
+      (checkInsMap[ci.schedule_id] ??= []).push({
+        schedule_id: ci.schedule_id,
+        user_id: ci.user_id,
+        is_absent: ci.is_absent ?? false,
+        checked_at: ci.checked_at,
+      });
     }
     for (const rp of allRp ?? []) {
       (reportsMap[rp.schedule_id] ??= []).push(rp);

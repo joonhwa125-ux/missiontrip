@@ -81,7 +81,7 @@ export async function fetchScheduleCheckIns(scheduleId: string): Promise<{
   const [{ data: checkIns }, { data: reports }] = await Promise.all([
     supabase
       .from("check_ins")
-      .select("user_id, is_absent, checked_at")
+      .select("*")
       .eq("schedule_id", scheduleId),
     supabase
       .from("group_reports")
@@ -89,73 +89,12 @@ export async function fetchScheduleCheckIns(scheduleId: string): Promise<{
       .eq("schedule_id", scheduleId),
   ]);
   return {
-    checkIns: checkIns ?? [],
+    checkIns: (checkIns ?? []).map((ci) => ({
+      user_id: ci.user_id,
+      is_absent: ci.is_absent ?? false,
+      checked_at: ci.checked_at,
+    })),
     reports: reports ?? [],
-  };
-}
-
-// 진단용: 활성 일정의 DB 상태 직접 확인 (디버그 후 제거)
-export async function debugCheckDbState(): Promise<{
-  activeSchedule: { id: string; title: string; is_active: boolean; activated_at: string | null } | null;
-  checkInCount: number;
-  reportCount: number;
-  sampleCheckIns: { user_id: string; schedule_id: string; checked_at: string }[];
-  fetchTestCount: number;
-  fetchTestError: string | null;
-  selectStarCount: number;
-  selectStarError: string | null;
-}> {
-  const supabase = createServiceClient();
-
-  const { data: active } = await supabase
-    .from("schedules")
-    .select("id, title, is_active, activated_at")
-    .eq("is_active", true)
-    .maybeSingle();
-
-  if (!active) {
-    return { activeSchedule: null, checkInCount: 0, reportCount: 0, sampleCheckIns: [], fetchTestCount: 0, fetchTestError: null, selectStarCount: 0, selectStarError: null };
-  }
-
-  // 동일 쿼리 3종 비교: count(*), select(is_absent 포함), select(* 전체)
-  const [{ count: ciCount }, { count: rpCount }, { data: samples },
-    { data: fetchTest, error: fetchError },
-    { data: starTest, error: starError },
-  ] = await Promise.all([
-    supabase
-      .from("check_ins")
-      .select("*", { count: "exact", head: true })
-      .eq("schedule_id", active.id),
-    supabase
-      .from("group_reports")
-      .select("*", { count: "exact", head: true })
-      .eq("schedule_id", active.id),
-    supabase
-      .from("check_ins")
-      .select("user_id, schedule_id, checked_at")
-      .eq("schedule_id", active.id)
-      .limit(5),
-    // fetchScheduleCheckIns와 동일한 쿼리 (is_absent 포함)
-    supabase
-      .from("check_ins")
-      .select("user_id, is_absent, checked_at")
-      .eq("schedule_id", active.id),
-    // select(*) 전체 컬럼
-    supabase
-      .from("check_ins")
-      .select("*")
-      .eq("schedule_id", active.id),
-  ]);
-
-  return {
-    activeSchedule: active,
-    checkInCount: ciCount ?? 0,
-    reportCount: rpCount ?? 0,
-    sampleCheckIns: samples ?? [],
-    fetchTestCount: fetchTest?.length ?? 0,
-    fetchTestError: fetchError?.message ?? null,
-    selectStarCount: starTest?.length ?? 0,
-    selectStarError: starError?.message ?? null,
   };
 }
 
