@@ -67,7 +67,11 @@ export default function AdminGroupDrillDown({
     [checkIns, groupMembers]
   );
 
-  const totalCount = groupMembers.length;
+  const absentCount = useMemo(
+    () => groupMembers.filter((m) => checkedMap.get(m.id)?.is_absent).length,
+    [groupMembers, checkedMap]
+  );
+  const totalCount = groupMembers.length - absentCount;
   const checkedCount = useMemo(
     () => groupMembers.filter((m) => checkedMap.has(m.id) && !checkedMap.get(m.id)!.is_absent).length,
     [groupMembers, checkedMap]
@@ -166,14 +170,16 @@ export default function AdminGroupDrillDown({
   return (
     <>
       <Dialog open={!!group} onOpenChange={(o) => !o && onClose()}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{group.name}</DialogTitle>
-          </DialogHeader>
-          <DialogDescription aria-live="polite">
-            {checkedCount}/{totalCount}명 확인
-          </DialogDescription>
-          <ul className="space-y-2">
+        <DialogContent className="flex max-h-[80vh] flex-col overflow-hidden p-0">
+          <div className="flex-shrink-0 px-6 pt-6">
+            <DialogHeader>
+              <DialogTitle>{group.name}</DialogTitle>
+            </DialogHeader>
+            <DialogDescription aria-live="polite">
+              {checkedCount}/{totalCount}명 확인
+            </DialogDescription>
+          </div>
+          <ul className="space-y-2 overflow-y-auto px-6 pb-6">
             {sorted.map((m) => (
               <MemberRow
                 key={m.id}
