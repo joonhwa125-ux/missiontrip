@@ -117,8 +117,10 @@ export function parseUsersSheet(rows: string[][]): {
       continue;
     }
 
-    // 역할값
-    const role = ROLE_MAP[roleRaw];
+    // 역할값 — 괄호 안 상위 역할 우선 (예: "조장(관리자)" → 관리자)
+    const parenMatch = roleRaw.match(/\((.+)\)/);
+    const roleClean = parenMatch ? parenMatch[1].trim() : roleRaw;
+    const role = ROLE_MAP[roleClean];
     if (!role) {
       errors.push({
         sheet: "users",
