@@ -200,7 +200,7 @@ export default function AdminView({
     <div className="flex min-h-full flex-col">
       {/* 통일 헤더 + 설정 아이콘 */}
       <PageHeader
-        title="미션트립"
+        title="실시간 현황"
         rightSlot={
           <Link
             href="/setup"

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import PageHeader from "@/components/common/PageHeader";
 import DataSourceStep from "./DataSourceStep";
 import PreviewStep from "./PreviewStep";
 import ImportResultStep from "./ImportResultStep";
@@ -47,25 +47,11 @@ export default function SetupWizard() {
 
   return (
     <div className="min-h-screen bg-app-bg">
-      <header className="bg-main-action px-4 py-4">
-        <div className="mx-auto max-w-2xl">
-          <div className="flex items-center gap-2">
-            <Link
-              href="/admin"
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-gray-900"
-              aria-label="관리자 화면으로 돌아가기"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
-            </Link>
-            <div>
-              <h1 className="text-lg font-bold">데이터 셋업</h1>
-              <p className="text-sm opacity-70">Step {step} / 3</p>
-            </div>
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        title="설정"
+        subtitle={`Step ${step} / 3`}
+        backHref="/admin"
+      />
 
       <main className="mx-auto max-w-2xl px-4 py-6">
         {step === 1 && (

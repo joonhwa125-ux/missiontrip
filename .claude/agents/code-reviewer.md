@@ -29,12 +29,33 @@ model: sonnet
 - console.log 잔류 여부
 - 매직넘버 사용 여부
 
-### 4. 성능
+### 4. CSS 레이아웃 (PC/모바일 공통)
+
+#### 4.1 Dialog/Sheet 내부 스크롤
+- DialogContent에 콘텐츠를 넣을 때, 스크롤 가능 여부 검증
+- `overflow-hidden` + 고정 높이(`h-[100dvh]`, `max-h-[85vh]` 등) 조합 시 내부 콘텐츠 스크롤 불가 → 반드시 내부에 `overflow-y-auto` wrapper 필요
+- `flex-1` 자식이 flex 부모 안에서 콘텐츠 높이 초과 시 축소되는 문제 → `min-h-0` 필수
+- Radix Dialog의 `transform`이 `position: fixed` 자식의 containing block을 변경하는 점 확인
+
+#### 4.2 고정 하단 요소와 콘텐츠 겹침
+- `position: fixed; bottom: 0` 요소가 있으면, 주변 스크롤 콘텐츠에 하단 패딩 충분한지 확인 (최소 `pb-20` 이상)
+- 여러 fixed bottom 요소가 동시에 존재할 때 z-index 겹침 검증
+- 활성 일정 유무에 따라 하단 바가 조건부 렌더될 때, 패딩도 조건부여야 하는지 확인
+
+#### 4.3 PC 스크롤바와 라운드 모서리
+- `overflow-y-auto` + `rounded-*` 같은 요소에서 PC 스크롤바가 모서리를 침범하는지 확인
+- 해결 패턴: 외부 `overflow-hidden rounded-*` + 내부 `overflow-y-auto`로 분리
+
+#### 4.4 반응형 컨테이너 폭
+- 헤더/바디 영역의 max-width가 불일치하면 PC에서 부자연스러운 레이아웃 발생
+- 같은 페이지 내 헤더와 본문 콘텐츠의 max-width 일관성 확인
+
+### 5. 성능
 - 불필요한 리렌더링 (useCallback/useMemo 부재)
 - Supabase 구독 cleanup 여부
 - 이미지 최적화 (next/image 사용)
 
-### 5. 오프라인 대응
+### 6. 오프라인 대응
 - localStorage 큐 구현 여부
 - 낙관적 업데이트 구현 여부
 - ON CONFLICT DO NOTHING 처리 여부

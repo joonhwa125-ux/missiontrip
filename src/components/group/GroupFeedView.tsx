@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { formatTime, cn, getScheduleStatus, sortSchedulesByStatus, getDefaultDay } from "@/lib/utils";
+import PageHeader from "@/components/common/PageHeader";
 import DayTabs from "@/components/common/DayTabs";
 import { COPY } from "@/lib/constants";
 import type { Schedule, CheckIn, Group, GroupMember } from "@/lib/types";
@@ -22,6 +23,7 @@ interface AllMember {
 }
 
 interface Props {
+  groupName: string;
   schedules: Schedule[];
   activeSchedule: Schedule | null;
   members: Member[];
@@ -36,6 +38,7 @@ interface Props {
 // getScheduleStatus는 utils.ts에서 import
 
 export default function GroupFeedView({
+  groupName,
   schedules,
   activeSchedule,
   members,
@@ -66,6 +69,9 @@ export default function GroupFeedView({
 
   return (
     <div className="flex-1 overflow-y-auto">
+      {/* 통일 헤더 */}
+      <PageHeader title="인원 체크" subtitle={groupName} />
+
       {/* 일차 탭 + 일정 타임라인 */}
       <DayTabs days={days} selected={selectedDay} onChange={setSelectedDay} panelId="group-feed-panel" />
       <div id="group-feed-panel" role="tabpanel" className="px-4 py-4">
