@@ -142,16 +142,13 @@ export default function AdminView({
       const result = await debugCheckDbState();
       const info = [
         `[DB 진단 결과]`,
-        `활성 일정: ${result.activeSchedule?.title ?? "없음"} (id: ${result.activeSchedule?.id ?? "N/A"})`,
-        `activated_at: ${result.activeSchedule?.activated_at ?? "null"}`,
-        `DB check_ins: ${result.checkInCount}건`,
-        `DB reports: ${result.reportCount}건`,
-        `샘플: ${JSON.stringify(result.sampleCheckIns.slice(0, 2))}`,
+        `활성 일정: ${result.activeSchedule?.title ?? "없음"}`,
+        `DB count(*): ${result.checkInCount}건`,
+        `select(is_absent포함): ${result.fetchTestCount}건 ${result.fetchTestError ? `ERR: ${result.fetchTestError}` : "OK"}`,
+        `select(*): ${result.selectStarCount}건 ${result.selectStarError ? `ERR: ${result.selectStarError}` : "OK"}`,
         `---`,
         `[클라이언트 state]`,
-        `activeSchedule prop id: ${activeSchedule?.id ?? "null"}`,
-        `checkInsMap keys: ${Object.keys(checkInsMap).join(", ") || "비어있음"}`,
-        `현재 일정 checkIns: ${activeSchedule ? (checkInsMap[activeSchedule.id]?.length ?? 0) : 0}건`,
+        `checkInsMap[activeId]: ${activeSchedule ? (checkInsMap[activeSchedule.id]?.length ?? 0) : 0}건`,
       ].join("\n");
       setDebugInfo(info);
     } catch (e) {

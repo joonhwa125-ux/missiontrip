@@ -100,6 +100,10 @@ export async function debugCheckDbState(): Promise<{
   checkInCount: number;
   reportCount: number;
   sampleCheckIns: { user_id: string; schedule_id: string; checked_at: string }[];
+  fetchTestCount: number;
+  fetchTestError: string | null;
+  selectStarCount: number;
+  selectStarError: string | null;
 }> {
   const supabase = createServiceClient();
 
@@ -110,10 +114,14 @@ export async function debugCheckDbState(): Promise<{
     .maybeSingle();
 
   if (!active) {
-    return { activeSchedule: null, checkInCount: 0, reportCount: 0, sampleCheckIns: [] };
+    return { activeSchedule: null, checkInCount: 0, reportCount: 0, sampleCheckIns: [], fetchTestCount: 0, fetchTestError: null, selectStarCount: 0, selectStarError: null };
   }
 
-  const [{ count: ciCount }, { count: rpCount }, { data: samples }] = await Promise.all([
+  // 동일 쿼리 3종 비교: count(*), select(is_absent 포함), select(* 전체)
+  const [{ count: ciCount }, { count: rpCount }, { data: samples },
+    { data: fetchTest, error: fetchError },
+    { data: starTest, error: starError },
+  ] = await Promise.all([
     supabase
       .from("check_ins")
       .select("*", { count: "exact", head: true })
@@ -127,6 +135,16 @@ export async function debugCheckDbState(): Promise<{
       .select("user_id, schedule_id, checked_at")
       .eq("schedule_id", active.id)
       .limit(5),
+    // fetchScheduleCheckIns와 동일한 쿼리 (is_absent 포함)
+    supabase
+      .from("check_ins")
+      .select("user_id, is_absent, checked_at")
+      .eq("schedule_id", active.id),
+    // select(*) 전체 컬럼
+    supabase
+      .from("check_ins")
+      .select("*")
+      .eq("schedule_id", active.id),
   ]);
 
   return {
@@ -134,6 +152,10 @@ export async function debugCheckDbState(): Promise<{
     checkInCount: ciCount ?? 0,
     reportCount: rpCount ?? 0,
     sampleCheckIns: samples ?? [],
+    fetchTestCount: fetchTest?.length ?? 0,
+    fetchTestError: fetchError?.message ?? null,
+    selectStarCount: starTest?.length ?? 0,
+    selectStarError: starError?.message ?? null,
   };
 }
 
