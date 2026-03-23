@@ -56,6 +56,7 @@ export default async function GroupPage() {
 
   let checkIns: CheckIn[] = [];
   let allCheckIns: { user_id: string; is_absent: boolean }[] = [];
+  let allReports: { group_id: string }[] = [];
   let initialReported = false;
 
   if (activeSchedule) {
@@ -82,14 +83,13 @@ export default async function GroupPage() {
       checkIns = (results[1].data as CheckIn[]) ?? [];
     }
 
-    // 보고 여부 확인
-    const { data: report } = await supabase
+    // 전체 보고 상태 조회 (GroupStatusGrid용 + 자신의 보고 여부)
+    const { data: allReportsData } = await supabase
       .from("group_reports")
-      .select("id")
-      .eq("group_id", currentUser.group_id)
-      .eq("schedule_id", activeSchedule.id)
-      .maybeSingle();
-    initialReported = !!report;
+      .select("group_id")
+      .eq("schedule_id", activeSchedule.id);
+    allReports = allReportsData ?? [];
+    initialReported = allReports.some((r) => r.group_id === currentUser.group_id);
   }
 
   // 완료 일정별 체크인 카운트 (우리 조 기준)
@@ -122,6 +122,7 @@ export default async function GroupPage() {
       allGroups={(allGroups as Group[]) ?? []}
       allCheckIns={allCheckIns}
       allMembers={(allMembers ?? []) as { id: string; group_id: string }[]}
+      allReports={allReports}
       scheduleCounts={scheduleCounts}
       initialReported={initialReported}
     />

@@ -50,6 +50,9 @@ export function useRealtime(
       .on("broadcast", { event: EVENT_CHECKIN_UPDATED }, ({ payload }) => {
         callbacksRef.current.onCheckinUpdated?.(payload);
       })
+      .on("broadcast", { event: EVENT_GROUP_REPORTED }, ({ payload }) => {
+        callbacksRef.current.onGroupReported?.(payload);
+      })
       .subscribe();
 
     channels.push(globalChannel);

@@ -24,6 +24,7 @@ interface Props {
   allGroups: Group[];
   allCheckIns: { user_id: string; is_absent: boolean }[];
   allMembers: AllMember[];
+  allReports: { group_id: string }[];
   scheduleCounts: Record<string, number>;
   initialReported: boolean;
 }
@@ -40,6 +41,7 @@ export default function GroupView({
   allGroups,
   allCheckIns,
   allMembers,
+  allReports: initialReports,
   scheduleCounts,
   initialReported,
 }: Props) {
@@ -48,6 +50,7 @@ export default function GroupView({
   const [schedules, setSchedules] = useState(initialSchedules);
   const [checkIns, setCheckIns] = useState<CheckIn[]>(initialCheckIns);
   const [allCheckInsState, setAllCheckInsState] = useState(allCheckIns);
+  const [allReportsState, setAllReportsState] = useState(initialReports);
   const [toast, setToast] = useState<string | null>(null);
   // CR-009: activeSchedule을 state로 관리 — 체크인 뷰에서도 Realtime 갱신 반영
   const [currentSchedule, setCurrentSchedule] = useState(activeSchedule);
@@ -101,6 +104,13 @@ export default function GroupView({
       );
       showToast("일정 시간이 변경되었어요");
     },
+    onGroupReported: ({ group_id }) => {
+      setAllReportsState((prev) =>
+        prev.some((r) => r.group_id === group_id)
+          ? prev
+          : [...prev, { group_id }]
+      );
+    },
     onCheckinUpdated: ({ user_id, action, is_absent }) => {
       // 전체 현황 바텀시트용 allCheckIns 업데이트 (모든 조)
       setAllCheckInsState((prev) => {
@@ -153,6 +163,15 @@ export default function GroupView({
     return members.filter((m) => m.party === scope);
   }, [members, currentSchedule?.scope]);
 
+  // 보고 완료 시 allReportsState에 즉시 반영 (self-echo 미도달 대응)
+  const handleReported = useCallback(() => {
+    setAllReportsState((prev) =>
+      prev.some((r) => r.group_id === currentUser.group_id)
+        ? prev
+        : [...prev, { group_id: currentUser.group_id }]
+    );
+  }, [currentUser.group_id]);
+
   // CR-010: 체크인 진입 시 히스토리 푸시
   const handleEnterCheckin = useCallback(() => {
     history.pushState(null, "");
@@ -177,6 +196,7 @@ export default function GroupView({
           allGroups={allGroups}
           allCheckIns={allCheckInsState}
           allMembers={allMembers}
+          allReports={allReportsState}
           onEnterCheckin={handleEnterCheckin}
         />
       ) : (
@@ -190,6 +210,7 @@ export default function GroupView({
           onBack={handleBack}
           showToast={showToast}
           initialReported={initialReported}
+          onReported={handleReported}
         />
       )}
 

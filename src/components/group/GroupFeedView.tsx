@@ -6,7 +6,7 @@ import { formatTime, cn, getScheduleStatus, sortSchedulesByStatus, getDefaultDay
 import PageHeader from "@/components/common/PageHeader";
 import DayTabs from "@/components/common/DayTabs";
 import { COPY } from "@/lib/constants";
-import type { Schedule, CheckIn, Group, GroupMember } from "@/lib/types";
+import type { Schedule, CheckIn, Group, GroupMember, GroupBadgeStatus } from "@/lib/types";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +32,7 @@ interface Props {
   allGroups: Group[];
   allCheckIns: { user_id: string; is_absent: boolean }[];
   allMembers: AllMember[];
+  allReports: { group_id: string }[];
   onEnterCheckin: () => void;
 }
 
@@ -47,6 +48,7 @@ export default function GroupFeedView({
   allGroups,
   allCheckIns,
   allMembers,
+  allReports,
   onEnterCheckin,
 }: Props) {
   const { isOnline, pendingCount } = useOfflineSync();
@@ -111,6 +113,7 @@ export default function GroupFeedView({
               allGroups={allGroups}
               allCheckIns={allCheckIns}
               allMembers={allMembers}
+              allReports={allReports}
             />
           </div>
         </DialogContent>
@@ -261,11 +264,14 @@ function GroupStatusGrid({
   allGroups,
   allCheckIns,
   allMembers,
+  allReports,
 }: {
   allGroups: Group[];
   allCheckIns: { user_id: string; is_absent: boolean }[];
   allMembers: AllMember[];
+  allReports: { group_id: string }[];
 }) {
+  const reportedIds = new Set(allReports.map((r) => r.group_id));
   // 조별 인원 수 계산
   const groupMemberCounts = new Map<string, number>();
   for (const m of allMembers) {
@@ -307,7 +313,7 @@ function GroupStatusGrid({
             {busGroupList.map((g) => {
               const total = groupMemberCounts.get(g.id) ?? 0;
               const checked = groupCheckedCounts.get(g.id) ?? 0;
-              const badge = getBadgeStatus(total, checked);
+              const badge = getBadgeStatus(total, checked, reportedIds.has(g.id));
               const progress = total > 0 ? (checked / total) * 100 : 0;
               return (
                 <GroupMiniCard
@@ -327,18 +333,18 @@ function GroupStatusGrid({
   );
 }
 
-type FeedBadgeStatus = "not_started" | "in_progress" | "all_checked";
-
-const FEED_BADGE: Record<FeedBadgeStatus, { bg: string; text: string; label: string }> = {
-  not_started: { bg: "bg-secondary", text: "text-muted-foreground", label: "시작전" },
-  in_progress: { bg: "bg-progress-badge", text: "text-[#633806]", label: "진행중" },
+const FEED_BADGE: Record<GroupBadgeStatus, { bg: string; text: string; label: string }> = {
+  reported: { bg: "bg-[#EAF3DE]", text: "text-[#27500A]", label: "보고완료" },
   all_checked: { bg: "bg-main-action", text: "text-[#3C1E1E]", label: "전원확인" },
+  in_progress: { bg: "bg-progress-badge", text: "text-[#633806]", label: "진행중" },
+  not_started: { bg: "bg-secondary", text: "text-muted-foreground", label: "시작전" },
 };
 
-function getBadgeStatus(total: number, checked: number): FeedBadgeStatus {
+function getBadgeStatus(total: number, checked: number, hasReport: boolean): GroupBadgeStatus {
   if (total === 0 || checked === 0) return "not_started";
-  if (checked >= total) return "all_checked";
-  return "in_progress";
+  if (checked < total) return "in_progress";
+  if (hasReport) return "reported";
+  return "all_checked";
 }
 
 function GroupMiniCard({
@@ -351,7 +357,7 @@ function GroupMiniCard({
   name: string;
   checked: number;
   total: number;
-  badge: FeedBadgeStatus;
+  badge: GroupBadgeStatus;
   progress: number;
 }) {
   const b = FEED_BADGE[badge];

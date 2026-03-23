@@ -38,6 +38,7 @@ interface Props {
   onBack: () => void;
   showToast: (msg: string) => void;
   initialReported?: boolean;
+  onReported?: () => void;
 }
 
 export default function GroupCheckinView({
@@ -50,6 +51,7 @@ export default function GroupCheckinView({
   onBack,
   showToast,
   initialReported = false,
+  onReported,
 }: Props) {
   const [cancelTarget, setCancelTarget] = useState<{ member: Member; isAbsent: boolean } | null>(null);
   const [absentTarget, setAbsentTarget] = useState<Member | null>(null);
@@ -192,11 +194,16 @@ export default function GroupCheckinView({
       const res = await submitReport(currentUser.group_id, activeSchedule.id, unchecked);
       if (res.ok) {
         setReported(true);
+        onReported?.();
         showToast(COPY.reportButtonDone);
-        await broadcast(CHANNEL_ADMIN, EVENT_GROUP_REPORTED, {
+        const reportPayload = {
           group_id: currentUser.group_id,
           pending_count: unchecked,
-        });
+        };
+        await Promise.all([
+          broadcast(CHANNEL_GLOBAL, EVENT_GROUP_REPORTED, reportPayload),
+          broadcast(CHANNEL_ADMIN, EVENT_GROUP_REPORTED, reportPayload),
+        ]);
       } else {
         showToast(res.error ?? "보고 처리 중 오류가 발생했어요. 다시 시도해주세요.");
       }
