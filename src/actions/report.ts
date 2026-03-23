@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import type { ActionResult } from "@/lib/types";
 
@@ -20,7 +20,7 @@ export async function submitReport(
     return { ok: false, error: "내 조의 보고만 할 수 있어요" };
   }
 
-  const supabase = createClient();
+  const supabase = createServiceClient();
   const { error } = await supabase.from("group_reports").upsert(
     {
       group_id: groupId,

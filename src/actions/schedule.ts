@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import type { ActionResult, ScheduleScope } from "@/lib/types";
 
@@ -11,7 +11,7 @@ export async function activateSchedule(
   const admin = await requireAdmin();
   if (!admin) return { ok: false, error: "관리자 권한이 필요해요" };
 
-  const supabase = createClient();
+  const supabase = createServiceClient();
   const { error } = await supabase.rpc("activate_schedule", {
     target_id: scheduleId,
   });
@@ -34,7 +34,7 @@ export async function createSchedule(
   const admin = await requireAdmin();
   if (!admin) return { ok: false, error: "관리자 권한이 필요해요" };
 
-  const supabase = createClient();
+  const supabase = createServiceClient();
 
   // 같은 day 내 최대 sort_order 조회 (해당 day에 일정이 없을 수 있으므로 maybeSingle)
   const { data: existing } = await supabase
@@ -75,7 +75,7 @@ export async function updateScheduleTime(
   const admin = await requireAdmin();
   if (!admin) return { ok: false, error: "관리자 권한이 필요해요" };
 
-  const supabase = createClient();
+  const supabase = createServiceClient();
   const { error } = await supabase
     .from("schedules")
     .update({ scheduled_time: scheduledTime })
