@@ -245,8 +245,7 @@ export default function GroupCheckinView({
           <div>
             <h1 className="text-lg font-bold">{groupName} 체크인</h1>
             <p className="text-sm text-muted-foreground">
-              {activeSchedule?.title ?? "대기 중"}
-              {activeSchedule?.location && ` · ${activeSchedule.location}`}
+              {activeSchedule?.location ?? activeSchedule?.title ?? "대기 중"}
             </p>
           </div>
         </div>
