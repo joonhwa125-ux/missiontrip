@@ -1,4 +1,5 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
 type CookieToSet = { name: string; value: string; options: CookieOptions };
@@ -30,26 +31,15 @@ export function createClient() {
 }
 
 // Service Role 클라이언트 — RLS 우회, Server Action/API Route 전용
+// @supabase/supabase-js 직접 사용: 쿠키 JWT 없이 service role key만으로 인증
 export function createServiceClient() {
-  const cookieStore = cookies();
-
-  return createServerClient(
+  return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet: CookieToSet[]) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // 무시
-          }
-        },
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
       },
     }
   );
