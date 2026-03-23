@@ -17,12 +17,35 @@ export function formatTime(iso: string): string {
   });
 }
 
-// HH:MM 입력을 KST 기준 ISO 문자열로 변환
-export function parseKSTTime(hhmm: string, referenceDate?: string | null): string {
-  const [hh, mm] = hhmm.split(":").map(Number);
-  const d = referenceDate ? new Date(referenceDate) : new Date();
-  d.setUTCHours(hh - 9, mm, 0, 0);
-  return d.toISOString();
+// 시간 문자열을 KST 기준 ISO 문자열로 변환
+// 지원 형식:
+//   "HH:MM"              → referenceDate 날짜 사용 (없으면 오늘 KST)
+//   "MM-DD HH:MM"        → 현재 연도 + 지정 날짜
+//   "YYYY-MM-DD HH:MM"   → 지정 날짜
+export function parseKSTTime(input: string, referenceDate?: string | null): string {
+  const fullMatch = input.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})$/);
+  if (fullMatch) {
+    const [, yyyy, mo, dd, hh, mi] = fullMatch;
+    return new Date(`${yyyy}-${mo}-${dd}T${hh}:${mi}:00+09:00`).toISOString();
+  }
+
+  const mmddMatch = input.match(/^(\d{2})-(\d{2})\s+(\d{2}):(\d{2})$/);
+  if (mmddMatch) {
+    const [, mo, dd, hh, mi] = mmddMatch;
+    const year = new Date().toLocaleDateString("sv", { timeZone: "Asia/Seoul" }).slice(0, 4);
+    return new Date(`${year}-${mo}-${dd}T${hh}:${mi}:00+09:00`).toISOString();
+  }
+
+  const hhmmMatch = input.match(/^(\d{2}):(\d{2})$/);
+  if (hhmmMatch) {
+    const [, hh, mi] = hhmmMatch;
+    const base = referenceDate
+      ? new Date(referenceDate).toLocaleDateString("sv", { timeZone: "Asia/Seoul" })
+      : new Date().toLocaleDateString("sv", { timeZone: "Asia/Seoul" });
+    return new Date(`${base}T${hh}:${mi}:00+09:00`).toISOString();
+  }
+
+  return input; // 이미 ISO 형식
 }
 
 // 경과 시간 (분 단위)

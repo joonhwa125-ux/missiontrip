@@ -161,8 +161,8 @@ export async function importToDatabase(
   }
 
   // 3. Schedules INSERT
-  // "HH:MM" → parseKSTTime으로 KST 기준 ISO 문자열 변환
-  const HH_MM_ONLY = /^\d{2}:\d{2}$/;
+  // "HH:MM" / "MM-DD HH:MM" / "YYYY-MM-DD HH:MM" → parseKSTTime으로 ISO 변환
+  const TIME_PATTERN = /^\d{2}:\d{2}$|^\d{2}-\d{2}\s+\d{2}:\d{2}$|^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}$/;
   const schedulesPayload = data.schedules.map((s) => ({
     title: s.title,
     location: s.location,
@@ -170,7 +170,7 @@ export async function importToDatabase(
     sort_order: s.sort_order,
     scope: s.scope,
     scheduled_time:
-      s.scheduled_time && HH_MM_ONLY.test(s.scheduled_time)
+      s.scheduled_time && TIME_PATTERN.test(s.scheduled_time)
         ? parseKSTTime(s.scheduled_time)
         : s.scheduled_time || null,
   }));
