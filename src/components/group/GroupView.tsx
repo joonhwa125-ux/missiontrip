@@ -68,7 +68,7 @@ export default function GroupView({
 
   useEffect(() => {
     if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 3500);
+    const timer = setTimeout(() => setToast(null), 5000);
     return () => clearTimeout(timer);
   }, [toast]);
 
@@ -101,12 +101,12 @@ export default function GroupView({
       );
       showToast("일정 시간이 변경되었어요");
     },
-    onCheckinUpdated: ({ user_id, action }) => {
+    onCheckinUpdated: ({ user_id, action, is_absent }) => {
       // 전체 현황 바텀시트용 allCheckIns 업데이트 (모든 조)
       setAllCheckInsState((prev) => {
         if (action === "insert") {
           if (prev.some((c) => c.user_id === user_id)) return prev;
-          return [...prev, { user_id, is_absent: false }];
+          return [...prev, { user_id, is_absent: is_absent ?? false }];
         }
         return prev.filter((c) => c.user_id !== user_id);
       });
@@ -123,10 +123,10 @@ export default function GroupView({
               user_id,
               schedule_id: currentSchedule.id,
               checked_at: new Date().toISOString(),
-              checked_by: "self" as const,
+              checked_by: "leader" as const,
               checked_by_user_id: null,
               offline_pending: false,
-              is_absent: false,
+              is_absent: is_absent ?? false,
             },
           ];
         }

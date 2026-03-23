@@ -131,7 +131,7 @@ export default function AdminView({
 
   useEffect(() => {
     if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 3000);
+    const timer = setTimeout(() => setToast(null), 5000);
     return () => clearTimeout(timer);
   }, [toast]);
 
@@ -144,14 +144,14 @@ export default function AdminView({
       );
       showToast("일정 시간이 변경되었어요");
     },
-    onCheckinUpdated: ({ user_id, action }) => {
+    onCheckinUpdated: ({ user_id, action, is_absent }) => {
       if (!activeSchedule) return;
       setCheckInsMap((prev) => {
         const sid = activeSchedule.id;
         const list = prev[sid] ?? [];
         if (action === "insert") {
           if (list.some((c) => c.user_id === user_id)) return prev;
-          return { ...prev, [sid]: [...list, { user_id, is_absent: false, checked_at: new Date().toISOString() }] };
+          return { ...prev, [sid]: [...list, { user_id, is_absent: is_absent ?? false, checked_at: new Date().toISOString() }] };
         }
         return { ...prev, [sid]: list.filter((c) => c.user_id !== user_id) };
       });

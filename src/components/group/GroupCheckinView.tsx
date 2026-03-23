@@ -61,8 +61,8 @@ export default function GroupCheckinView({
   const { broadcast } = useBroadcast();
 
   const broadcastCheckin = useCallback(
-    async (userId: string, action: "insert" | "delete") => {
-      const payload = { user_id: userId, schedule_id: activeSchedule?.id ?? "", action };
+    async (userId: string, action: "insert" | "delete", isAbsent = false) => {
+      const payload = { user_id: userId, schedule_id: activeSchedule?.id ?? "", action, is_absent: isAbsent };
       await Promise.all([
         broadcast(CHANNEL_GLOBAL, EVENT_CHECKIN_UPDATED, payload),
         broadcast(`${CHANNEL_GROUP_PREFIX}${currentUser.group_id}`, EVENT_CHECKIN_UPDATED, payload),
@@ -158,7 +158,7 @@ export default function GroupCheckinView({
     startTransition(async () => {
       const res = await markAbsent(userId, activeSchedule.id);
       if (res.ok) {
-        await broadcastCheckin(userId, "insert");
+        await broadcastCheckin(userId, "insert", true);
       } else {
         setCheckIns((prev) => prev.filter((c) => c.id !== temp.id));
         showToast(res.error ?? "불참 처리 중 오류가 발생했어요.");

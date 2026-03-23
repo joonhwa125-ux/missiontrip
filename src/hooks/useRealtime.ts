@@ -16,7 +16,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 interface RealtimeCallbacks {
   onScheduleActivated?: (payload: { schedule_id: string; title: string }) => void;
   onScheduleUpdated?: (payload: { schedule_id: string; scheduled_time: string }) => void;
-  onCheckinUpdated?: (payload: { user_id: string; schedule_id: string; action: "insert" | "delete" }) => void;
+  onCheckinUpdated?: (payload: { user_id: string; schedule_id: string; action: "insert" | "delete"; is_absent?: boolean }) => void;
   onGroupReported?: (payload: { group_id: string; pending_count: number }) => void;
 }
 

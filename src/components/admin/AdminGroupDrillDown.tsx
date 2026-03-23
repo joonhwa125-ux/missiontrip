@@ -104,7 +104,7 @@ export default function AdminGroupDrillDown({
     startTransition(async () => {
       const res = await markAbsent(member.id, activeSchedule.id);
       if (res.ok) {
-        await broadcastCheckin(member.group_id, member.id, "insert");
+        await broadcastCheckin(member.group_id, member.id, "insert", true);
       } else {
         onCheckInsChange((prev) => prev.filter((c) => c.user_id !== member.id));
       }
@@ -149,11 +149,12 @@ export default function AdminGroupDrillDown({
     if (action.type === "demote") handleRoleChange(action.member, "member");
   }
 
-  async function broadcastCheckin(groupId: string, userId: string, action: "insert" | "delete") {
+  async function broadcastCheckin(groupId: string, userId: string, action: "insert" | "delete", isAbsent = false) {
     const payload = {
       user_id: userId,
       schedule_id: activeSchedule?.id ?? "",
       action,
+      is_absent: isAbsent,
     };
     await Promise.all([
       broadcast(CHANNEL_GLOBAL, EVENT_CHECKIN_UPDATED, payload),
