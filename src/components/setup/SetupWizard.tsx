@@ -48,21 +48,23 @@ export default function SetupWizard() {
   return (
     <div className="min-h-screen bg-app-bg">
       <header className="bg-main-action px-4 py-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-lg font-bold">데이터 셋업</h1>
-          <Link
-            href="/admin"
-            className="min-h-11 flex items-center gap-1 rounded-lg px-2 text-sm font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
-          >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
-            돌아가기
-          </Link>
+        <div className="mx-auto max-w-2xl">
+          <div className="flex items-center gap-2">
+            <Link
+              href="/admin"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-gray-900"
+              aria-label="관리자 화면으로 돌아가기"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+            </Link>
+            <div>
+              <h1 className="text-lg font-bold">데이터 셋업</h1>
+              <p className="text-sm opacity-70">Step {step} / 3</p>
+            </div>
+          </div>
         </div>
-        <p className="text-sm opacity-70">
-          Step {step} / 3
-        </p>
       </header>
 
       <main className="mx-auto max-w-2xl px-4 py-6">

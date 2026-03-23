@@ -105,14 +105,17 @@ export default function AdminBottomSheet({
         if (!o && drillGroup) return;
         if (!o) onClose();
       }}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{schedule?.title} 현황</DialogTitle>
-            <DialogDescription aria-live="polite">
-              {COPY.totalSummary(totalChecked, members.length)}
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="flex max-h-[85vh] flex-col overflow-hidden p-0">
+          <div className="flex-shrink-0 px-6 pt-6">
+            <DialogHeader>
+              <DialogTitle>{schedule?.title} 현황</DialogTitle>
+              <DialogDescription aria-live="polite">
+                {COPY.totalSummary(totalChecked, members.length)}
+              </DialogDescription>
+            </DialogHeader>
+          </div>
 
+          <div className="overflow-y-auto px-6 pb-6">
           {busEntries.map(([busName, busSummaries]) => (
             <section key={busName} className="mb-4">
               <h3 className="mb-2 text-sm font-bold text-muted-foreground">{busName}</h3>
@@ -175,6 +178,7 @@ export default function AdminBottomSheet({
               </div>
             </section>
           ))}
+          </div>
         </DialogContent>
       </Dialog>
 
