@@ -1,15 +1,18 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import AdminView from "@/components/admin/AdminView";
 import type { Group, Schedule } from "@/lib/types";
 
 export default async function AdminPage() {
-  const supabase = createClient();
-
+  // 인증 확인은 쿠키 기반 클라이언트
+  const authClient = createClient();
   const {
     data: { user: authUser },
-  } = await supabase.auth.getUser();
+  } = await authClient.auth.getUser();
   if (!authUser) redirect("/login");
+
+  // 데이터 조회는 service client (RLS의 auth.uid() ≠ users.id 문제 우회)
+  const supabase = createServiceClient();
 
   const { data: currentUser } = await supabase
     .from("users")
