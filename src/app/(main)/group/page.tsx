@@ -63,7 +63,7 @@ export default async function GroupPage() {
     const queries = [
       supabase
         .from("check_ins")
-        .select("user_id, is_absent")
+        .select("*")
         .eq("schedule_id", activeSchedule.id),
     ];
 
