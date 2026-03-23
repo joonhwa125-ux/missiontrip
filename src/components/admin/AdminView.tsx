@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useMemo, useRef, type SetStateAction 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useRealtime } from "@/hooks/useRealtime";
+import { fetchScheduleCheckIns } from "@/actions/schedule";
 import { sortSchedulesByStatus, getDefaultDay } from "@/lib/utils";
 import PageHeader from "@/components/common/PageHeader";
 import DayTabs from "@/components/common/DayTabs";
@@ -91,6 +92,15 @@ export default function AdminView({
 
   // 바텀시트 대상 일정
   const [bottomSheetSchedule, setBottomSheetSchedule] = useState<Schedule | null>(null);
+
+  // 바텀시트 열 때 서버에서 최신 데이터 fetch (Realtime 실패 안전망)
+  const openBottomSheet = useCallback(async (schedule: Schedule | null) => {
+    setBottomSheetSchedule(schedule);
+    if (!schedule) return;
+    const { checkIns: freshCi, reports: freshRp } = await fetchScheduleCheckIns(schedule.id);
+    setCheckInsMap((prev) => ({ ...prev, [schedule.id]: freshCi }));
+    setReportsMap((prev) => ({ ...prev, [schedule.id]: freshRp }));
+  }, []);
 
   // 다이얼로그
   const [addOpen, setAddOpen] = useState(false);
@@ -182,10 +192,10 @@ export default function AdminView({
       );
       showToast("일정 시간이 변경되었어요");
     },
-    onCheckinUpdated: ({ user_id, action, is_absent }) => {
-      if (!activeSchedule) return;
+    onCheckinUpdated: ({ user_id, schedule_id, action, is_absent }) => {
+      const sid = schedule_id || activeSchedule?.id;
+      if (!sid) return;
       setCheckInsMap((prev) => {
-        const sid = activeSchedule.id;
         const list = prev[sid] ?? [];
         if (action === "insert") {
           if (list.some((c) => c.user_id === user_id)) return prev;
@@ -194,10 +204,10 @@ export default function AdminView({
         return { ...prev, [sid]: list.filter((c) => c.user_id !== user_id) };
       });
     },
-    onGroupReported: ({ group_id, pending_count }) => {
-      if (!activeSchedule) return;
+    onGroupReported: ({ group_id, schedule_id, pending_count }) => {
+      const sid = schedule_id || activeSchedule?.id;
+      if (!sid) return;
       setReportsMap((prev) => {
-        const sid = activeSchedule.id;
         const list = prev[sid] ?? [];
         const newReport = { group_id, pending_count, reported_at: new Date().toISOString() };
         const idx = list.findIndex((r) => r.group_id === group_id);
@@ -298,7 +308,7 @@ export default function AdminView({
           groups={groups}
           members={members}
           activeSchedule={activeSchedule}
-          onBottomSheet={setBottomSheetSchedule}
+          onBottomSheet={openBottomSheet}
           onTimeEdit={setTimeEditTarget}
           onToast={showToast}
           onRefresh={() => router.refresh()}

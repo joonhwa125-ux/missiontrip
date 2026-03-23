@@ -198,6 +198,7 @@ export default function GroupCheckinView({
         showToast(COPY.reportButtonDone);
         const reportPayload = {
           group_id: currentUser.group_id,
+          schedule_id: activeSchedule.id,
           pending_count: unchecked,
         };
         await Promise.all([
