@@ -94,7 +94,7 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
           <>
             <button
               onClick={() => onAbsent(user)}
-              className="min-h-11 rounded-xl px-3 text-sm font-medium text-gray-400 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              className="min-h-11 rounded-xl px-3 text-sm font-medium text-gray-500 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               aria-label={`${user.name} 불참 처리`}
             >
               {COPY.absent}

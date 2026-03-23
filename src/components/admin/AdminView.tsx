@@ -121,11 +121,11 @@ export default function AdminView({
     <div className="flex min-h-full flex-col">
       {/* 일차 탭 (제목 헤더 없음 — HTML <title>로 접근성 충족) */}
       <div className="bg-main-action">
-        <DayTabs days={days} selected={selectedDay} onChange={setSelectedDay} />
+        <DayTabs days={days} selected={selectedDay} onChange={setSelectedDay} panelId="admin-schedule-panel" />
       </div>
 
       {/* 일정 카드 목록 */}
-      <div role="tabpanel" className="flex-1">
+      <div id="admin-schedule-panel" role="tabpanel" className="flex-1">
         <AdminScheduleList
           schedules={daySchedules}
           allSchedules={schedules}

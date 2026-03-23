@@ -261,7 +261,7 @@ export default function GroupCheckinView({
                   className={cn(
                     "flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold",
                     absent
-                      ? "bg-gray-200 text-gray-400"
+                      ? "bg-gray-200 text-gray-500"
                       : checked
                         ? "bg-main-action"
                         : "border-2 border-dashed border-gray-300 bg-gray-100"

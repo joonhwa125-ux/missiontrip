@@ -122,6 +122,7 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
             ref={userFileRef}
             type="file"
             accept=".csv"
+            aria-label="참가자 CSV 파일 선택"
             className="w-full text-sm"
           />
         </div>
@@ -133,6 +134,7 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
             ref={scheduleFileRef}
             type="file"
             accept=".csv"
+            aria-label="일정 CSV 파일 선택"
             className="w-full text-sm"
           />
         </div>

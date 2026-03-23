@@ -217,7 +217,7 @@ export async function resetAllData(): Promise<ActionResult> {
   return { ok: true };
 }
 
-// 조장 수 검증 — 각 조에 최소 1명의 조장
+// 조장 수 검증 — 각 조에 최소 1명의 조장 (관리자도 조장 역할 수행 가능)
 function validateLeaderCount(
   groups: ParsedGroup[],
   users: ParsedUser[]
@@ -226,7 +226,9 @@ function validateLeaderCount(
 
   for (const group of groups) {
     const leaders = users.filter(
-      (u) => u.group_name === group.name && u.role === "leader"
+      (u) =>
+        u.group_name === group.name &&
+        (u.role === "leader" || u.role === "admin")
     );
     if (leaders.length === 0) {
       errors.push({

@@ -58,8 +58,8 @@ export default function GroupFeedView({
   return (
     <div className="flex-1 overflow-y-auto">
       {/* 일차 탭 + 일정 타임라인 */}
-      <DayTabs days={days} selected={selectedDay} onChange={setSelectedDay} />
-      <div className="px-4 py-4">
+      <DayTabs days={days} selected={selectedDay} onChange={setSelectedDay} panelId="group-feed-panel" />
+      <div id="group-feed-panel" role="tabpanel" className="px-4 py-4">
         <div className="space-y-2">
           {daySchedules.map((s) => (
             <ScheduleCard

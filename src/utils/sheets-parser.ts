@@ -19,6 +19,14 @@ const ROLE_MAP: Record<string, UserRole> = {
   관리자: "admin",
 };
 
+// Google Sheets CSV에 포함될 수 있는 보이지 않는 Unicode 문자 제거
+function sanitizeText(text: string): string {
+  return text
+    .replace(/[\uFEFF\u200B\u200C\u200D\u00A0\u2060]/g, "")
+    .normalize("NFC")
+    .trim();
+}
+
 // Google Sheets URL에서 Sheet ID 추출
 export function extractSheetId(url: string): string | null {
   const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
@@ -31,7 +39,7 @@ export function parseCsv(csv: string): string[][] {
   let row: string[] = [];
   let field = "";
   let inQuotes = false;
-  const text = csv.trim();
+  const text = csv.replace(/^\uFEFF/, "").trim();
 
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
@@ -92,10 +100,10 @@ export function parseUsersSheet(rows: string[][]): {
     const row = rows[i];
     if (!row || row.every((c) => !c)) continue;
 
-    const name = row[0]?.trim();
+    const name = sanitizeText(row[0] ?? "");
     const phone = row[1]?.trim() || null;
-    const roleRaw = row[2]?.trim();
-    const groupName = row[3]?.trim();
+    const roleRaw = sanitizeText(row[2] ?? "");
+    const groupName = sanitizeText(row[3] ?? "");
     const busName = row[4]?.trim() || null;
 
     // 이름 필수
@@ -116,7 +124,7 @@ export function parseUsersSheet(rows: string[][]): {
         sheet: "users",
         row: i + 1,
         field: "역할",
-        message: "역할은 조원/조장/관리자만 가능해요",
+        message: `역할은 조원/조장/관리자만 가능해요 (입력값: "${roleRaw}")`,
       });
       continue;
     }
