@@ -332,7 +332,7 @@ function GroupMiniCard({
 }) {
   const b = FEED_BADGE[badge];
   return (
-    <div className="rounded-xl bg-white px-3 py-2">
+    <div className="rounded-xl border border-gray-200 bg-white px-3 py-2">
       <div className="mb-1 flex items-center justify-between gap-1">
         <span className="truncate text-sm font-medium">{name}</span>
         <span
