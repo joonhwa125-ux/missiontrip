@@ -25,7 +25,6 @@ interface Props {
   onTimeEdit: (s: Schedule) => void;
   onToast: (msg: string) => void;
   onRefresh: () => void;
-  onAddOpen: () => void;
 }
 
 /** 현재 활성 일정 기준 미확인 인원 수 계산 */
@@ -41,7 +40,6 @@ function calcUncheckedCount(
 export default function AdminScheduleList({
   schedules, allSchedules, checkInsMap, reportsMap, groups, members,
   activeSchedule, onBottomSheet, onTimeEdit, onToast, onRefresh,
-  onAddOpen,
 }: Props) {
   const [, startTransition] = useTransition();
   const { broadcast } = useBroadcast();
@@ -129,15 +127,6 @@ export default function AdminScheduleList({
           />
         ))}
       </div>
-
-      {/* + 일정 추가 버튼 */}
-      <button
-        onClick={onAddOpen}
-        className="mt-4 w-full min-h-11 rounded-2xl border-2 border-dashed border-gray-300 py-4 text-sm font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action"
-        aria-label="일정 추가"
-      >
-        + 일정 추가
-      </button>
 
       {/* 미확인 경고 모달 (수동 활성화 시) */}
       <Dialog open={!!warningTarget} onOpenChange={(o) => !o && setWarningTarget(null)}>
