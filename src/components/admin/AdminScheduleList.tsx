@@ -135,8 +135,8 @@ export default function AdminScheduleList({
             <DialogTitle>
               {COPY.uncheckedWarning(calcUncheckedCount(activeCheckIns, totalMemberCount))}
             </DialogTitle>
-            <DialogDescription className="sr-only">
-              미확인 인원이 있는 상태에서 일정을 전환할지 확인합니다.
+            <DialogDescription>
+              {COPY.uncheckedWarningQuestion}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
