@@ -21,6 +21,8 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
   const [isPending, startTransition] = useTransition();
   const userFileRef = useRef<HTMLInputElement>(null);
   const scheduleFileRef = useRef<HTMLInputElement>(null);
+  const [userFileName, setUserFileName] = useState<string | null>(null);
+  const [scheduleFileName, setScheduleFileName] = useState<string | null>(null);
 
   const handleGoogleSheet = () => {
     const sheetId = extractSheetId(sheetUrl);
@@ -160,8 +162,25 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
               type="file"
               accept=".csv"
               aria-label="참가자 CSV 파일 선택"
-              className="w-full text-sm"
+              className="sr-only"
+              onChange={(e) => {
+                setUserFileName(e.target.files?.[0]?.name ?? null);
+                setError(null);
+              }}
             />
+            <button
+              type="button"
+              onClick={() => userFileRef.current?.click()}
+              className={cn(
+                "flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed px-4 py-3 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-main-action",
+                userFileName
+                  ? "border-main-action bg-[#FEF9E7] text-foreground"
+                  : "border-gray-300 bg-[#F5F3EF] text-muted-foreground hover:border-main-action hover:bg-[#FEF9E7]"
+              )}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+              {userFileName ?? "파일 선택"}
+            </button>
           </div>
           <div className="mb-3">
             <label className="mb-1 block text-xs text-muted-foreground">
@@ -172,8 +191,25 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
               type="file"
               accept=".csv"
               aria-label="일정 CSV 파일 선택"
-              className="w-full text-sm"
+              className="sr-only"
+              onChange={(e) => {
+                setScheduleFileName(e.target.files?.[0]?.name ?? null);
+                setError(null);
+              }}
             />
+            <button
+              type="button"
+              onClick={() => scheduleFileRef.current?.click()}
+              className={cn(
+                "flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed px-4 py-3 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-main-action",
+                scheduleFileName
+                  ? "border-main-action bg-[#FEF9E7] text-foreground"
+                  : "border-gray-300 bg-[#F5F3EF] text-muted-foreground hover:border-main-action hover:bg-[#FEF9E7]"
+              )}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+              {scheduleFileName ?? "파일 선택"}
+            </button>
           </div>
           <button
             onClick={handleCsvUpload}
