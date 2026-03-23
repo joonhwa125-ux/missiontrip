@@ -62,7 +62,7 @@ export default function DayTabs({ days, selected, onChange, panelId, rightSlot }
                 className={cn(
                   "min-h-9 flex-1 rounded-lg text-sm font-semibold transition-all duration-200 focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-1",
                   isSelected
-                    ? "bg-white text-gray-900 shadow-sm"
+                    ? "bg-main-action text-gray-900 shadow-sm"
                     : "text-gray-500 hover:text-gray-700"
                 )}
               >
