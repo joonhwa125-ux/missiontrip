@@ -20,6 +20,7 @@ type Member = GroupMember;
 interface AllMember {
   id: string;
   group_id: string;
+  party: "advance" | "rear" | null;
 }
 
 interface Props {
@@ -114,6 +115,7 @@ export default function GroupFeedView({
               allCheckIns={allCheckIns}
               allMembers={allMembers}
               allReports={allReports}
+              scope={activeSchedule?.scope ?? "all"}
             />
           </div>
         </DialogContent>
@@ -265,16 +267,22 @@ function GroupStatusGrid({
   allCheckIns,
   allMembers,
   allReports,
+  scope,
 }: {
   allGroups: Group[];
   allCheckIns: { user_id: string; is_absent: boolean }[];
   allMembers: AllMember[];
   allReports: { group_id: string }[];
+  scope: "all" | "advance" | "rear";
 }) {
   const reportedIds = new Set(allReports.map((r) => r.group_id));
+  // scope 기반 멤버 필터링: 선발/후발 일정이면 해당 party 멤버만 카운트
+  const scopeMembers = scope === "all"
+    ? allMembers
+    : allMembers.filter((m) => m.party === scope);
   // 조별 인원 수 계산
   const groupMemberCounts = new Map<string, number>();
-  for (const m of allMembers) {
+  for (const m of scopeMembers) {
     groupMemberCounts.set(m.group_id, (groupMemberCounts.get(m.group_id) ?? 0) + 1);
   }
 

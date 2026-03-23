@@ -12,6 +12,7 @@ type Member = GroupMember;
 interface AllMember {
   id: string;
   group_id: string;
+  party: "advance" | "rear" | null;
 }
 
 interface Props {

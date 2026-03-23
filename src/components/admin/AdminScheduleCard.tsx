@@ -130,18 +130,13 @@ export default function AdminScheduleCard({
               </p>
             )}
           </button>
-          <div className="flex flex-shrink-0 items-center gap-2">
-            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-muted-foreground">
-              대기
-            </span>
-            <button
-              onClick={onActivate}
-              className="min-h-11 rounded-xl bg-gray-900 px-3 text-xs font-bold text-white focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label={`${schedule.title} 활성화`}
-            >
-              활성화
-            </button>
-          </div>
+          <button
+            onClick={onActivate}
+            className="flex-shrink-0 min-h-11 rounded-xl bg-gray-900 px-3 text-xs font-bold text-white focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={`${schedule.title} 활성화`}
+          >
+            활성화
+          </button>
         </div>
       </div>
     );
