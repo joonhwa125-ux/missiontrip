@@ -135,6 +135,17 @@ export default function GroupView({
     },
   });
 
+  // 내 조 checkIns 변경 → allCheckInsState에 동기화
+  // (useBroadcast와 useRealtime이 별도 채널 인스턴스를 사용하므로 self-echo가 도달하지 않음)
+  useEffect(() => {
+    const myMemberIds = new Set(members.map((m) => m.id));
+    setAllCheckInsState((prev) => {
+      const withoutMyGroup = prev.filter((c) => !myMemberIds.has(c.user_id));
+      const myCheckIns = checkIns.map((c) => ({ user_id: c.user_id, is_absent: c.is_absent }));
+      return [...withoutMyGroup, ...myCheckIns];
+    });
+  }, [checkIns, members]);
+
   // scope 기반 멤버 필터링: 선발/후발 일정이면 해당 party 멤버만
   const checkinMembers = useMemo(() => {
     const scope = currentSchedule?.scope;
