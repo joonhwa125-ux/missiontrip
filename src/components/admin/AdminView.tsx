@@ -93,13 +93,17 @@ export default function AdminView({
   // 바텀시트 대상 일정
   const [bottomSheetSchedule, setBottomSheetSchedule] = useState<Schedule | null>(null);
 
-  // 바텀시트 열 때 서버에서 최신 데이터 fetch (Realtime 실패 안전망)
+  // 바텀시트 열 때 서버에서 최신 데이터 fetch → 완료 후 열기
   const openBottomSheet = useCallback(async (schedule: Schedule | null) => {
+    if (!schedule) { setBottomSheetSchedule(null); return; }
+    try {
+      const { checkIns: freshCi, reports: freshRp } = await fetchScheduleCheckIns(schedule.id);
+      setCheckInsMap((prev) => ({ ...prev, [schedule.id]: freshCi }));
+      setReportsMap((prev) => ({ ...prev, [schedule.id]: freshRp }));
+    } catch {
+      // fetch 실패 시 기존 in-memory state로 열기
+    }
     setBottomSheetSchedule(schedule);
-    if (!schedule) return;
-    const { checkIns: freshCi, reports: freshRp } = await fetchScheduleCheckIns(schedule.id);
-    setCheckInsMap((prev) => ({ ...prev, [schedule.id]: freshCi }));
-    setReportsMap((prev) => ({ ...prev, [schedule.id]: freshRp }));
   }, []);
 
   // 다이얼로그

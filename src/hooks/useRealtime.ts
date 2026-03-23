@@ -130,12 +130,12 @@ export function useBroadcast() {
         return;
       }
 
-      // 2) 없으면 자체 채널 생성 (suffix로 topic 충돌 방지)
+      // 2) 없으면 자체 채널 생성 (별도 클라이언트이므로 토픽명 동일해도 충돌 없음)
       const own = ownChannelsRef.current;
       let channel = own.get(channelName);
 
       if (!channel) {
-        channel = supabaseRef.current.channel(`${channelName}:send`, {
+        channel = supabaseRef.current.channel(channelName, {
           config: { broadcast: { self: true } },
         });
         await new Promise<void>((resolve) => {
