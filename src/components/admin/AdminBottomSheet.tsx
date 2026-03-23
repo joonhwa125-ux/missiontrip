@@ -166,10 +166,9 @@ export default function AdminBottomSheet({
                           style={{ width: `${progress}%` }}
                         />
                       </div>
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{checkedCount} / {totalCount}명</span>
-                        <span aria-hidden="true">&rsaquo;</span>
-                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {checkedCount} / {totalCount}명
+                      </p>
                     </button>
                   );
                 })}
