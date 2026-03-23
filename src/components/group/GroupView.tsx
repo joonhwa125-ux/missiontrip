@@ -69,6 +69,20 @@ export default function GroupView({
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
+  // 백그라운드 복귀 시 서버 데이터 갱신 (탭 전환 후 stale 방지)
+  useEffect(() => {
+    let hiddenAt = 0;
+    const handleVisibility = () => {
+      if (document.hidden) {
+        hiddenAt = Date.now();
+      } else if (hiddenAt && Date.now() - hiddenAt > 3000) {
+        router.refresh();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [router]);
+
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(null), 5000);
