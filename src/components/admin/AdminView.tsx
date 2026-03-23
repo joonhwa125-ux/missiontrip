@@ -155,12 +155,15 @@ export default function AdminView({
     [adminMembers]
   );
 
-  // 내 조 체크인 카운트 (하단 바 표시용)
-  const adminCheckedCount = useMemo(() => {
+  // 내 조 미확인 카운트 — 체크인 기록이 아예 없는 인원 (탑승완료·불참 모두 "확인됨")
+  const adminUncheckedCount = useMemo(() => {
     if (!activeSchedule) return 0;
     const ciList = checkInsMap[activeSchedule.id] ?? [];
-    return ciList.filter((ci) => adminMemberIds.has(ci.user_id) && !ci.is_absent).length;
-  }, [activeSchedule, checkInsMap, adminMemberIds]);
+    const confirmedIds = new Set(
+      ciList.filter((ci) => adminMemberIds.has(ci.user_id)).map((ci) => ci.user_id)
+    );
+    return adminMembers.filter((m) => !confirmedIds.has(m.id)).length;
+  }, [activeSchedule, checkInsMap, adminMemberIds, adminMembers]);
 
   // Sheet 열 때 현재 체크인 데이터로 초기화
   const openCheckinSheet = useCallback(() => {
@@ -286,14 +289,14 @@ export default function AdminView({
               <button
                 onClick={openCheckinSheet}
                 className="relative flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
-                aria-label={`${adminGroupName} 체크인 — ${adminCheckedCount}/${adminMembers.length}명 완료`}
+                aria-label={`${adminGroupName} 체크인 — 미확인 ${adminUncheckedCount}명`}
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z" />
                 </svg>
-                {adminCheckedCount < adminMembers.length && (
+                {adminUncheckedCount > 0 && (
                   <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[0.625rem] font-bold leading-none text-white">
-                    {adminMembers.length - adminCheckedCount}
+                    {adminUncheckedCount}
                   </span>
                 )}
               </button>
