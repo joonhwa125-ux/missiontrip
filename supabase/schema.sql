@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS users (
   phone       text,
   role        text        NOT NULL CHECK (role IN ('member', 'leader', 'admin')),
   group_id    uuid        NOT NULL REFERENCES groups(id),
+  party       text,                                -- 선발/후발 구분 (advance | rear | null)
   created_at  timestamptz DEFAULT now()
 );
 
@@ -29,6 +30,7 @@ CREATE TABLE IF NOT EXISTS schedules (
   scheduled_time  timestamptz,
   is_active       boolean     NOT NULL DEFAULT false,
   activated_at    timestamptz,
+  scope           text        NOT NULL DEFAULT 'all',  -- 일정 대상 (all | advance | rear)
   created_at      timestamptz DEFAULT now()
 );
 
@@ -42,9 +44,10 @@ CREATE TABLE IF NOT EXISTS check_ins (
   user_id             uuid        NOT NULL REFERENCES users(id),
   schedule_id         uuid        NOT NULL REFERENCES schedules(id),
   checked_at          timestamptz DEFAULT now(),
-  checked_by          text        NOT NULL CHECK (checked_by IN ('self', 'leader', 'admin')),
+  checked_by          text        NOT NULL CHECK (checked_by IN ('leader', 'admin')),
   checked_by_user_id  uuid        REFERENCES users(id),
   offline_pending     boolean     NOT NULL DEFAULT false,
+  is_absent           boolean     NOT NULL DEFAULT false,  -- 불참 처리 여부
   CONSTRAINT unique_checkin UNIQUE (user_id, schedule_id)
 );
 
@@ -86,7 +89,7 @@ CREATE POLICY "schedules_write" ON schedules
     SELECT 1 FROM users WHERE users.email = auth.jwt() ->> 'email' AND users.role = 'admin'
   ));
 
--- Check_ins: 읽기(같은 조 + admin), 쓰기(leader/admin/self)
+-- Check_ins: 읽기(같은 조 + admin), 쓰기(leader/admin)
 CREATE POLICY "checkins_read" ON check_ins
   FOR SELECT TO authenticated USING (
     EXISTS (
@@ -105,7 +108,7 @@ CREATE POLICY "checkins_insert" ON check_ins
     EXISTS (
       SELECT 1 FROM users
       WHERE email = auth.jwt() ->> 'email'
-        AND (role IN ('leader', 'admin') OR id = check_ins.user_id)
+        AND role IN ('leader', 'admin')
     )
   );
 
