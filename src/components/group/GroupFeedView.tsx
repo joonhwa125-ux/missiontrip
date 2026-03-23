@@ -289,12 +289,15 @@ function GroupStatusGrid({
   // user_id -> group_id 매핑
   const userGroupMap = new Map(allMembers.map((m) => [m.id, m.group_id]));
 
-  // 조별 체크인 수 (불참 제외)
+  // 조별 체크인 수 (불참 제외) + 조별 불참 수
   const groupCheckedCounts = new Map<string, number>();
+  const groupAbsentCounts = new Map<string, number>();
   for (const c of allCheckIns) {
-    if (c.is_absent) continue;
     const gid = userGroupMap.get(c.user_id);
-    if (gid) {
+    if (!gid) continue;
+    if (c.is_absent) {
+      groupAbsentCounts.set(gid, (groupAbsentCounts.get(gid) ?? 0) + 1);
+    } else {
       groupCheckedCounts.set(gid, (groupCheckedCounts.get(gid) ?? 0) + 1);
     }
   }
@@ -319,7 +322,9 @@ function GroupStatusGrid({
           </h3>
           <div className="grid grid-cols-2 gap-1.5 [&>*:last-child:nth-child(odd)]:col-span-2">
             {busGroupList.map((g) => {
-              const total = groupMemberCounts.get(g.id) ?? 0;
+              const rawTotal = groupMemberCounts.get(g.id) ?? 0;
+              const absent = groupAbsentCounts.get(g.id) ?? 0;
+              const total = rawTotal - absent;
               const checked = groupCheckedCounts.get(g.id) ?? 0;
               const badge = getBadgeStatus(total, checked, reportedIds.has(g.id));
               const progress = total > 0 ? (checked / total) * 100 : 0;

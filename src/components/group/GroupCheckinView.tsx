@@ -55,7 +55,6 @@ export default function GroupCheckinView({
 }: Props) {
   const [cancelTarget, setCancelTarget] = useState<{ member: Member; isAbsent: boolean } | null>(null);
   const [absentTarget, setAbsentTarget] = useState<Member | null>(null);
-  const [reportOpen, setReportOpen] = useState(false);
   const [reported, setReported] = useState(initialReported);
   const [, startTransition] = useTransition();
 
@@ -185,7 +184,6 @@ export default function GroupCheckinView({
     const unchecked = members.filter(
       (m) => !checkIns.some((c) => c.user_id === m.id)
     ).length;
-    setReportOpen(false);
 
     if (!isOnline) {
       const saved = addPendingReport({
@@ -375,23 +373,27 @@ export default function GroupCheckinView({
             {COPY.offline(pendingCount)}
           </div>
         )}
-        <button
-          onClick={() => (allComplete ? handleReport() : setReportOpen(true))}
-          className={cn(
-            "w-full min-h-11 rounded-2xl py-4 text-base font-bold transition-colors focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2",
-            reported
-              ? "bg-complete-card text-[#27500A]"
-              : allComplete
-                ? "bg-main-action"
-                : "bg-gray-100 text-gray-700"
-          )}
-        >
-          {reported
-            ? COPY.reportButtonDone
-            : allComplete
-              ? COPY.reportButtonComplete
-              : COPY.reportButtonPending(uncheckedCount)}
-        </button>
+        {allComplete || reported ? (
+          <button
+            onClick={() => !reported && handleReport()}
+            className={cn(
+              "w-full min-h-11 rounded-2xl py-4 text-base font-bold transition-colors focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2",
+              reported
+                ? "bg-complete-card text-[#27500A]"
+                : "bg-main-action"
+            )}
+          >
+            {reported ? COPY.reportButtonDone : COPY.reportButtonComplete}
+          </button>
+        ) : (
+          <p
+            className="w-full rounded-2xl bg-gray-100 py-4 text-center text-base font-bold text-gray-700"
+            role="status"
+            aria-live="polite"
+          >
+            {COPY.reportButtonPending(uncheckedCount)}
+          </p>
+        )}
       </div>
 
       {/* 취소 확인 모달 */}
@@ -448,28 +450,7 @@ export default function GroupCheckinView({
         </DialogContent>
       </Dialog>
 
-      {/* 보고 확인 모달 (미완료 시) */}
-      <Dialog open={reportOpen} onOpenChange={setReportOpen}>
-        <DialogContent hideClose>
-          <DialogHeader>
-            <DialogTitle>
-              {uncheckedCount}명이 아직이에요. 그래도 보고할까요?
-            </DialogTitle>
-            <DialogDescription className="sr-only">미완료 인원이 있는 상태에서 보고 여부를 확인합니다.</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose className="min-h-11 flex-1 rounded-xl bg-gray-100 text-sm font-medium">
-              취소
-            </DialogClose>
-            <button
-              onClick={handleReport}
-              className="min-h-11 flex-1 rounded-xl bg-main-action text-sm font-bold focus-visible:ring-2 focus-visible:ring-main-action"
-            >
-              보고하기
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* 보고 확인 모달 제거: 전원 완료 시에만 보고 가능 */}
     </div>
   );
 }
