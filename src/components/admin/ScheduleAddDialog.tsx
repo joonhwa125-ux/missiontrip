@@ -65,7 +65,7 @@ export default function ScheduleAddDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent hideClose>
         <DialogHeader>
           <DialogTitle>일정 추가</DialogTitle>
           <DialogDescription className="sr-only">

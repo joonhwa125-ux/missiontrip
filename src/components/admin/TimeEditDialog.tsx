@@ -66,7 +66,7 @@ export default function TimeEditDialog({
         }
       }}
     >
-      <DialogContent>
+      <DialogContent hideClose>
         <DialogHeader>
           <DialogTitle>예정 시각 변경</DialogTitle>
           <DialogDescription>{schedule?.title}</DialogDescription>

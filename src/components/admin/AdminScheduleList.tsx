@@ -130,7 +130,7 @@ export default function AdminScheduleList({
 
       {/* 미확인 경고 모달 (수동 활성화 시) */}
       <Dialog open={!!warningTarget} onOpenChange={(o) => !o && setWarningTarget(null)}>
-        <DialogContent>
+        <DialogContent hideClose>
           <DialogHeader>
             <DialogTitle>
               {COPY.uncheckedWarning(calcUncheckedCount(activeCheckIns, totalMemberCount))}

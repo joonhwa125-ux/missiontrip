@@ -366,7 +366,7 @@ function ConfirmDialog({ action, onClose, onConfirm }: ConfirmDialogProps) {
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent>
+      <DialogContent hideClose>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>

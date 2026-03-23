@@ -204,7 +204,7 @@ export default function PreviewStep({
 
       {/* 확인 모달 */}
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent aria-describedby={undefined}>
+        <DialogContent hideClose aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>
               {hasErrors

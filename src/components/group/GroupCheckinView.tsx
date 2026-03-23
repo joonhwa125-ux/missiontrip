@@ -399,7 +399,7 @@ export default function GroupCheckinView({
         open={!!cancelTarget}
         onOpenChange={(o) => !o && setCancelTarget(null)}
       >
-        <DialogContent>
+        <DialogContent hideClose>
           <DialogHeader>
             <DialogTitle>
               {cancelTarget?.isAbsent ? COPY.absentCancel : "체크인을 취소할까요?"}
@@ -427,7 +427,7 @@ export default function GroupCheckinView({
         open={!!absentTarget}
         onOpenChange={(o) => !o && setAbsentTarget(null)}
       >
-        <DialogContent>
+        <DialogContent hideClose>
           <DialogHeader>
             <DialogTitle>불참 처리할까요?</DialogTitle>
           </DialogHeader>
@@ -450,7 +450,7 @@ export default function GroupCheckinView({
 
       {/* 보고 확인 모달 (미완료 시) */}
       <Dialog open={reportOpen} onOpenChange={setReportOpen}>
-        <DialogContent>
+        <DialogContent hideClose>
           <DialogHeader>
             <DialogTitle>
               {uncheckedCount}명이 아직이에요. 그래도 보고할까요?

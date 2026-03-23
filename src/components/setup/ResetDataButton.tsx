@@ -44,7 +44,7 @@ export default function ResetDataButton() {
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent aria-describedby={undefined}>
+        <DialogContent hideClose aria-describedby={undefined}>
           <DialogHeader>
             <DialogTitle>정말 초기화할까요?</DialogTitle>
           </DialogHeader>

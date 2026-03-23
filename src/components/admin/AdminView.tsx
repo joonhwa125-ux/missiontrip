@@ -117,18 +117,20 @@ export default function AdminView({
 
   // 바텀시트 대상 일정
   const [bottomSheetSchedule, setBottomSheetSchedule] = useState<Schedule | null>(null);
+  const [bottomSheetLoading, setBottomSheetLoading] = useState(false);
 
-  // 바텀시트 열 때 서버에서 최신 데이터 fetch → 완료 후 열기
-  const openBottomSheet = useCallback(async (schedule: Schedule | null) => {
+  // 바텀시트 즉시 열고, 백그라운드에서 최신 데이터 fetch
+  const openBottomSheet = useCallback((schedule: Schedule | null) => {
     if (!schedule) { setBottomSheetSchedule(null); return; }
-    try {
-      const { checkIns: freshCi, reports: freshRp } = await fetchScheduleCheckIns(schedule.id);
-      setCheckInsMap((prev) => ({ ...prev, [schedule.id]: freshCi }));
-      setReportsMap((prev) => ({ ...prev, [schedule.id]: freshRp }));
-    } catch {
-      // fetch 실패 시 기존 in-memory state로 열기
-    }
     setBottomSheetSchedule(schedule);
+    setBottomSheetLoading(true);
+    fetchScheduleCheckIns(schedule.id)
+      .then(({ checkIns: freshCi, reports: freshRp }) => {
+        setCheckInsMap((prev) => ({ ...prev, [schedule.id]: freshCi }));
+        setReportsMap((prev) => ({ ...prev, [schedule.id]: freshRp }));
+      })
+      .catch(() => {})
+      .finally(() => setBottomSheetLoading(false));
   }, []);
 
   // 다이얼로그
@@ -352,6 +354,7 @@ export default function AdminView({
         checkIns={bottomSheetSchedule ? (checkInsMap[bottomSheetSchedule.id] ?? []) : []}
         reports={bottomSheetSchedule ? (reportsMap[bottomSheetSchedule.id] ?? []) : []}
         isReadOnly={isBottomSheetReadOnly}
+        loading={bottomSheetLoading}
         onClose={() => setBottomSheetSchedule(null)}
         onMembersChange={setMembers}
         onCheckInsChange={handleBottomSheetCheckInsChange}
@@ -375,7 +378,7 @@ export default function AdminView({
 
       {/* 내 조 체크인 Sheet (풀스크린 다이얼로그) */}
       <Dialog open={checkinSheetOpen} onOpenChange={(open) => { if (!open) closeCheckinSheet(); }}>
-        <DialogContent className="flex h-[100dvh] max-h-[100dvh] w-full max-w-lg flex-col gap-0 overflow-hidden rounded-none border-none p-0" aria-describedby={undefined}>
+        <DialogContent hideClose className="flex h-[100dvh] max-h-[100dvh] w-full max-w-lg flex-col gap-0 overflow-hidden rounded-none border-none p-0" aria-describedby={undefined}>
           <DialogTitle className="sr-only">{adminGroupName} 체크인 다이얼로그</DialogTitle>
           <div className="min-h-0 flex-1 overflow-y-auto">
             <GroupCheckinView

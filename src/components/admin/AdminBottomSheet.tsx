@@ -29,6 +29,7 @@ interface Props {
   checkIns: AdminCheckIn[];
   reports: Report[];
   isReadOnly: boolean;
+  loading?: boolean;
   onClose: () => void;
   onMembersChange: (members: AdminMember[]) => void;
   onCheckInsChange: React.Dispatch<React.SetStateAction<AdminCheckIn[]>>;
@@ -55,6 +56,7 @@ export default function AdminBottomSheet({
   checkIns,
   reports,
   isReadOnly,
+  loading,
   onClose,
   onMembersChange,
   onCheckInsChange,
@@ -122,7 +124,12 @@ export default function AdminBottomSheet({
             </DialogHeader>
           </div>
 
-          <div className="overflow-y-auto px-6 pb-6">
+          <div className="relative overflow-y-auto px-6 pb-6">
+          {loading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-main-action" role="status" aria-label="불러오는 중" />
+            </div>
+          )}
           {busEntries.map(([busName, busSummaries]) => (
             <section key={busName} className="mb-4">
               <h3 className="mb-2 text-sm font-bold text-muted-foreground">{busName}</h3>
