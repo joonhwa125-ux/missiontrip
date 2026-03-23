@@ -115,7 +115,7 @@ export default function AdminBottomSheet({
         <DialogContent className="flex max-h-[85vh] flex-col overflow-hidden p-0">
           <div className="flex-shrink-0 px-6 pt-6">
             <DialogHeader>
-              <DialogTitle>{schedule?.title} 현황</DialogTitle>
+              <DialogTitle>{schedule?.location ?? schedule?.title} 현황</DialogTitle>
               <DialogDescription aria-live="polite">
                 {COPY.totalSummary(totalChecked, scopeMembers.length)}
               </DialogDescription>
