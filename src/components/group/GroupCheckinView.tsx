@@ -36,6 +36,7 @@ interface Props {
   setCheckIns: Dispatch<SetStateAction<CheckIn[]>>;
   onBack: () => void;
   showToast: (msg: string) => void;
+  initialReported?: boolean;
 }
 
 export default function GroupCheckinView({
@@ -47,11 +48,12 @@ export default function GroupCheckinView({
   setCheckIns,
   onBack,
   showToast,
+  initialReported = false,
 }: Props) {
   const [cancelTarget, setCancelTarget] = useState<{ member: Member; isAbsent: boolean } | null>(null);
   const [absentTarget, setAbsentTarget] = useState<Member | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
-  const [reported, setReported] = useState(false);
+  const [reported, setReported] = useState(initialReported);
   const [, startTransition] = useTransition();
 
   const { isOnline, pendingCount, addPending, addPendingReport } = useOfflineSync();
@@ -241,10 +243,11 @@ export default function GroupCheckinView({
             </svg>
           </button>
           <div>
-            <h1 className="text-lg font-bold">{activeSchedule?.title ?? "대기 중"}</h1>
-            {activeSchedule?.location && (
-              <p className="text-sm text-muted-foreground">{activeSchedule.location}</p>
-            )}
+            <h1 className="text-lg font-bold">{groupName} 체크인</h1>
+            <p className="text-sm text-muted-foreground">
+              {activeSchedule?.title ?? "대기 중"}
+              {activeSchedule?.location && ` · ${activeSchedule.location}`}
+            </p>
           </div>
         </div>
       </header>

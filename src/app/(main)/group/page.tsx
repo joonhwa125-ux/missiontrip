@@ -53,6 +53,7 @@ export default async function GroupPage() {
 
   let checkIns: CheckIn[] = [];
   let allCheckIns: { user_id: string; is_absent: boolean }[] = [];
+  let initialReported = false;
 
   if (activeSchedule) {
     const queries = [
@@ -77,6 +78,15 @@ export default async function GroupPage() {
     if (results[1]) {
       checkIns = (results[1].data as CheckIn[]) ?? [];
     }
+
+    // 보고 여부 확인
+    const { data: report } = await supabase
+      .from("group_reports")
+      .select("id")
+      .eq("group_id", currentUser.group_id)
+      .eq("schedule_id", activeSchedule.id)
+      .maybeSingle();
+    initialReported = !!report;
   }
 
   // 완료 일정별 체크인 카운트 (우리 조 기준)
@@ -110,6 +120,7 @@ export default async function GroupPage() {
       allCheckIns={allCheckIns}
       allMembers={(allMembers ?? []) as { id: string; group_id: string }[]}
       scheduleCounts={scheduleCounts}
+      initialReported={initialReported}
     />
   );
 }

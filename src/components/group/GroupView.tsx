@@ -25,6 +25,7 @@ interface Props {
   allCheckIns: { user_id: string; is_absent: boolean }[];
   allMembers: AllMember[];
   scheduleCounts: Record<string, number>;
+  initialReported: boolean;
 }
 
 type ViewMode = "feed" | "checkin";
@@ -40,6 +41,7 @@ export default function GroupView({
   allCheckIns,
   allMembers,
   scheduleCounts,
+  initialReported,
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<ViewMode>("feed");
@@ -165,6 +167,7 @@ export default function GroupView({
           setCheckIns={setCheckIns}
           onBack={handleBack}
           showToast={showToast}
+          initialReported={initialReported}
         />
       )}
 
