@@ -164,6 +164,8 @@ function ScheduleCard({
 
   if (status === "active") {
     const checked = checkIns.filter((c) => !c.is_absent).length;
+    const absentCount = checkIns.filter((c) => c.is_absent).length;
+    const effectiveTotal = total - absentCount;
     return (
       <div
         className={cn(
@@ -191,7 +193,7 @@ function ScheduleCard({
                 진행중
               </span>
               <span className="text-xs font-medium text-muted-foreground">
-                {checked}/{total}명
+                {checked}/{effectiveTotal}명
               </span>
             </div>
           </div>
