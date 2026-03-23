@@ -9,7 +9,7 @@ interface Props {
 
 export default function PageHeader({ title, subtitle, backHref, rightSlot }: Props) {
   return (
-    <header className="bg-main-action px-4 py-3">
+    <header className="border-b border-gray-100 bg-white px-4 py-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {backHref && (
