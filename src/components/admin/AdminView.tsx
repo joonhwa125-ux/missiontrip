@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useMemo, type SetStateAction } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef, type SetStateAction } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useRealtime } from "@/hooks/useRealtime";
@@ -46,6 +46,30 @@ export default function AdminView({
   const [checkInsMap, setCheckInsMap] = useState(initialCheckInsMap);
   const [reportsMap, setReportsMap] = useState(initialReportsMap);
   const [toast, setToast] = useState<string | null>(null);
+
+  // 서버 prop → state 동기화 (router.refresh() / 페이지 재진입 시)
+  // useState는 초기값만 사용하므로, prop이 바뀌면 수동으로 state를 갱신해야 한다.
+  const prevCheckInsRef = useRef(initialCheckInsMap);
+  const prevReportsRef = useRef(initialReportsMap);
+  const prevSchedulesRef = useRef(initialSchedules);
+  const prevMembersRef = useRef(initialMembers);
+
+  if (prevCheckInsRef.current !== initialCheckInsMap) {
+    prevCheckInsRef.current = initialCheckInsMap;
+    setCheckInsMap(initialCheckInsMap);
+  }
+  if (prevReportsRef.current !== initialReportsMap) {
+    prevReportsRef.current = initialReportsMap;
+    setReportsMap(initialReportsMap);
+  }
+  if (prevSchedulesRef.current !== initialSchedules) {
+    prevSchedulesRef.current = initialSchedules;
+    setSchedules(initialSchedules);
+  }
+  if (prevMembersRef.current !== initialMembers) {
+    prevMembersRef.current = initialMembers;
+    setMembers(initialMembers);
+  }
 
   // 일차 탭
   const days = Array.from(new Set(schedules.map((s) => s.day_number))).sort();
