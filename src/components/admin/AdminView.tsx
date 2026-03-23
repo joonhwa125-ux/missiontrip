@@ -303,7 +303,7 @@ export default function AdminView({
       {/* 내 조 체크인 Sheet (풀스크린 다이얼로그) */}
       <Dialog open={checkinSheetOpen} onOpenChange={(open) => { if (!open) closeCheckinSheet(); }}>
         <DialogContent className="flex h-[100dvh] max-h-[100dvh] w-full max-w-lg flex-col gap-0 overflow-hidden rounded-none border-none p-0" aria-describedby={undefined}>
-          <DialogTitle className="sr-only">{adminGroupName} 체크인</DialogTitle>
+          <DialogTitle className="sr-only">{adminGroupName} 체크인 다이얼로그</DialogTitle>
           <div className="min-h-0 flex-1 overflow-y-auto">
             <GroupCheckinView
               currentUser={currentUser}

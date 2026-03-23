@@ -97,18 +97,22 @@ export default function GroupFeedView({
 
       {/* 전체 조 현황 바텀시트 */}
       <Dialog open={statusOpen} onOpenChange={setStatusOpen}>
-        <DialogContent className="max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>전체 현황</DialogTitle>
-            <DialogDescription>
-              {activeSchedule?.title} 기준
-            </DialogDescription>
-          </DialogHeader>
-          <GroupStatusGrid
-            allGroups={allGroups}
-            allCheckIns={allCheckIns}
-            allMembers={allMembers}
-          />
+        <DialogContent className="flex max-h-[80vh] flex-col overflow-hidden p-0">
+          <div className="flex-shrink-0 px-6 pt-6">
+            <DialogHeader>
+              <DialogTitle>전체 현황</DialogTitle>
+              <DialogDescription>
+                {activeSchedule?.location ?? activeSchedule?.title ?? "대기 중"} 기준
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="overflow-y-auto px-6 pb-6">
+            <GroupStatusGrid
+              allGroups={allGroups}
+              allCheckIns={allCheckIns}
+              allMembers={allMembers}
+            />
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -170,9 +174,9 @@ function ScheduleCard({
           <div className="flex items-center justify-between gap-2">
             <div className="flex-1">
               <p className="font-medium">{schedule.location ?? schedule.title}</p>
-              <p className="text-sm text-muted-foreground">
-                {schedule.location ? schedule.title : ""}
-              </p>
+              {schedule.location && (
+                <p className="text-sm text-muted-foreground">{schedule.title}</p>
+              )}
               {timeDisplay && (
                 <p className="mt-0.5 text-sm text-muted-foreground">{timeDisplay}</p>
               )}
