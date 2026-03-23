@@ -52,7 +52,12 @@ export default function AdminScheduleList({
     () => (activeSchedule ? checkInsMap[activeSchedule.id] ?? [] : []),
     [activeSchedule, checkInsMap]
   );
-  const totalMemberCount = members.length;
+  // scope 기반 멤버 카운트 (선발/후발 일정은 해당 party만)
+  const totalMemberCount = useMemo(() => {
+    const scope = activeSchedule?.scope;
+    if (!scope || scope === "all") return members.length;
+    return members.filter((m) => m.party === scope).length;
+  }, [activeSchedule?.scope, members]);
 
 
   // -- 일정 활성화 Server Action --

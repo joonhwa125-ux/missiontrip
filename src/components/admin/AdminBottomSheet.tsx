@@ -68,10 +68,17 @@ export default function AdminBottomSheet({
   );
   const reportMap = useMemo(() => new Map(reports.map((r) => [r.group_id, r])), [reports]);
 
+  // scope 기반 멤버 필터링 (선발/후발 일정은 해당 party만 카운트)
+  const scopeMembers = useMemo(() => {
+    const scope = schedule?.scope;
+    if (!scope || scope === "all") return members;
+    return members.filter((m) => m.party === scope);
+  }, [schedule?.scope, members]);
+
   const summaries = useMemo(
     () =>
       groups.map((g) => {
-        const gMembers = members.filter((m) => m.group_id === g.id);
+        const gMembers = scopeMembers.filter((m) => m.group_id === g.id);
         const absentCount = gMembers.filter((m) => absentIds.has(m.id)).length;
         const checkedCount = gMembers.filter(
           (m) => checkedIds.has(m.id) && !absentIds.has(m.id)
@@ -81,7 +88,7 @@ export default function AdminBottomSheet({
         const leader = gMembers.find((m) => m.role === "leader");
         return { group: g, totalCount, checkedCount, badge, leader };
       }),
-    [groups, members, checkedIds, absentIds, reportMap]
+    [groups, scopeMembers, checkedIds, absentIds, reportMap]
   );
 
   const busEntries = useMemo(() => {
@@ -95,8 +102,8 @@ export default function AdminBottomSheet({
   }, [summaries]);
 
   const totalChecked = useMemo(
-    () => members.filter((m) => checkedIds.has(m.id) && !absentIds.has(m.id)).length,
-    [members, checkedIds, absentIds]
+    () => scopeMembers.filter((m) => checkedIds.has(m.id) && !absentIds.has(m.id)).length,
+    [scopeMembers, checkedIds, absentIds]
   );
 
   return (
@@ -110,7 +117,7 @@ export default function AdminBottomSheet({
             <DialogHeader>
               <DialogTitle>{schedule?.title} 현황</DialogTitle>
               <DialogDescription aria-live="polite">
-                {COPY.totalSummary(totalChecked, members.length)}
+                {COPY.totalSummary(totalChecked, scopeMembers.length)}
               </DialogDescription>
             </DialogHeader>
           </div>

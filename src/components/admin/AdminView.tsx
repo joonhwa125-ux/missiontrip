@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useRealtime } from "@/hooks/useRealtime";
 import { sortSchedulesByStatus, getDefaultDay } from "@/lib/utils";
+import PageHeader from "@/components/common/PageHeader";
 import DayTabs from "@/components/common/DayTabs";
 import AdminScheduleList from "./AdminScheduleList";
 import AdminBottomSheet from "./AdminBottomSheet";
@@ -93,17 +94,36 @@ export default function AdminView({
         user_id: ci.user_id,
         schedule_id: activeSchedule.id,
         checked_at: ci.checked_at ?? new Date().toISOString(),
-        checked_by: "leader" as const,
-        checked_by_user_id: null,
+        checked_by: "admin" as const,
+        checked_by_user_id: currentUser.id,
         offline_pending: false,
         is_absent: ci.is_absent,
       }));
     setSheetCheckIns(myCheckIns);
     setCheckinSheetOpen(true);
-  }, [activeSchedule, checkInsMap, adminMemberIds]);
+  }, [activeSchedule, checkInsMap, adminMemberIds, currentUser.id]);
+
+  // Sheet 체크인 변경 → checkInsMap 실시간 동기화
+  // (sheetCheckIns는 격리된 state이므로 변경 시마다 checkInsMap에 반영)
+  useEffect(() => {
+    if (!checkinSheetOpen || !activeSchedule) return;
+    const sid = activeSchedule.id;
+    setCheckInsMap((prev) => {
+      const prevList = prev[sid] ?? [];
+      const nonAdminCIs = prevList.filter((ci) => !adminMemberIds.has(ci.user_id));
+      const adminCIs: AdminCheckIn[] = sheetCheckIns.map((ci) => ({
+        user_id: ci.user_id,
+        is_absent: ci.is_absent,
+        checked_at: ci.checked_at,
+      }));
+      return { ...prev, [sid]: [...nonAdminCIs, ...adminCIs] };
+    });
+  }, [checkinSheetOpen, activeSchedule, adminMemberIds, sheetCheckIns]);
 
   const closeCheckinSheet = useCallback(() => {
     setCheckinSheetOpen(false);
+    // checkInsMap은 sync useEffect에서 이미 갱신됨
+    // router.refresh()는 서버 prop(activeSchedule 등)을 최신화하기 위한 호출
     router.refresh();
   }, [router]);
 
@@ -178,27 +198,30 @@ export default function AdminView({
 
   return (
     <div className="flex min-h-full flex-col">
-      {/* 일차 탭 + 설정 기어 아이콘 */}
-      <div className="bg-main-action">
-        <DayTabs
-          days={days}
-          selected={selectedDay}
-          onChange={setSelectedDay}
-          panelId="admin-schedule-panel"
-          rightSlot={
-            <Link
-              href="/setup"
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
-              aria-label="설정"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-              </svg>
-            </Link>
-          }
-        />
-      </div>
+      {/* 통일 헤더 + 설정 아이콘 */}
+      <PageHeader
+        title="미션트립"
+        rightSlot={
+          <Link
+            href="/setup"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
+            aria-label="설정"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+            </svg>
+          </Link>
+        }
+      />
+
+      {/* 일차 탭 */}
+      <DayTabs
+        days={days}
+        selected={selectedDay}
+        onChange={setSelectedDay}
+        panelId="admin-schedule-panel"
+      />
 
       {/* 일정 카드 목록 */}
       <div id="admin-schedule-panel" role="tabpanel" className="flex-1">

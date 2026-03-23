@@ -37,8 +37,12 @@ export default function AdminScheduleCard({
     : null;
   const scopeLabel = schedule.scope !== "all" ? SCOPE_LABEL[schedule.scope] : null;
 
+  // scope 기반 멤버 필터링 (선발/후발 일정은 해당 party만 카운트)
+  const scopeMembers = schedule.scope === "all"
+    ? members
+    : members.filter((m) => m.party === schedule.scope);
   const checkedCount = checkIns.filter((c) => !c.is_absent).length;
-  const totalMembers = members.length;
+  const totalMembers = scopeMembers.length;
   const reportedCount = new Set(reports.map((r) => r.group_id)).size;
   const totalGroups = groups.length;
 

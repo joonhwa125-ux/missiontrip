@@ -84,39 +84,45 @@ export default function AdminGroupDrillDown({
 
   function handleCheckin(member: Member) {
     if (!activeSchedule) return;
+    const temp: CheckIn = { user_id: member.id, is_absent: false, checked_at: new Date().toISOString() };
+    onCheckInsChange((prev) => [...prev, temp]);
     startTransition(async () => {
       const res = await createCheckin(member.id, activeSchedule.id);
       if (res.ok) {
-        onCheckInsChange((prev) => [
-          ...prev,
-          { user_id: member.id, is_absent: false, checked_at: new Date().toISOString() },
-        ]);
         await broadcastCheckin(member.group_id, member.id, "insert");
+      } else {
+        onCheckInsChange((prev) => prev.filter((c) => c.user_id !== member.id));
       }
     });
   }
 
   function handleAbsent(member: Member) {
     if (!activeSchedule) return;
+    const temp: CheckIn = { user_id: member.id, is_absent: true, checked_at: new Date().toISOString() };
+    onCheckInsChange((prev) => [...prev.filter((c) => c.user_id !== member.id), temp]);
     startTransition(async () => {
       const res = await markAbsent(member.id, activeSchedule.id);
       if (res.ok) {
-        onCheckInsChange((prev) => {
-          const filtered = prev.filter((c) => c.user_id !== member.id);
-          return [...filtered, { user_id: member.id, is_absent: true, checked_at: new Date().toISOString() }];
-        });
         await broadcastCheckin(member.group_id, member.id, "insert");
+      } else {
+        onCheckInsChange((prev) => prev.filter((c) => c.user_id !== member.id));
       }
     });
   }
 
   function handleCancel(member: Member) {
     if (!activeSchedule) return;
+    let removed: CheckIn | undefined;
+    onCheckInsChange((prev) => {
+      removed = prev.find((c) => c.user_id === member.id);
+      return prev.filter((c) => c.user_id !== member.id);
+    });
     startTransition(async () => {
       const res = await deleteCheckin(member.id, activeSchedule.id);
       if (res.ok) {
-        onCheckInsChange((prev) => prev.filter((c) => c.user_id !== member.id));
         await broadcastCheckin(member.group_id, member.id, "delete");
+      } else if (removed) {
+        onCheckInsChange((prev) => [...prev, removed!]);
       }
     });
   }
