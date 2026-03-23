@@ -5,6 +5,7 @@ import { useBroadcast } from "@/hooks/useRealtime";
 import { createCheckin, deleteCheckin, markAbsent } from "@/actions/checkin";
 import { updateUserRole } from "@/actions/setup";
 import {
+  CHANNEL_GLOBAL,
   CHANNEL_GROUP_PREFIX,
   CHANNEL_ADMIN,
   EVENT_CHECKIN_UPDATED,
@@ -155,6 +156,7 @@ export default function AdminGroupDrillDown({
       action,
     };
     await Promise.all([
+      broadcast(CHANNEL_GLOBAL, EVENT_CHECKIN_UPDATED, payload),
       broadcast(`${CHANNEL_GROUP_PREFIX}${groupId}`, EVENT_CHECKIN_UPDATED, payload),
       broadcast(CHANNEL_ADMIN, EVENT_CHECKIN_UPDATED, payload),
     ]);

@@ -47,6 +47,7 @@ export default function GroupView({
   const [view, setView] = useState<ViewMode>("feed");
   const [schedules, setSchedules] = useState(initialSchedules);
   const [checkIns, setCheckIns] = useState<CheckIn[]>(initialCheckIns);
+  const [allCheckInsState, setAllCheckInsState] = useState(allCheckIns);
   const [toast, setToast] = useState<string | null>(null);
   // CR-009: activeSchedule을 state로 관리 — 체크인 뷰에서도 Realtime 갱신 반영
   const [currentSchedule, setCurrentSchedule] = useState(activeSchedule);
@@ -101,6 +102,16 @@ export default function GroupView({
       showToast("일정 시간이 변경되었어요");
     },
     onCheckinUpdated: ({ user_id, action }) => {
+      // 전체 현황 바텀시트용 allCheckIns 업데이트 (모든 조)
+      setAllCheckInsState((prev) => {
+        if (action === "insert") {
+          if (prev.some((c) => c.user_id === user_id)) return prev;
+          return [...prev, { user_id, is_absent: false }];
+        }
+        return prev.filter((c) => c.user_id !== user_id);
+      });
+
+      // 내 조 체크인 상세 업데이트
       if (!currentSchedule) return;
       setCheckIns((prev) => {
         if (action === "insert") {
@@ -153,7 +164,7 @@ export default function GroupView({
           checkIns={checkIns}
           scheduleCounts={scheduleCounts}
           allGroups={allGroups}
-          allCheckIns={allCheckIns}
+          allCheckIns={allCheckInsState}
           allMembers={allMembers}
           onEnterCheckin={handleEnterCheckin}
         />

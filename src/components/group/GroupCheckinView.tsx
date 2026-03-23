@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   COPY,
+  CHANNEL_GLOBAL,
   CHANNEL_ADMIN,
   CHANNEL_GROUP_PREFIX,
   EVENT_CHECKIN_UPDATED,
@@ -63,6 +64,7 @@ export default function GroupCheckinView({
     async (userId: string, action: "insert" | "delete") => {
       const payload = { user_id: userId, schedule_id: activeSchedule?.id ?? "", action };
       await Promise.all([
+        broadcast(CHANNEL_GLOBAL, EVENT_CHECKIN_UPDATED, payload),
         broadcast(`${CHANNEL_GROUP_PREFIX}${currentUser.group_id}`, EVENT_CHECKIN_UPDATED, payload),
         broadcast(CHANNEL_ADMIN, EVENT_CHECKIN_UPDATED, payload),
       ]);

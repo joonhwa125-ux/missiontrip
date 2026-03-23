@@ -38,7 +38,7 @@ export function useRealtime(
     const supabase = createClient();
     const channels: RealtimeChannel[] = [];
 
-    // global 채널 — 전체 사용자
+    // global 채널 — 전체 사용자 (일정 + 체크인 이벤트)
     const globalChannel = supabase
       .channel(CHANNEL_GLOBAL, { config: { broadcast: { self: true } } })
       .on("broadcast", { event: EVENT_SCHEDULE_ACTIVATED }, ({ payload }) => {
@@ -46,6 +46,9 @@ export function useRealtime(
       })
       .on("broadcast", { event: EVENT_SCHEDULE_UPDATED }, ({ payload }) => {
         callbacksRef.current.onScheduleUpdated?.(payload);
+      })
+      .on("broadcast", { event: EVENT_CHECKIN_UPDATED }, ({ payload }) => {
+        callbacksRef.current.onCheckinUpdated?.(payload);
       })
       .subscribe();
 
