@@ -74,9 +74,9 @@ export function parseCsv(csv: string): string[][] {
   return rows;
 }
 
-// 참가자 시트 파싱 (4컬럼: 이름, 전화번호, 역할, 소속조)
+// 참가자 시트 파싱 (5컬럼: 이름, 전화번호, 역할, 소속조, 배정차량)
 // 이메일은 이름 기반 자동 생성 (조장/관리자: name@도메인, 조원: nologin)
-// groups는 소속조 고유값에서 자동 추출
+// groups는 소속조 고유값에서 자동 추출, bus_name은 배정차량 열에서 매핑
 export function parseUsersSheet(rows: string[][]): {
   users: ParsedUser[];
   groups: ParsedGroup[];
@@ -85,7 +85,8 @@ export function parseUsersSheet(rows: string[][]): {
   const users: ParsedUser[] = [];
   const errors: ValidationError[] = [];
   const emailSet = new Set<string>();
-  const groupNameSet = new Set<string>();
+  // 조이름 → 배정차량 매핑 (같은 조의 첫 번째 배정차량값 사용)
+  const groupBusMap = new Map<string, string>();
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
@@ -95,6 +96,7 @@ export function parseUsersSheet(rows: string[][]): {
     const phone = row[1]?.trim() || null;
     const roleRaw = row[2]?.trim();
     const groupName = row[3]?.trim();
+    const busName = row[4]?.trim() || null;
 
     // 이름 필수
     if (!name) {
@@ -130,7 +132,7 @@ export function parseUsersSheet(rows: string[][]): {
       continue;
     }
 
-    // 이메일 자동 생성: 조장/관리자 → name@도메인, 조원 → nologin
+    // 이메일 자동 생성: 조장/관리자 → LDAP 이름@도메인, 조원 → nologin
     const email = (role === "leader" || role === "admin")
       ? `${name.toLowerCase()}${ALLOWED_EMAIL_DOMAIN}`
       : `${MEMBER_EMAIL_PREFIX}.${name}.${i}${NO_LOGIN_EMAIL_DOMAIN}`;
@@ -147,16 +149,18 @@ export function parseUsersSheet(rows: string[][]): {
     }
     emailSet.add(email);
 
-    // 소속조 수집
-    groupNameSet.add(groupName);
+    // 소속조 → 배정차량 매핑 수집 (첫 번째 값 우선)
+    if (!groupBusMap.has(groupName)) {
+      groupBusMap.set(groupName, busName ?? groupName);
+    }
 
     users.push({ name, email, phone, role, group_name: groupName });
   }
 
-  // 소속조 고유값 → ParsedGroup[] (name = bus_name)
-  const groups: ParsedGroup[] = Array.from(groupNameSet).map((gn) => ({
+  // 소속조 고유값 → ParsedGroup[] (bus_name은 배정차량 열, 없으면 조이름)
+  const groups: ParsedGroup[] = Array.from(groupBusMap.entries()).map(([gn, bn]) => ({
     name: gn,
-    bus_name: gn,
+    bus_name: bn,
   }));
 
   return { users, groups, errors };

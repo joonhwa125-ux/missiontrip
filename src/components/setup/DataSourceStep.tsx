@@ -116,7 +116,7 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
         <h2 className="mb-3 font-bold">CSV 파일 업로드</h2>
         <div className="mb-2">
           <label className="mb-1 block text-xs text-muted-foreground">
-            참가자 CSV (이름, 전화번호, 역할, 소속조)
+            참가자 CSV (이름, 전화번호, 역할, 소속조, 배정차량)
           </label>
           <input
             ref={userFileRef}

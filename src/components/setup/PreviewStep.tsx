@@ -70,6 +70,20 @@ export default function PreviewStep({
         조장 {leaderCount}명 / 조원 {memberCount}명 / 관리자 {adminCount}명
       </p>
 
+      {/* 조-차량 매핑 요약 */}
+      {data.groups.some((g) => g.bus_name !== g.name) && (
+        <div className="rounded-xl bg-white p-3">
+          <p className="mb-1 text-xs font-medium text-muted-foreground">차량 배정</p>
+          <div className="flex flex-wrap gap-1.5">
+            {data.groups.map((g) => (
+              <span key={g.name} className="rounded-lg bg-gray-50 px-2 py-1 text-xs">
+                {g.name} → {g.bus_name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* 검증 오류 */}
       {hasErrors && <ValidationErrorList errors={data.errors} />}
 
