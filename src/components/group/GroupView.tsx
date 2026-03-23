@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useRealtime } from "@/hooks/useRealtime";
 import GroupFeedView from "./GroupFeedView";
 import GroupCheckinView from "./GroupCheckinView";
-import type { Schedule, CheckIn, Group, GroupMember, GroupParty } from "@/lib/types";
+import type { Schedule, CheckIn, Group, GroupMember } from "@/lib/types";
 
 type Member = GroupMember;
 
@@ -17,7 +17,6 @@ interface AllMember {
 interface Props {
   currentUser: { id: string; group_id: string };
   groupName: string;
-  groupParty: GroupParty | null;
   members: Member[];
   activeSchedule: Schedule | null;
   initialCheckIns: CheckIn[];
@@ -33,7 +32,6 @@ type ViewMode = "feed" | "checkin";
 export default function GroupView({
   currentUser,
   groupName,
-  groupParty,
   members,
   activeSchedule,
   initialCheckIns,
@@ -124,6 +122,13 @@ export default function GroupView({
     },
   });
 
+  // scope 기반 멤버 필터링: 선발/후발 일정이면 해당 party 멤버만
+  const checkinMembers = useMemo(() => {
+    const scope = currentSchedule?.scope;
+    if (!scope || scope === "all") return members;
+    return members.filter((m) => m.party === scope);
+  }, [members, currentSchedule?.scope]);
+
   // CR-010: 체크인 진입 시 히스토리 푸시
   const handleEnterCheckin = useCallback(() => {
     history.pushState(null, "");
@@ -141,7 +146,6 @@ export default function GroupView({
         <GroupFeedView
           schedules={schedules}
           activeSchedule={currentSchedule}
-          groupParty={groupParty}
           members={members}
           checkIns={checkIns}
           scheduleCounts={scheduleCounts}
@@ -154,7 +158,7 @@ export default function GroupView({
         <GroupCheckinView
           currentUser={currentUser}
           groupName={groupName}
-          members={members}
+          members={checkinMembers}
           activeSchedule={currentSchedule}
           checkIns={checkIns}
           setCheckIns={setCheckIns}

@@ -14,6 +14,7 @@ import GroupCheckinView from "@/components/group/GroupCheckinView";
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import type { Group, Schedule, AdminMember, AdminCheckIn, AdminReport, CheckIn } from "@/lib/types";
 
@@ -268,7 +269,8 @@ export default function AdminView({
 
       {/* 내 조 체크인 Sheet (풀스크린 다이얼로그) */}
       <Dialog open={checkinSheetOpen} onOpenChange={(open) => { if (!open) closeCheckinSheet(); }}>
-        <DialogContent className="flex h-[100dvh] max-h-[100dvh] w-full max-w-lg flex-col gap-0 overflow-hidden rounded-none border-none p-0">
+        <DialogContent className="flex h-[100dvh] max-h-[100dvh] w-full max-w-lg flex-col gap-0 overflow-hidden rounded-none border-none p-0" aria-describedby={undefined}>
+          <DialogTitle className="sr-only">내 조 체크인</DialogTitle>
           <div className="min-h-0 flex-1 overflow-y-auto">
             <GroupCheckinView
               currentUser={currentUser}

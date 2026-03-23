@@ -10,7 +10,6 @@ export interface Group {
   id: string;
   name: string;
   bus_name: string | null;
-  party: GroupParty | null;
   created_at: string;
 }
 
@@ -21,6 +20,7 @@ export interface User {
   phone: string | null;
   role: UserRole;
   group_id: string;
+  party: GroupParty | null;
   created_at: string;
 }
 
@@ -28,8 +28,8 @@ export interface UserWithGroup extends User {
   groups: Group;
 }
 
-/** 조장 화면용 멤버 (id, name) */
-export type GroupMember = Pick<User, "id" | "name">;
+/** 조장 화면용 멤버 (id, name, party) */
+export type GroupMember = Pick<User, "id" | "name" | "party">;
 
 /** 관리자 화면용 멤버 (전화, 역할, 소속조 포함) */
 export interface AdminMember {
@@ -38,6 +38,7 @@ export interface AdminMember {
   phone: string | null;
   role: string;
   group_id: string;
+  party: GroupParty | null;
 }
 
 export interface Schedule {
@@ -133,7 +134,6 @@ export interface ActionResult<T = void> {
 export interface ParsedGroup {
   name: string;
   bus_name: string;
-  party: GroupParty | null;
 }
 
 export interface ParsedUser {
@@ -142,6 +142,7 @@ export interface ParsedUser {
   phone: string | null;
   role: UserRole;
   group_name: string;
+  party: GroupParty | null;
 }
 
 export interface ParsedSchedule {

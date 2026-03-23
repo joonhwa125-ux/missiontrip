@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import GroupView from "@/components/group/GroupView";
-import type { CheckIn, Schedule, Group } from "@/lib/types";
+import type { CheckIn, Schedule, Group, GroupParty } from "@/lib/types";
 
 export default async function GroupPage() {
   const supabase = createClient();
@@ -29,12 +29,12 @@ export default async function GroupPage() {
   ] = await Promise.all([
     supabase
       .from("groups")
-      .select("name, party")
+      .select("name")
       .eq("id", currentUser.group_id)
       .single(),
     supabase
       .from("users")
-      .select("id, name")
+      .select("id, name, party")
       .eq("group_id", currentUser.group_id)
       .order("name"),
     supabase
@@ -101,8 +101,8 @@ export default async function GroupPage() {
       key={activeSchedule?.id ?? "no-schedule"}
       currentUser={{ id: currentUser.id, group_id: currentUser.group_id }}
       groupName={group?.name ?? "내 조"}
-      groupParty={group?.party ?? null}
-      members={members ?? []}
+      members={(members ?? []).map((m) => ({ ...m, party: (m.party as GroupParty) ?? null }))}
+
       activeSchedule={activeSchedule ?? null}
       initialCheckIns={checkIns}
       schedules={(schedules as Schedule[]) ?? []}

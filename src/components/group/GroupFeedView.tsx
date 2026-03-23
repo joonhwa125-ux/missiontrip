@@ -5,7 +5,7 @@ import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { formatTime, cn, getScheduleStatus, sortSchedulesByStatus, getDefaultDay } from "@/lib/utils";
 import DayTabs from "@/components/common/DayTabs";
 import { COPY } from "@/lib/constants";
-import type { Schedule, CheckIn, Group, GroupMember, GroupParty } from "@/lib/types";
+import type { Schedule, CheckIn, Group, GroupMember } from "@/lib/types";
 import {
   Dialog,
   DialogContent,
@@ -24,7 +24,6 @@ interface AllMember {
 interface Props {
   schedules: Schedule[];
   activeSchedule: Schedule | null;
-  groupParty: GroupParty | null;
   members: Member[];
   checkIns: CheckIn[];
   scheduleCounts: Record<string, number>;
@@ -39,7 +38,6 @@ interface Props {
 export default function GroupFeedView({
   schedules,
   activeSchedule,
-  groupParty,
   members,
   checkIns,
   scheduleCounts,
@@ -51,9 +49,14 @@ export default function GroupFeedView({
   const { isOnline, pendingCount } = useOfflineSync();
   const [statusOpen, setStatusOpen] = useState(false);
 
-  // scope 필터: 내 대(advance/rear) + 전체(all) 일정만 표시
+  // scope 필터: 조 내에 해당 party 멤버가 있는 일정만 표시
+  const hasAdvance = members.some((m) => m.party === "advance");
+  const hasRear = members.some((m) => m.party === "rear");
   const mySchedules = schedules.filter(
-    (s) => s.scope === "all" || !groupParty || s.scope === groupParty
+    (s) =>
+      s.scope === "all" ||
+      (s.scope === "advance" && hasAdvance) ||
+      (s.scope === "rear" && hasRear)
   );
   const days = Array.from(new Set(mySchedules.map((s) => s.day_number))).sort();
   const [selectedDay, setSelectedDay] = useState(() => getDefaultDay(mySchedules));
@@ -137,7 +140,12 @@ function ScheduleCard({
   const timeDisplay = schedule.scheduled_time
     ? formatTime(schedule.scheduled_time)
     : null;
-  const total = members.length;
+  // scope 기반 멤버 필터링: advance/rear 일정 → 해당 party 멤버만
+  const scopeMembers =
+    schedule.scope === "all"
+      ? members
+      : members.filter((m) => m.party === schedule.scope);
+  const total = scopeMembers.length;
 
   if (status === "active") {
     const checked = checkIns.filter((c) => !c.is_absent).length;

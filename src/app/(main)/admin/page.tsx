@@ -26,7 +26,7 @@ export default async function AdminPage() {
     { data: schedules },
   ] = await Promise.all([
     supabase.from("groups").select("*").order("name"),
-    supabase.from("users").select("id, name, phone, role, group_id").order("name"),
+    supabase.from("users").select("id, name, phone, role, group_id, party").order("name"),
     supabase.from("schedules").select("*").eq("is_active", true).maybeSingle(),
     supabase
       .from("schedules")

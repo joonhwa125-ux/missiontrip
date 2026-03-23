@@ -86,7 +86,7 @@ export function parseCsv(csv: string): string[][] {
 
 // 참가자 시트 파싱 (6컬럼: 이름, 전화번호, 역할, 소속조, 배정차량, 선후발)
 // 이메일은 이름 기반 자동 생성 (조장/관리자: name@도메인, 조원: nologin)
-// groups는 소속조 고유값에서 자동 추출, bus_name/party는 각 열에서 매핑
+// groups는 소속조 고유값에서 자동 추출, bus_name은 배정차량 열에서 매핑, party는 유저별
 export function parseUsersSheet(rows: string[][]): {
   users: ParsedUser[];
   groups: ParsedGroup[];
@@ -97,8 +97,6 @@ export function parseUsersSheet(rows: string[][]): {
   const emailSet = new Set<string>();
   // 조이름 → 배정차량 매핑 (같은 조의 첫 번째 배정차량값 사용)
   const groupBusMap = new Map<string, string>();
-  // 조이름 → 선후발 매핑 (같은 조의 첫 번째 값 사용)
-  const groupPartyMap = new Map<string, "advance" | "rear">();
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
@@ -169,12 +167,13 @@ export function parseUsersSheet(rows: string[][]): {
       groupBusMap.set(groupName, busName ?? groupName);
     }
 
-    // 소속조 → 선후발 매핑 수집 (첫 번째 값 우선)
-    if (partyRaw && !groupPartyMap.has(groupName)) {
-      const party = PARTY_MAP[partyRaw];
-      if (party) {
-        groupPartyMap.set(groupName, party);
-      } else if (partyRaw) {
+    // 유저별 선후발 파싱
+    let party: "advance" | "rear" | null = null;
+    if (partyRaw) {
+      const mapped = PARTY_MAP[partyRaw];
+      if (mapped) {
+        party = mapped;
+      } else {
         errors.push({
           sheet: "users",
           row: i + 1,
@@ -184,14 +183,13 @@ export function parseUsersSheet(rows: string[][]): {
       }
     }
 
-    users.push({ name, email, phone, role, group_name: groupName });
+    users.push({ name, email, phone, role, group_name: groupName, party });
   }
 
-  // 소속조 고유값 → ParsedGroup[] (bus_name은 배정차량 열, party는 선후발 열)
+  // 소속조 고유값 → ParsedGroup[] (bus_name은 배정차량 열)
   const groups: ParsedGroup[] = Array.from(groupBusMap.entries()).map(([gn, bn]) => ({
     name: gn,
     bus_name: bn,
-    party: groupPartyMap.get(gn) ?? null,
   }));
 
   return { users, groups, errors };

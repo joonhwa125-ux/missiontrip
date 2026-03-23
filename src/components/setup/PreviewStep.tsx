@@ -71,22 +71,27 @@ export default function PreviewStep({
         조장 {leaderCount}명 / 조원 {memberCount}명 / 관리자 {adminCount}명
       </p>
 
-      {/* 조-차량-선후발 매핑 요약 */}
-      {data.groups.some((g) => g.bus_name !== g.name || g.party) && (
+      {/* 조-차량 매핑 요약 */}
+      {data.groups.some((g) => g.bus_name !== g.name) && (
         <div className="rounded-xl bg-white p-3">
-          <p className="mb-1 text-xs font-medium text-muted-foreground">차량 배정 / 선후발</p>
+          <p className="mb-1 text-xs font-medium text-muted-foreground">차량 배정</p>
           <div className="flex flex-wrap gap-1.5">
             {data.groups.map((g) => (
               <span key={g.name} className="rounded-lg bg-gray-50 px-2 py-1 text-xs">
                 {g.name} → {g.bus_name}
-                {g.party && (
-                  <span className="ml-1 rounded bg-gray-700 px-1 py-0.5 text-[0.5625rem] font-bold text-white">
-                    {g.party === "advance" ? "선발" : "후발"}
-                  </span>
-                )}
               </span>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* 선후발 인원 요약 */}
+      {data.users.some((u) => u.party) && (
+        <div className="rounded-xl bg-white p-3">
+          <p className="mb-1 text-xs font-medium text-muted-foreground">선후발 배정</p>
+          <p className="text-xs text-muted-foreground">
+            선발 {data.users.filter((u) => u.party === "advance").length}명 / 후발 {data.users.filter((u) => u.party === "rear").length}명
+          </p>
         </div>
       )}
 
@@ -125,6 +130,7 @@ export default function PreviewStep({
                 <th className="px-3 py-2">전화번호</th>
                 <th className="px-3 py-2">역할</th>
                 <th className="px-3 py-2">소속조</th>
+                <th className="px-3 py-2">선후발</th>
               </tr>
             </thead>
             <tbody>
@@ -141,6 +147,7 @@ export default function PreviewStep({
                   <td className="px-3 py-2">{u.phone ?? "-"}</td>
                   <td className="px-3 py-2">{u.role}</td>
                   <td className="px-3 py-2">{u.group_name}</td>
+                  <td className="px-3 py-2">{u.party ? (SCOPE_LABEL[u.party] ?? "-") : "-"}</td>
                 </tr>
               ))}
             </tbody>

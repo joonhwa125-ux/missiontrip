@@ -111,7 +111,7 @@ export async function importToDatabase(
   const { data: insertedGroups, error: groupError } = await supabase
     .from("groups")
     .upsert(
-      data.groups.map((g) => ({ name: g.name, bus_name: g.bus_name, party: g.party })),
+      data.groups.map((g) => ({ name: g.name, bus_name: g.bus_name })),
       { onConflict: "name" }
     )
     .select("id, name");
@@ -130,6 +130,7 @@ export async function importToDatabase(
     phone: string | null;
     role: string;
     group_id: string;
+    party: string | null;
   }[] = [];
   for (const u of data.users) {
     const groupId = groupMap.get(u.group_name);
@@ -145,6 +146,7 @@ export async function importToDatabase(
       phone: u.phone,
       role: u.role,
       group_id: groupId,
+      party: u.party,
     });
   }
 
