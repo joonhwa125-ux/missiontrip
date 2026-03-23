@@ -61,11 +61,11 @@ export default function AdminScheduleCard({
                   {scopeLabel}
                 </span>
               )}
-              {schedule.title}
+              {schedule.location ?? schedule.title}
             </p>
             {schedule.location && (
               <p className="text-sm text-muted-foreground">
-                {schedule.location}
+                {schedule.title}
               </p>
             )}
             {timeDisplay && (
@@ -117,11 +117,11 @@ export default function AdminScheduleCard({
                   {scopeLabel}
                 </span>
               )}
-              {schedule.title}
+              {schedule.location ?? schedule.title}
             </p>
             {schedule.location && (
               <p className="text-sm text-muted-foreground">
-                {schedule.location}
+                {schedule.title}
               </p>
             )}
             {timeDisplay && (
@@ -162,11 +162,11 @@ export default function AdminScheduleCard({
                 {scopeLabel}
               </span>
             )}
-            {schedule.title}
+            {schedule.location ?? schedule.title}
           </p>
           {schedule.location && (
             <p className="text-sm text-muted-foreground">
-              {schedule.location}
+              🚩 {schedule.title}
             </p>
           )}
           {timeDisplay && (

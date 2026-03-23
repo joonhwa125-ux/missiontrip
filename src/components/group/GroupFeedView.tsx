@@ -171,7 +171,7 @@ function ScheduleCard({
             <div className="flex-1">
               <p className="font-medium">{schedule.location ?? schedule.title}</p>
               <p className="text-sm text-muted-foreground">
-                🚩 {schedule.location ? schedule.title : ""}
+                {schedule.location ? schedule.title : ""}
               </p>
               {timeDisplay && (
                 <p className="mt-0.5 text-sm text-muted-foreground">{timeDisplay}</p>
@@ -214,7 +214,7 @@ function ScheduleCard({
         <div className="flex-1">
           <p className="font-medium">{schedule.location ?? schedule.title}</p>
           {schedule.location && (
-            <p className="text-sm text-muted-foreground">🚩 {schedule.title}</p>
+            <p className="text-sm text-muted-foreground">{schedule.title}</p>
           )}
           {timeDisplay && (
             <p className="mt-0.5 text-sm text-muted-foreground">{timeDisplay}</p>
