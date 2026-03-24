@@ -3,11 +3,12 @@ import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = { title: "셋업" };
 import SetupWizard from "@/components/setup/SetupWizard";
 import SetupPageTabs from "@/components/setup/SetupPageTabs";
 import CurrentDataView from "@/components/setup/CurrentDataView";
 import type { Schedule, Group, UserRole, GroupParty } from "@/lib/types";
+
+export const metadata: Metadata = { title: "세팅" };
 
 export default async function SetupPage() {
   const supabase = createClient();
