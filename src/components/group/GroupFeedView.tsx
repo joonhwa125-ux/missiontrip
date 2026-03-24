@@ -375,24 +375,22 @@ function GroupMiniCard({
   const b = GROUP_BADGE_STYLE[badge];
   return (
     <div className="rounded-xl border border-gray-200 bg-white px-3 py-2">
-      <div className="mb-1 flex items-center justify-between gap-1">
-        <div className="min-w-0">
-          <span className="block text-sm font-medium leading-tight">{name}</span>
-          {leaderName && (
-            <span className="block truncate text-[0.6875rem] text-muted-foreground">
-              {leaderName}
-            </span>
-          )}
-        </div>
+      <div className="mb-1">
         <span
           className={cn(
-            "flex-shrink-0 rounded-full px-1.5 py-0.5 text-[0.625rem] font-medium leading-tight",
+            "inline-block rounded-full px-1.5 py-0.5 text-[0.625rem] font-medium leading-tight",
             b.bg,
             b.text
           )}
         >
           {b.label}
         </span>
+        <span className="mt-0.5 block text-xs font-medium">{name}</span>
+        {leaderName && (
+          <span className="block text-[0.6875rem] text-muted-foreground">
+            {leaderName}
+          </span>
+        )}
       </div>
       <div
         className="mb-0.5 h-1.5 overflow-hidden rounded-full bg-gray-100"

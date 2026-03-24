@@ -128,17 +128,17 @@ export default function AdminBottomSheet({
                       className="rounded-2xl border border-gray-200 bg-white p-4 text-left transition-colors active:bg-gray-50 focus-visible:ring-2 focus-visible:ring-main-action"
                       aria-label={`${group.name} 상세 보기`}
                     >
-                      <div className="mb-2 flex items-center justify-between gap-1">
-                        <span className="font-semibold leading-tight">{group.name}</span>
+                      <div className="mb-1.5">
                         <span
                           className={cn(
-                            "flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
+                            "inline-block rounded-full px-2 py-0.5 text-xs font-medium",
                             b.bg,
                             b.text
                           )}
                         >
                           {b.label}
                         </span>
+                        <span className="mt-1 block text-xs font-semibold">{group.name}</span>
                       </div>
                       {leader && (
                         <div className="mb-1.5 flex items-center gap-1 text-xs text-muted-foreground">
