@@ -26,9 +26,22 @@ export default function AdminScheduleCard({
   const scopeMembers = filterMembersByScope(members, schedule.scope);
   const checkedCount = checkIns.filter((c) => !c.is_absent).length;
   const totalMembers = scopeMembers.length;
-  const reportedCount = new Set(reports.map((r) => r.group_id)).size;
   const scopeGroupIds = new Set(scopeMembers.map((m) => m.group_id));
   const totalGroups = scopeGroupIds.size;
+
+  // 바텀시트 배지와 동일 기준: 전원체크인(불참 제외) + 보고레코드 존재 시에만 "보고완료"
+  const reportMap = new Set(reports.map((r) => r.group_id));
+  const checkedIds = new Set(checkIns.filter((c) => !c.is_absent).map((c) => c.user_id));
+  const absentIds = new Set(checkIns.filter((c) => c.is_absent).map((c) => c.user_id));
+  const reportedCount = Array.from(scopeGroupIds).filter((gid) => {
+    if (!reportMap.has(gid)) return false;
+    const gMembers = scopeMembers.filter((m) => m.group_id === gid);
+    const gAbsent = gMembers.filter((m) => absentIds.has(m.id)).length;
+    const gChecked = gMembers.filter((m) => checkedIds.has(m.id)).length;
+    const gTotal = gMembers.length - gAbsent;
+    return gTotal > 0 && gChecked >= gTotal;
+  }).length;
+
   const progressPct = totalGroups > 0 ? Math.round((reportedCount / totalGroups) * 100) : 0;
 
   // location 우선, 없으면 title
