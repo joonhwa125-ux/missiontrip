@@ -242,7 +242,7 @@ function MemberRow({
           )}
         </div>
 
-        {/* 오른쪽: 상태/액션 */}
+        {/* 오른쪽: 상태/액션 + 조장 권한 */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {!checkin && hasSchedule && (
             <>
@@ -255,7 +255,7 @@ function MemberRow({
               </button>
               <button
                 onClick={onAbsent}
-                className="min-h-11 min-w-11 rounded-xl px-2 text-xs text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                className="min-h-11 rounded-xl border border-red-200 px-3 text-xs font-medium text-red-600 focus-visible:ring-2 focus-visible:ring-red-300"
                 aria-label={`${member.name} 불참 처리`}
               >
                 {COPY.absent}
@@ -275,7 +275,7 @@ function MemberRow({
               {hasSchedule && (
                 <button
                   onClick={onCancel}
-                  className="min-h-11 min-w-11 rounded-xl px-2 text-xs text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  className="min-h-11 rounded-xl border border-gray-300 px-3 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
                   aria-label={`${member.name} 불참 취소`}
                 >
                   {COPY.cancelButton}
@@ -286,34 +286,30 @@ function MemberRow({
           {(isChecked && hasSchedule) && (
             <button
               onClick={onCancel}
-              className="min-h-11 min-w-11 rounded-xl px-2 text-xs text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              className="min-h-11 rounded-xl border border-gray-300 px-3 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
               aria-label={`${member.name} 체크인 취소`}
             >
               {COPY.cancelButton}
             </button>
           )}
+          {isLeader ? (
+            <button
+              onClick={onDemote}
+              className="min-h-11 rounded-xl border border-gray-300 px-3 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={`${member.name} 조장 해제`}
+            >
+              조장 해제
+            </button>
+          ) : (
+            <button
+              onClick={onPromote}
+              className="min-h-11 rounded-xl border border-blue-200 px-3 text-xs font-medium text-blue-600 focus-visible:ring-2 focus-visible:ring-blue-300"
+              aria-label={`${member.name} 조장 지정`}
+            >
+              조장 지정
+            </button>
+          )}
         </div>
-      </div>
-
-      {/* 조장 권한 변경 */}
-      <div className="mt-1 flex justify-end">
-        {isLeader ? (
-          <button
-            onClick={onDemote}
-            className="min-h-11 rounded-lg px-2 text-xs text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label={`${member.name} 조장 해제`}
-          >
-            조장 해제
-          </button>
-        ) : (
-          <button
-            onClick={onPromote}
-            className="min-h-11 rounded-lg px-2 text-xs text-blue-600 focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label={`${member.name} 조장 지정`}
-          >
-            조장 지정
-          </button>
-        )}
       </div>
     </li>
   );
