@@ -213,8 +213,8 @@ function MemberRow({
       </div>
 
 
-      {/* Row 2: 체크인 액션 (우측 정렬) */}
-      <div className="mt-1 flex items-center justify-end gap-1.5">
+      {/* Row 2: 체크인 액션 */}
+      <div className="mt-1 flex items-center gap-1.5">
         {!checkin && hasSchedule && (
           <>
             <button
