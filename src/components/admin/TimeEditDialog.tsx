@@ -75,7 +75,7 @@ export default function TimeEditDialog({
           type="time"
           value={timeValue}
           onChange={(e) => setTimeValue(e.target.value)}
-          className="w-full rounded-xl border px-4 py-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+          className="w-full appearance-none rounded-xl border px-4 py-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
           aria-label="예정 시각"
         />
         <DialogFooter>
