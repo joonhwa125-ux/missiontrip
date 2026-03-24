@@ -85,15 +85,13 @@ export default function AdminScheduleCard({
         role="region"
         aria-label={`진행중 일정: ${schedule.title}`}
       >
-        {/* 헤더: 진행중 pill + 후발 배지 (좌) + 집결 시간 (우) */}
-        <div className="mb-2 flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <span className="rounded-full bg-main-action px-2 py-0.5 text-xs font-bold text-gray-900">
-              진행중
-            </span>
-            {scopeBadge}
-          </div>
+        {/* 헤더: 진행중 pill + 집결시간 배지 + 후발 배지 (모두 좌측) */}
+        <div className="mb-2 flex items-center gap-1">
+          <span className="rounded-full bg-main-action px-2 py-0.5 text-xs font-bold text-gray-900">
+            진행중
+          </span>
           {timeBadge}
+          {scopeBadge}
         </div>
 
         {/* 장소 (primary) + 일정명 (secondary) */}
@@ -196,33 +194,29 @@ export default function AdminScheduleCard({
       role="region"
       aria-label={`완료 일정: ${schedule.title}`}
     >
-      {/* 헤더: 완료 배지 + 집결시간 배지 + 후발 배지 (좌) + 조 통계 (우) */}
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1">
-          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
-            완료
+      {/* 헤더: 완료 배지 + 집결시간 배지 + 후발 배지 */}
+      <div className="mb-2 flex items-center gap-1">
+        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+          완료
+        </span>
+        {timeDisplay && (
+          <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
+            집결 {timeDisplay}
           </span>
-          {timeDisplay && (
-            <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
-              집결 {timeDisplay}
-            </span>
-          )}
-          {scopeBadge}
-        </div>
-        <div className="flex flex-col items-end gap-0.5">
-          <p className="flex items-center gap-0.5 text-sm font-medium text-muted-foreground">
-            <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
-            {reportedCount}/{totalGroups}조
-          </p>
-          <p className="text-xs text-muted-foreground">
-            ({checkedCount}/{totalMembers}명)
-          </p>
-        </div>
+        )}
+        {scopeBadge}
       </div>
 
       {/* 장소/일정명 */}
       <p className="font-medium">{primaryText}</p>
       {subtitle}
+
+      {/* 통계 — 현황 보기 버튼 위, 좌정렬 */}
+      <p className="mt-3 flex items-center gap-1 text-sm text-muted-foreground" aria-live="polite">
+        <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
+        <span className="font-medium">{reportedCount}/{totalGroups}조</span>
+        <span className="text-xs">({checkedCount}/{totalMembers}명)</span>
+      </p>
 
       <button
         onClick={onSummaryTap}

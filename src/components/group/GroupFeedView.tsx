@@ -187,19 +187,17 @@ function ScheduleCard({
           className="w-full text-left min-h-11 focus-visible:ring-2 focus-visible:ring-main-action rounded-lg"
           aria-label={`${schedule.title} 체크인 화면으로 이동`}
         >
-          {/* 헤더: 진행중 pill + 후발 배지 (좌) + 집결 시간 (우) */}
-          <div className="mb-2 flex items-center justify-between">
-            <div className="flex items-center gap-1">
-              <span className="rounded-full bg-main-action px-2 py-0.5 text-xs font-bold text-gray-900">
-                진행중
-              </span>
-              {scopeBadge}
-            </div>
+          {/* 헤더: 진행중 pill + 집결시간 배지 + 후발 배지 (모두 좌측) */}
+          <div className="mb-2 flex items-center gap-1">
+            <span className="rounded-full bg-main-action px-2 py-0.5 text-xs font-bold text-gray-900">
+              진행중
+            </span>
             {timeDisplay && (
               <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
                 집결 {timeDisplay}
               </span>
             )}
+            {scopeBadge}
           </div>
           <p className="text-base font-semibold leading-snug">{primaryText}</p>
           {schedule.location && (
