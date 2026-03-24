@@ -242,6 +242,10 @@ export default function AdminView({
         return { ...prev, [sid]: [...list, newReport] };
       });
     },
+    onReconnected: () => {
+      router.refresh();
+      showToast("연결이 복구되었어요");
+    },
   });
 
   // 현재 일차의 정렬된 일정

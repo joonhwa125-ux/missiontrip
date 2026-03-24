@@ -21,6 +21,7 @@ interface RealtimeCallbacks {
   onScheduleUpdated?: (payload: { schedule_id: string; scheduled_time: string }) => void;
   onCheckinUpdated?: (payload: { user_id: string; schedule_id: string; action: "insert" | "delete"; is_absent?: boolean }) => void;
   onGroupReported?: (payload: { group_id: string; schedule_id: string; pending_count: number }) => void;
+  onReconnected?: () => void;  // 네트워크 재연결 시 호출 (WiFi↔LTE 전환 등)
 }
 
 // global + group:{groupId} 채널 구독
@@ -37,9 +38,37 @@ export function useRealtime(
     callbacksRef.current = callbacks;
   });
 
+  // 재연결 감지용 refs
+  const everConnectedRef = useRef(new Set<string>()); // 한 번 이상 SUBSCRIBED된 채널
+  const erroredRef = useRef(new Set<string>());       // 연결이 끊긴 채널
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
   useEffect(() => {
     const supabase = createClient();
     const channels: RealtimeChannel[] = [];
+
+    // 재연결 감지 핸들러 — 채널별 클로저로 생성
+    // 로직: SUBSCRIBED → 정상 | CHANNEL_ERROR/TIMED_OUT → erroredRef 추가
+    //       erroredRef에 있던 채널이 SUBSCRIBED → 재연결 감지 → onReconnected 호출
+    //       300ms debounce로 다중 채널 동시 재연결 시 중복 호출 방지
+    const makeStatusHandler = (channelName: string) => (status: string) => {
+      if (status === "SUBSCRIBED") {
+        if (erroredRef.current.has(channelName)) {
+          erroredRef.current.delete(channelName);
+          clearTimeout(reconnectTimerRef.current);
+          reconnectTimerRef.current = setTimeout(() => {
+            callbacksRef.current.onReconnected?.();
+          }, 300);
+        }
+        everConnectedRef.current.add(channelName);
+      }
+      if (
+        (status === "CHANNEL_ERROR" || status === "TIMED_OUT") &&
+        everConnectedRef.current.has(channelName)
+      ) {
+        erroredRef.current.add(channelName);
+      }
+    };
 
     // global 채널 — 전체 사용자 (일정 + 체크인 이벤트)
     const globalChannel = supabase
@@ -56,22 +85,23 @@ export function useRealtime(
       .on("broadcast", { event: EVENT_GROUP_REPORTED }, ({ payload }) => {
         callbacksRef.current.onGroupReported?.(payload);
       })
-      .subscribe();
+      .subscribe(makeStatusHandler(CHANNEL_GLOBAL));
 
     channels.push(globalChannel);
     channelRegistry.set(CHANNEL_GLOBAL, globalChannel);
 
     // group:{groupId} 채널 — 조장
     if (groupId) {
+      const groupChannelName = `${CHANNEL_GROUP_PREFIX}${groupId}`;
       const groupChannel = supabase
-        .channel(`${CHANNEL_GROUP_PREFIX}${groupId}`, { config: { broadcast: { self: true } } })
+        .channel(groupChannelName, { config: { broadcast: { self: true } } })
         .on("broadcast", { event: EVENT_CHECKIN_UPDATED }, ({ payload }) => {
           callbacksRef.current.onCheckinUpdated?.(payload);
         })
-        .subscribe();
+        .subscribe(makeStatusHandler(groupChannelName));
 
       channels.push(groupChannel);
-      channelRegistry.set(`${CHANNEL_GROUP_PREFIX}${groupId}`, groupChannel);
+      channelRegistry.set(groupChannelName, groupChannel);
     }
 
     // admin 채널 — 관리자 (보고 + 체크인 업데이트 수신)
@@ -84,7 +114,7 @@ export function useRealtime(
         .on("broadcast", { event: EVENT_CHECKIN_UPDATED }, ({ payload }) => {
           callbacksRef.current.onCheckinUpdated?.(payload);
         })
-        .subscribe();
+        .subscribe(makeStatusHandler(CHANNEL_ADMIN));
 
       channels.push(adminChannel);
       channelRegistry.set(CHANNEL_ADMIN, adminChannel);
@@ -93,6 +123,8 @@ export function useRealtime(
     channelsRef.current = channels;
 
     return () => {
+      clearTimeout(reconnectTimerRef.current);
+      erroredRef.current.clear(); // StrictMode 재마운트 시 false positive 방지
       channels.forEach((ch) => {
         // 레지스트리에서도 제거
         channelRegistry.forEach((val, key) => {

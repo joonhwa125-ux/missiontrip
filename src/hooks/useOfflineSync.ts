@@ -13,6 +13,7 @@ import {
 } from "@/utils/offline";
 import { syncOfflineCheckins } from "@/actions/checkin";
 import { submitReport } from "@/actions/report";
+import { OFFLINE_PENDING_REPORTS_KEY } from "@/lib/constants";
 import type { OfflinePendingCheckin, OfflinePendingReport, Schedule } from "@/lib/types";
 
 export function useOfflineSync() {
@@ -32,21 +33,29 @@ export function useOfflineSync() {
       }
     }
 
-    // 2. 보고 sync (체크인 완료 후)
+    // 2. 보고 sync (체크인 완료 후) — 성공 항목만 제거, 실패 항목은 유지
     const pendingReports = getPendingReports();
     if (pendingReports.length > 0) {
-      let allOk = true;
+      const failedReports: OfflinePendingReport[] = [];
       for (const report of pendingReports) {
         const res = await submitReport(report.group_id, report.schedule_id, report.pending_count);
-        if (!res.ok) allOk = false;
+        if (!res.ok) failedReports.push(report);
       }
-      if (allOk) {
-        clearPendingReports();
+      clearPendingReports();
+      if (failedReports.length > 0) {
+        localStorage.setItem(OFFLINE_PENDING_REPORTS_KEY, JSON.stringify(failedReports));
       }
     }
 
     setPendingCount(getPendingCheckins().length + getPendingReports().length);
   }, []);
+
+  // 온라인 상태에서 pending 항목이 남아있으면 30초마다 재시도
+  useEffect(() => {
+    if (!isOnline || pendingCount === 0) return;
+    const timer = setInterval(() => syncPending(), 30_000);
+    return () => clearInterval(timer);
+  }, [isOnline, pendingCount, syncPending]);
 
   // 온라인/오프라인 상태 감지
   useEffect(() => {

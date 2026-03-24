@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useBroadcast } from "@/hooks/useRealtime";
 import {
   CHANNEL_GLOBAL,
@@ -12,6 +13,7 @@ import {
 /** 체크인 변경 3채널 동시 broadcast 훅 */
 export function useBroadcastCheckin(groupId: string, scheduleId: string | undefined) {
   const { broadcast } = useBroadcast();
+  const router = useRouter();
 
   return useCallback(
     async (userId: string, action: "insert" | "delete", isAbsent = false) => {
@@ -21,12 +23,17 @@ export function useBroadcastCheckin(groupId: string, scheduleId: string | undefi
         action,
         is_absent: isAbsent,
       };
-      await Promise.all([
-        broadcast(CHANNEL_GLOBAL, EVENT_CHECKIN_UPDATED, payload),
-        broadcast(`${CHANNEL_GROUP_PREFIX}${groupId}`, EVENT_CHECKIN_UPDATED, payload),
-        broadcast(CHANNEL_ADMIN, EVENT_CHECKIN_UPDATED, payload),
-      ]);
+      try {
+        await Promise.all([
+          broadcast(CHANNEL_GLOBAL, EVENT_CHECKIN_UPDATED, payload),
+          broadcast(`${CHANNEL_GROUP_PREFIX}${groupId}`, EVENT_CHECKIN_UPDATED, payload),
+          broadcast(CHANNEL_ADMIN, EVENT_CHECKIN_UPDATED, payload),
+        ]);
+      } catch {
+        // broadcast 실패 시 DB 데이터는 이미 저장됨 — 서버 데이터로 강제 갱신
+        router.refresh();
+      }
     },
-    [groupId, scheduleId, broadcast]
+    [groupId, scheduleId, broadcast, router]
   );
 }

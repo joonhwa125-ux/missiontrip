@@ -137,6 +137,10 @@ export default function GroupView({
         return prev.filter((c) => c.user_id !== user_id);
       });
     },
+    onReconnected: () => {
+      router.refresh();
+      showToast("연결이 복구되었어요");
+    },
   });
 
   // 내 조 checkIns 변경 → allCheckInsState에 동기화
