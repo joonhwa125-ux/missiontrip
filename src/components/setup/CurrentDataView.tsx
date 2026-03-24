@@ -120,7 +120,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
                 <tr key={s.id} className="border-t border-gray-100">
                   <td className="px-3 py-2 text-center">{s.day_number}일</td>
                   <td className="px-3 py-2 text-center">{s.sort_order}</td>
-                  <td className="px-3 py-2 text-xs text-muted-foreground">{s.location ?? "-"}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{s.location ?? "-"}</td>
                   <td className="px-3 py-2">{s.title}</td>
                   <td className="px-3 py-2 text-center text-xs">{s.scheduled_time ? formatTime(s.scheduled_time) : "-"}</td>
                   <td className="px-3 py-2 text-center text-xs">{SCOPE_LABEL[s.scope]}</td>
