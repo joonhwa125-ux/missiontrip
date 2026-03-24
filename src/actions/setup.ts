@@ -10,6 +10,9 @@ import type {
   ParsedGroup,
   ParsedUser,
   ValidationError,
+  ScheduleScope,
+  UserRole,
+  GroupParty,
 } from "@/lib/types";
 import {
   parseCsv,
@@ -230,6 +233,110 @@ export async function resetAllData(): Promise<ActionResult> {
       return { ok: false, error: `${table} 삭제 실패: ${error.message}` };
     }
   }
+
+  revalidatePath("/admin");
+  revalidatePath("/group");
+  revalidatePath("/setup");
+  return { ok: true };
+}
+
+// 일정 수정
+export async function updateSchedule(
+  scheduleId: string,
+  data: {
+    title: string;
+    location: string | null;
+    day_number: number;
+    sort_order: number;
+    scheduled_time: string | null;
+    scope: ScheduleScope;
+  }
+): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  if (!admin) return { ok: false, error: "관리자 권한이 필요해요" };
+
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .from("schedules")
+    .update(data)
+    .eq("id", scheduleId);
+
+  if (error) return { ok: false, error: "일정 수정 중 오류가 발생했어요" };
+
+  revalidatePath("/admin");
+  revalidatePath("/group");
+  revalidatePath("/setup");
+  return { ok: true };
+}
+
+// 일정 삭제 (진행 중인 일정 제외)
+export async function deleteSchedule(scheduleId: string): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  if (!admin) return { ok: false, error: "관리자 권한이 필요해요" };
+
+  const supabase = createServiceClient();
+
+  const { data: schedule } = await supabase
+    .from("schedules")
+    .select("is_active")
+    .eq("id", scheduleId)
+    .single();
+
+  if (schedule?.is_active) {
+    return {
+      ok: false,
+      error: "진행 중인 일정은 삭제할 수 없어요. 먼저 다른 일정을 활성화해주세요",
+    };
+  }
+
+  const { error } = await supabase.from("schedules").delete().eq("id", scheduleId);
+
+  if (error) return { ok: false, error: "일정 삭제 중 오류가 발생했어요" };
+
+  revalidatePath("/admin");
+  revalidatePath("/group");
+  revalidatePath("/setup");
+  return { ok: true };
+}
+
+// 참가자 수정
+export async function updateUser(
+  userId: string,
+  data: {
+    name: string;
+    phone: string | null;
+    role: UserRole;
+    group_id: string;
+    party: GroupParty | null;
+  }
+): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  if (!admin) return { ok: false, error: "관리자 권한이 필요해요" };
+
+  const supabase = createServiceClient();
+  const { error } = await supabase.from("users").update(data).eq("id", userId);
+
+  if (error) return { ok: false, error: "참가자 수정 중 오류가 발생했어요" };
+
+  revalidatePath("/admin");
+  revalidatePath("/group");
+  revalidatePath("/setup");
+  return { ok: true };
+}
+
+// 참가자 삭제 (본인 제외)
+export async function deleteUser(userId: string): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  if (!admin) return { ok: false, error: "관리자 권한이 필요해요" };
+
+  if (userId === admin.id) {
+    return { ok: false, error: "자신의 계정은 삭제할 수 없어요" };
+  }
+
+  const supabase = createServiceClient();
+  const { error } = await supabase.from("users").delete().eq("id", userId);
+
+  if (error) return { ok: false, error: "참가자 삭제 중 오류가 발생했어요" };
 
   revalidatePath("/admin");
   revalidatePath("/group");
