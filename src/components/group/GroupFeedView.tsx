@@ -6,7 +6,7 @@ import { formatTime, cn, getScheduleStatus, sortSchedulesByStatus, getDefaultDay
 import PageHeader from "@/components/common/PageHeader";
 import DayTabs from "@/components/common/DayTabs";
 import { CheckIcon } from "@/components/ui/icons";
-import { COPY, GROUP_BADGE_STYLE, isLeaderRole } from "@/lib/constants";
+import { COPY, GROUP_BADGE_STYLE, isLeaderRole, SCOPE_LABEL } from "@/lib/constants";
 import type { Schedule, CheckIn, Group, GroupMember, GroupMemberBrief, GroupBadgeStatus } from "@/lib/types";
 import {
   Dialog,
@@ -168,7 +168,15 @@ function ScheduleCard({
   // location 우선, 없으면 title
   const primaryText = schedule.location ?? schedule.title;
 
-  // 대기/완료 카드 서브텍스트: "일정명 · 집결 HH:MM"
+  // 후발 배지 (waiting 카드 헤더용)
+  const scopeLabel = schedule.scope === "rear" ? SCOPE_LABEL[schedule.scope] : null;
+  const scopeBadge = scopeLabel ? (
+    <span className="inline-block rounded bg-orange-100 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-orange-800">
+      {scopeLabel}
+    </span>
+  ) : null;
+
+  // 완료 카드 서브텍스트: "일정명 · 집결 HH:MM"
   const metaLine = (schedule.location || timeDisplay) ? (
     <p className="mt-0.5 flex flex-wrap items-center gap-x-1 text-sm text-muted-foreground">
       {schedule.location && <span>{schedule.title}</span>}
@@ -230,32 +238,43 @@ function ScheduleCard({
     );
   }
 
+  if (status === "waiting") {
+    return (
+      <div className="rounded-2xl bg-white p-4">
+        {/* 헤더: 예정 배지 + 집결시간 배지 + 후발 배지 */}
+        <div className="mb-1.5 flex items-center gap-1">
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+            예정
+          </span>
+          {timeDisplay && (
+            <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
+              집결 {timeDisplay}
+            </span>
+          )}
+          {scopeBadge}
+        </div>
+        <p className="font-medium">{primaryText}</p>
+        {schedule.location && (
+          <p className="mt-0.5 text-sm text-muted-foreground">{schedule.title}</p>
+        )}
+      </div>
+    );
+  }
+
   const completedCount = scheduleCounts[schedule.id] ?? 0;
 
   return (
-    <div
-      className={cn(
-        "rounded-2xl p-4",
-        status === "completed" ? "bg-white opacity-55" : "bg-white"
-      )}
-    >
+    <div className="rounded-2xl bg-white p-4 opacity-55">
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1">
           <p className="font-medium">{primaryText}</p>
           {metaLine}
         </div>
         <div className="flex flex-col items-end gap-1">
-          <span
-            className={cn(
-              "flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
-              status === "completed"
-                ? "bg-gray-100 text-muted-foreground"
-                : "bg-secondary text-muted-foreground"
-            )}
-          >
-            {status === "completed" ? "완료" : "예정"}
+          <span className="flex-shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+            완료
           </span>
-          {status === "completed" && total > 0 && (
+          {total > 0 && (
             <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
               <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
               {completedCount}/{total}명

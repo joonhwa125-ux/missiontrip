@@ -49,7 +49,7 @@ export default function AdminScheduleCard({
 
   // 후발 배지
   const scopeBadge = scopeLabel ? (
-    <span className="ml-1 inline-block rounded bg-orange-100 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-orange-800">
+    <span className="inline-block rounded bg-orange-100 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-orange-800">
       {scopeLabel}
     </span>
   ) : null;
@@ -145,15 +145,28 @@ export default function AdminScheduleCard({
         role="region"
         aria-label={`예정 일정: ${schedule.title}`}
       >
-        {/* 헤더: 예정+시간 배지 + 후발 배지 */}
+        {/* 헤더: 예정 배지 + 집결시간 배지 + 후발 배지 */}
         <div className="mb-2 flex items-center gap-1">
-          <button
-            onClick={onTimeEdit}
-            className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-main-action"
-            aria-label={timeDisplay ? `집결 시간 ${timeDisplay} — 탭하여 수정` : "집결 시간 추가"}
-          >
-            {timeDisplay ? `예정 · 집결 ${timeDisplay}` : "예정 · + 시간"}
-          </button>
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+            예정
+          </span>
+          {timeDisplay ? (
+            <button
+              onClick={onTimeEdit}
+              className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 focus-visible:ring-2 focus-visible:ring-main-action"
+              aria-label={`집결 시간 ${timeDisplay} — 탭하여 수정`}
+            >
+              집결 {timeDisplay}
+            </button>
+          ) : (
+            <button
+              onClick={onTimeEdit}
+              className="rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-400 focus-visible:ring-2 focus-visible:ring-main-action"
+              aria-label="집결 시간 추가"
+            >
+              + 시간
+            </button>
+          )}
           {scopeBadge}
         </div>
 
