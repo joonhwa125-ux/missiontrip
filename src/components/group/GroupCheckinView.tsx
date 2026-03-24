@@ -259,7 +259,7 @@ export default function GroupCheckinView({
 
       {/* 이니셜 원 행 */}
       <div className="border-b bg-white">
-        <div className="flex flex-wrap gap-2 px-4 py-3">
+        <div className="flex gap-2 overflow-x-auto px-4 py-3 scrollbar-none">
           {sorted.map((m) => {
             const checked = checkedIds.has(m.id);
             const absent = absentIds.has(m.id);

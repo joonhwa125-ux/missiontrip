@@ -2,7 +2,7 @@
 
 import { COPY } from "@/lib/constants";
 import { formatTime, cn } from "@/lib/utils";
-import { CheckIcon, XIcon } from "@/components/ui/icons";
+// 상태는 카드 배경색 + 텍스트로 표현 (아이콘 원 제거)
 import type { CheckIn, GroupMember } from "@/lib/types";
 
 type Member = GroupMember;
@@ -30,37 +30,15 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
           : "border-[#E0DDD8] bg-white"
       )}
     >
-      <div className="flex items-center gap-3">
-        {isAbsent ? (
-          <div
-            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gray-300"
-            aria-hidden="true"
-          >
-            <XIcon className="h-4 w-4 text-white" aria-hidden />
-          </div>
-        ) : isChecked ? (
-          <div
-            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-complete-check"
-            aria-hidden="true"
-          >
-            <CheckIcon className="h-4 w-4 text-white" aria-hidden />
-          </div>
-        ) : (
-          <div
-            className="h-8 w-8 flex-shrink-0 rounded-full border-2 border-dashed border-gray-300"
-            aria-hidden="true"
-          />
-        )}
-        <div>
-          <p className={cn("text-base font-medium", (isChecked || isAbsent) && "text-muted-foreground")}>{user.name}</p>
-          <p className="text-sm text-muted-foreground">
-            {isAbsent
-              ? COPY.absent
-              : isChecked
-                ? COPY.checked(formatTime(checkIn.checked_at))
-                : COPY.notChecked}
-          </p>
-        </div>
+      <div className="min-w-0">
+        <p className={cn("text-base font-medium truncate", (isChecked || isAbsent) && "text-muted-foreground")}>{user.name}</p>
+        <p className="text-sm text-muted-foreground">
+          {isAbsent
+            ? COPY.absent
+            : isChecked
+              ? COPY.checked(formatTime(checkIn.checked_at))
+              : COPY.notChecked}
+        </p>
       </div>
 
       <div className="flex items-center gap-1.5">
