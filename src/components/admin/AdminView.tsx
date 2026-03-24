@@ -305,11 +305,11 @@ export default function AdminView({
           </span>
         }
         rightSlot={
-          <div className="flex items-center">
+          <div className="-mr-2 flex items-center">
             {activeSchedule && (
               <button
                 onClick={openCheckinSheet}
-                className="relative flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
+                className="relative flex min-h-11 min-w-10 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
                 aria-label={`${adminGroupName} 체크인 — 미확인 ${adminUncheckedCount}명`}
               >
                 <UsersIcon aria-hidden />
@@ -322,14 +322,14 @@ export default function AdminView({
             )}
             <button
               onClick={() => setAddOpen(true)}
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
+              className="flex min-h-11 min-w-10 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
               aria-label="일정 추가"
             >
               <PlusIcon aria-hidden />
             </button>
             <Link
               href="/setup"
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
+              className="flex min-h-11 min-w-10 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
               aria-label="설정"
             >
               <SettingsIcon aria-hidden />
