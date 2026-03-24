@@ -345,6 +345,8 @@ function GroupStatusGrid({
                   leaderName={groupLeaderMap.get(g.id)}
                   checked={checked}
                   total={total}
+                  rawTotal={rawTotal}
+                  absent={absent}
                   badge={badge}
                   progress={progress}
                 />
@@ -362,6 +364,8 @@ function GroupMiniCard({
   leaderName,
   checked,
   total,
+  rawTotal,
+  absent,
   badge,
   progress,
 }: {
@@ -369,6 +373,8 @@ function GroupMiniCard({
   leaderName?: string;
   checked: number;
   total: number;
+  rawTotal: number;
+  absent: number;
   badge: GroupBadgeStatus;
   progress: number;
 }) {
@@ -403,7 +409,7 @@ function GroupMiniCard({
         />
       </div>
       <p className="text-xs text-muted-foreground">
-        {checked}/{total}명
+        {checked}/{rawTotal}명{absent > 0 ? ` (불참 ${absent})` : ""}
       </p>
     </div>
   );

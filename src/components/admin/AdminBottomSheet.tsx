@@ -116,7 +116,7 @@ export default function AdminBottomSheet({
             <section key={busName} className="mb-4">
               <h3 className="mb-2 text-sm font-bold text-muted-foreground">{busName}</h3>
               <div className="grid grid-cols-2 gap-2 [&>*:last-child:nth-child(odd)]:col-span-2">
-                {busSummaries.map(({ group, totalCount, checkedCount, absentCount, badge, leader }) => {
+                {busSummaries.map(({ group, totalCount, checkedCount, absentCount, badge, leader, rawTotal }) => {
                   const b = GROUP_BADGE_STYLE[badge];
                   const progress = totalCount > 0 ? (checkedCount / totalCount) * 100 : 0;
                   return (
@@ -166,7 +166,7 @@ export default function AdminBottomSheet({
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {checkedCount} / {totalCount}명{absentCount > 0 ? ` (불참 ${absentCount})` : ""}
+                        {checkedCount} / {rawTotal}명{absentCount > 0 ? ` (불참 ${absentCount})` : ""}
                       </p>
                     </button>
                   );
