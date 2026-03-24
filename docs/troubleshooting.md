@@ -131,6 +131,78 @@ const supabase = createServerClient(
 
 ---
 
+## TSG-003: Next.js NEXT_PUBLIC_* 환경변수 동적 접근 불가 (브라우저 번들)
+
+**일시:** 2026-03-24
+**심각도:** High — 클라이언트 측 Supabase 초기화 실패
+**영향 범위:** 브라우저에서 실행되는 모든 클라이언트 컴포넌트
+
+### 증상
+
+`lib/supabase/client.ts`에 `requireEnv(key: string)` 헬퍼를 추가하고
+`process.env.NEXT_PUBLIC_SUPABASE_URL!` → `requireEnv("NEXT_PUBLIC_SUPABASE_URL")`로 변경 후
+브라우저에서 "환경 변수 NEXT_PUBLIC_SUPABASE_URL이 없어요" 에러 발생.
+
+### 근본 원인
+
+Next.js는 빌드 시 `NEXT_PUBLIC_*` 환경변수를 **리터럴 문자열로 정적 치환**한다.
+
+```
+// 소스 코드
+process.env.NEXT_PUBLIC_SUPABASE_URL
+
+// 브라우저 번들로 변환 후
+"https://xxxxx.supabase.co"  ← 값이 직접 inlining됨
+```
+
+**동적 키 접근 `process.env[key]`는 이 치환 대상이 아니다.**
+브라우저 번들에는 원본 `process.env` 객체가 없으므로 `process.env["NEXT_PUBLIC_SUPABASE_URL"]`은 `undefined`를 반환한다.
+
+```
+환경   │ process.env[key]  │ process.env.NEXT_PUBLIC_*
+───────┼───────────────────┼──────────────────────────
+서버   │ ✅ 작동           │ ✅ 작동
+브라우저│ ❌ undefined      │ ✅ 빌드 시 정적 치환됨
+```
+
+### 해결
+
+`requireEnv()` 패턴은 서버 전용 파일(`server.ts`)에만 적용한다.
+클라이언트 파일(`client.ts`)은 리터럴 접근을 유지하고, 주석으로 이유를 명시한다.
+
+```typescript
+// client.ts — 브라우저 전용
+// NEXT_PUBLIC_* 환경변수는 Next.js가 빌드 시 정적 치환하므로
+// 반드시 리터럴로 참조해야 함 (동적 접근 process.env[key] 불가)
+export function createClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
+
+// server.ts — 서버 전용 (requireEnv 적용 가능)
+function requireEnv(key: string): string {
+  const val = process.env[key];
+  if (!val) throw new Error(`환경 변수 ${key}가 없어요.`);
+  return val;
+}
+```
+
+### 교훈
+
+- `client.ts`와 `server.ts`는 **실행 환경이 다르다** — 동일한 패턴을 기계적으로 적용하기 전에 파일이 브라우저/서버 중 어디서 실행되는지 먼저 확인한다
+- `createBrowserClient`가 보이면 브라우저 번들 제약 적용 대상임을 즉시 인식한다
+- 새로운 유틸 함수를 여러 파일에 적용할 때, 각 파일의 실행 환경 차이를 개별 검토한다
+
+### 진단 체크리스트
+
+- [ ] 에러 발생 파일이 `"use client"` 또는 브라우저 API(`window`, `navigator`)를 사용하는지 확인
+- [ ] `process.env` 접근 방식이 리터럴인지 동적 키인지 확인
+- [ ] Next.js 공식 문서 [Environment Variables](https://nextjs.org/docs/app/building-your-application/configuring/environment-variables) 참고
+
+---
+
 ## 문서 작성 가이드
 
 ### 기록 기준
