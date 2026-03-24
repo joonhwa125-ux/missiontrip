@@ -71,7 +71,12 @@ const STATUS_ORDER: Record<ScheduleStatus, number> = { active: 0, waiting: 1, co
 export function sortSchedulesByStatus(schedules: Schedule[]): Schedule[] {
   return [...schedules].sort((a, b) => {
     const diff = STATUS_ORDER[getScheduleStatus(a)] - STATUS_ORDER[getScheduleStatus(b)];
-    return diff !== 0 ? diff : a.sort_order - b.sort_order;
+    if (diff !== 0) return diff;
+    // 둘 다 scheduled_time이 있으면 시간순, 없으면 sort_order 유지
+    if (a.scheduled_time && b.scheduled_time) {
+      return new Date(a.scheduled_time).getTime() - new Date(b.scheduled_time).getTime();
+    }
+    return a.sort_order - b.sort_order;
   });
 }
 

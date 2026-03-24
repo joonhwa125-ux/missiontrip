@@ -195,7 +195,7 @@ export function parseUsersSheet(rows: string[][]): {
   return { users, groups, errors };
 }
 
-// 일정 시트 파싱 (6컬럼: 일차, 순서, 일정명, 장소, 예정시각, 대상)
+// 일정 시트 파싱 (6컬럼: 일차, 순서, 장소, 일정명, 예정시각, 대상)
 export function parseSchedulesSheet(rows: string[][]): {
   schedules: ParsedSchedule[];
   errors: ValidationError[];
@@ -209,8 +209,8 @@ export function parseSchedulesSheet(rows: string[][]): {
 
     const dayNumber = parseInt(row[0], 10);
     const sortOrder = parseInt(row[1], 10);
-    const title = row[2]?.trim();
-    const location = row[3]?.trim() || null;
+    const location = row[2]?.trim() || null;
+    const title = row[3]?.trim();
     const scheduledTimeRaw = row[4]?.trim() || null;
     const scopeRaw = sanitizeText(row[5] ?? "");
 
