@@ -27,7 +27,7 @@ export default async function AdminPage() {
     .eq("email", authUser.email ?? "")
     .single();
 
-  if (!currentUser || currentUser.role !== "admin") redirect("/");
+  if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "admin_leader")) redirect("/");
 
   const [
     { data: groups },

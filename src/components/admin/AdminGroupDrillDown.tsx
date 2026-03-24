@@ -213,7 +213,7 @@ function MemberRow({
 }: MemberRowProps) {
   const isChecked = checkin && !checkin.is_absent;
   const isAbsent = checkin?.is_absent;
-  const isLeader = member.role === "leader";
+  const isLeader = member.role === "leader" || member.role === "admin_leader";
   const hasSchedule = !!activeSchedule;
 
   return (

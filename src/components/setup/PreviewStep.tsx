@@ -32,9 +32,9 @@ export default function PreviewStep({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const leaderCount = data.users.filter((u) => u.role === "leader").length;
+  const leaderCount = data.users.filter((u) => u.role === "leader" || u.role === "admin_leader").length;
   const memberCount = data.users.filter((u) => u.role === "member").length;
-  const adminCount = data.users.filter((u) => u.role === "admin").length;
+  const adminCount = data.users.filter((u) => u.role === "admin" || u.role === "admin_leader").length;
   const hasErrors = data.errors.length > 0;
   const errorRows = new Set(data.errors.map((e) => e.row));
 

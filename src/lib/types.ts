@@ -1,6 +1,6 @@
 // 미션트립 도메인 타입 정의
 
-export type UserRole = "member" | "leader" | "admin";
+export type UserRole = "member" | "leader" | "admin" | "admin_leader";
 export type CheckedBy = "leader" | "admin";
 export type ScheduleStatus = "active" | "completed" | "waiting";
 export type GroupParty = "advance" | "rear";
@@ -37,7 +37,7 @@ export interface GroupMemberBrief {
   group_id: string;
   party: GroupParty | null;
   name: string;
-  role: "member" | "leader" | "admin";
+  role: UserRole;
 }
 
 /** 관리자 화면용 멤버 (전화, 역할, 소속조 포함) */

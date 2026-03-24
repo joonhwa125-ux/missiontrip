@@ -58,7 +58,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
   };
 
   const SCOPE_LABEL: Record<ScheduleScope, string> = { all: "전체", advance: "선발", rear: "후발" };
-  const ROLE_LABEL: Record<UserRole, string> = { member: "조원", leader: "조장", admin: "관리자" };
+  const ROLE_LABEL: Record<UserRole, string> = { member: "조원", leader: "조장", admin: "관리자", admin_leader: "관리자(조장)" };
   const PARTY_LABEL = (p: GroupParty | null) => (p === "advance" ? "선발" : p === "rear" ? "후발" : "-");
 
   return (

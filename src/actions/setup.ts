@@ -355,7 +355,7 @@ function validateLeaderCount(
     const leaders = users.filter(
       (u) =>
         u.group_name === group.name &&
-        (u.role === "leader" || u.role === "admin")
+        (u.role === "leader" || u.role === "admin" || u.role === "admin_leader")
     );
     if (leaders.length === 0) {
       errors.push({

@@ -56,11 +56,23 @@ export const SCOPE_LABEL: Record<string, string> = {
 };
 
 // 역할 라우팅
-export const ROLE_ROUTES = {
+export const ROLE_ROUTES: Record<string, string> = {
   leader: "/group",
   member: "/no-access",
   admin: "/admin",
-} as const;
+  admin_leader: "/admin",
+};
+
+// 역할 판별 헬퍼 — 복합 역할(admin_leader) 대응
+export function isAdminRole(role: string): boolean {
+  return role === "admin" || role === "admin_leader";
+}
+export function isLeaderRole(role: string): boolean {
+  return role === "leader" || role === "admin_leader";
+}
+export function canCheckin(role: string): boolean {
+  return role === "leader" || role === "admin" || role === "admin_leader";
+}
 
 // 컬러 상수 (tailwind.config와 동기화)
 export const COLORS = {

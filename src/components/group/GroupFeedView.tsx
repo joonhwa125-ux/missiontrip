@@ -295,7 +295,7 @@ function GroupStatusGrid({
   // 조별 조장 이름
   const groupLeaderMap = new Map<string, string>();
   for (const m of allMembers) {
-    if (m.role === "leader") groupLeaderMap.set(m.group_id, m.name);
+    if (m.role === "leader" || m.role === "admin_leader") groupLeaderMap.set(m.group_id, m.name);
   }
 
   // 조별 체크인 수 (불참 제외) + 조별 불참 수
@@ -374,22 +374,20 @@ function GroupMiniCard({
 }) {
   const b = GROUP_BADGE_STYLE[badge];
   return (
-    <div className="rounded-xl border border-gray-200 bg-white px-3 py-2">
-      <div className="mb-1">
+    <div className="rounded-xl border border-gray-200 bg-white px-3 py-2.5">
+      <div className="mb-1.5">
         <span
           className={cn(
-            "inline-block rounded-full px-1.5 py-0.5 text-[0.625rem] font-medium leading-tight",
+            "inline-block rounded-full px-2 py-0.5 text-[0.6875rem] font-medium",
             b.bg,
             b.text
           )}
         >
           {b.label}
         </span>
-        <span className="mt-0.5 block text-xs font-medium">{name}</span>
+        <p className="mt-1 text-sm font-semibold leading-snug">{name}</p>
         {leaderName && (
-          <span className="block text-[0.6875rem] text-muted-foreground">
-            {leaderName}
-          </span>
+          <p className="mt-0.5 text-xs text-muted-foreground">{leaderName}</p>
         )}
       </div>
       <div

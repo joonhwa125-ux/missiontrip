@@ -56,8 +56,8 @@ export async function middleware(request: NextRequest) {
     const role = userData.role as UserRole;
     const homeRoute = ROLE_ROUTES[role];
 
-    // /setup 은 admin만 허용
-    if (pathname.startsWith("/setup") && role !== "admin") {
+    // /setup 은 admin/admin_leader만 허용
+    if (pathname.startsWith("/setup") && role !== "admin" && role !== "admin_leader") {
       return NextResponse.redirect(new URL(homeRoute, request.url));
     }
 

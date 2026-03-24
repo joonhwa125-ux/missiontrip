@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
+import { canCheckin, isAdminRole } from "@/lib/constants";
 import type { ActionResult, OfflinePendingCheckin } from "@/lib/types";
 
 /** 조장의 자기 조원 접근 권한 검증. 실패 시 ActionResult 반환, 통과 시 null */
@@ -10,7 +11,7 @@ async function validateGroupAccess(
   actor: { role: string; group_id: string },
   targetUserId: string
 ): Promise<ActionResult | null> {
-  if (actor.role !== "leader") return null;
+  if (isAdminRole(actor.role)) return null;
   const supabase = createServiceClient();
   const { data } = await supabase
     .from("users")
@@ -30,19 +31,20 @@ export async function createCheckin(
 ): Promise<ActionResult> {
   const actor = await getCurrentUser();
 
-  if (!actor || !["leader", "admin"].includes(actor.role)) {
+  if (!actor || !canCheckin(actor.role)) {
     return { ok: false, error: "권한이 없어요" };
   }
 
   const denied = await validateGroupAccess(actor, userId);
   if (denied) return denied;
 
+  const checkedBy = isAdminRole(actor.role) ? "admin" : "leader";
   const supabase = createServiceClient();
   const { error } = await supabase.from("check_ins").upsert(
     {
       user_id: userId,
       schedule_id: scheduleId,
-      checked_by: actor.role as "leader" | "admin",
+      checked_by: checkedBy,
       checked_by_user_id: actor.id,
     },
     { onConflict: "user_id,schedule_id", ignoreDuplicates: true }
@@ -64,7 +66,7 @@ export async function deleteCheckin(
 ): Promise<ActionResult> {
   const actor = await getCurrentUser();
 
-  if (!actor || !["leader", "admin"].includes(actor.role)) {
+  if (!actor || !canCheckin(actor.role)) {
     return { ok: false, error: "권한이 없어요" };
   }
 
@@ -94,19 +96,20 @@ export async function markAbsent(
 ): Promise<ActionResult> {
   const actor = await getCurrentUser();
 
-  if (!actor || !["leader", "admin"].includes(actor.role)) {
+  if (!actor || !canCheckin(actor.role)) {
     return { ok: false, error: "권한이 없어요" };
   }
 
   const denied = await validateGroupAccess(actor, userId);
   if (denied) return denied;
 
+  const checkedBy = isAdminRole(actor.role) ? "admin" : "leader";
   const supabase = createServiceClient();
   const { error } = await supabase.from("check_ins").upsert(
     {
       user_id: userId,
       schedule_id: scheduleId,
-      checked_by: actor.role as "leader" | "admin",
+      checked_by: checkedBy,
       checked_by_user_id: actor.id,
       is_absent: true,
     },
@@ -128,7 +131,7 @@ export async function syncOfflineCheckins(
 ): Promise<ActionResult<number>> {
   const actor = await getCurrentUser();
 
-  if (!actor || !["leader", "admin"].includes(actor.role)) {
+  if (!actor || !canCheckin(actor.role)) {
     return { ok: false, error: "권한이 없어요" };
   }
 

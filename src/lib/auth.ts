@@ -17,8 +17,9 @@ export async function getCurrentUser() {
   return data;
 }
 
-/** 관리자 전용 — role === 'admin' 확인 */
+/** 관리자 전용 — admin 또는 admin_leader 확인 */
 export async function requireAdmin() {
   const user = await getCurrentUser();
-  return user?.role === "admin" ? user : null;
+  if (!user) return null;
+  return (user.role === "admin" || user.role === "admin_leader") ? user : null;
 }

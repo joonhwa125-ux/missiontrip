@@ -70,7 +70,7 @@ export default function AdminBottomSheet({
           ).length;
           const totalCount = gMembers.length - absentCount;
           const badge = getGroupBadgeStatus(totalCount, checkedCount, reportMap.has(g.id));
-          const leader = gMembers.find((m) => m.role === "leader");
+          const leader = gMembers.find((m) => m.role === "leader" || m.role === "admin_leader");
           return { group: g, totalCount, checkedCount, badge, leader, rawTotal: gMembers.length };
         })
         .filter((s) => s.rawTotal > 0),
@@ -131,14 +131,14 @@ export default function AdminBottomSheet({
                       <div className="mb-1.5">
                         <span
                           className={cn(
-                            "inline-block rounded-full px-2 py-0.5 text-xs font-medium",
+                            "inline-block rounded-full px-2 py-0.5 text-[0.8125rem] font-medium",
                             b.bg,
                             b.text
                           )}
                         >
                           {b.label}
                         </span>
-                        <span className="mt-1 block text-xs font-semibold">{group.name}</span>
+                        <p className="mt-1 text-sm font-semibold leading-snug">{group.name}</p>
                       </div>
                       {leader && (
                         <div className="mb-1.5 flex items-center gap-1 text-xs text-muted-foreground">

@@ -19,6 +19,8 @@ const ROLE_MAP: Record<string, UserRole> = {
   조원: "member",
   조장: "leader",
   관리자: "admin",
+  "관리자 (조장)": "admin_leader",
+  "관리자(조장)": "admin_leader",
 };
 
 // Google Sheets CSV에 포함될 수 있는 보이지 않는 Unicode 문자 제거
@@ -120,16 +122,17 @@ export function parseUsersSheet(rows: string[][]): {
       continue;
     }
 
-    // 역할값 — 괄호 안 상위 역할 우선 (예: "조장(관리자)" → 관리자)
-    const parenMatch = roleRaw.match(/\((.+)\)/);
-    const roleClean = parenMatch ? parenMatch[1].trim() : roleRaw;
-    const role = ROLE_MAP[roleClean];
+    // 역할값 — 전체 문자열 먼저 매칭, 실패 시 괄호 안 추출
+    const role = ROLE_MAP[roleRaw] ?? (() => {
+      const parenMatch = roleRaw.match(/\((.+)\)/);
+      return parenMatch ? ROLE_MAP[parenMatch[1].trim()] : undefined;
+    })();
     if (!role) {
       errors.push({
         sheet: "users",
         row: i + 1,
         field: "역할",
-        message: `역할은 조원/조장/관리자만 가능해요 (입력값: "${roleRaw}")`,
+        message: `역할은 조원/조장/관리자/관리자(조장)만 가능해요 (입력값: "${roleRaw}")`,
       });
       continue;
     }
@@ -145,8 +148,9 @@ export function parseUsersSheet(rows: string[][]): {
       continue;
     }
 
-    // 이메일 자동 생성: 조장/관리자 → LDAP 이름@도메인, 조원 → nologin
-    const email = (role === "leader" || role === "admin")
+    // 이메일 자동 생성: 조장/관리자/관리자(조장) → LDAP 이름@도메인, 조원 → nologin
+    const needsLogin = role !== "member";
+    const email = needsLogin
       ? `${name.toLowerCase()}${ALLOWED_EMAIL_DOMAIN}`
       : `${MEMBER_EMAIL_PREFIX}.${name}.${i}${NO_LOGIN_EMAIL_DOMAIN}`;
 

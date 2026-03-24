@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
+import { canCheckin, isAdminRole } from "@/lib/constants";
 import type { ActionResult } from "@/lib/types";
 
 // 조장 보고 (UPSERT — 재보고 허용)
@@ -12,12 +13,12 @@ export async function submitReport(
   pendingCount: number
 ): Promise<ActionResult> {
   const actor = await getCurrentUser();
-  if (!actor || !["leader", "admin"].includes(actor.role)) {
+  if (!actor || !canCheckin(actor.role)) {
     return { ok: false, error: "권한이 없어요" };
   }
 
-  // 조장은 자신의 조만 보고 가능 (다른 조 보고 위조 방지)
-  if (actor.role === "leader" && actor.group_id !== groupId) {
+  // 조장은 자신의 조만 보고 가능 (관리자는 전체 가능)
+  if (!isAdminRole(actor.role) && actor.group_id !== groupId) {
     return { ok: false, error: "내 조의 보고만 할 수 있어요" };
   }
 

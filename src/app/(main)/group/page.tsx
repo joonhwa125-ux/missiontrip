@@ -23,7 +23,7 @@ export default async function GroupPage() {
     .eq("email", authUser.email ?? "")
     .single();
 
-  if (!currentUser || !["leader", "admin"].includes(currentUser.role)) redirect("/");
+  if (!currentUser || !["leader", "admin", "admin_leader"].includes(currentUser.role)) redirect("/");
 
   const [
     { data: group },
