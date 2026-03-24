@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -11,6 +11,14 @@ interface Props {
 
 export default function SetupPageTabs({ wizard, currentData, hasData }: Props) {
   const [tab, setTab] = useState<"upload" | "data">("upload");
+
+  // URL ?tab=data 파라미터로 초기 탭 결정 (import 완료 후 자동 전환용)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("tab") === "data" && hasData) {
+      setTab("data");
+    }
+  }, [hasData]);
 
   return (
     <div className="flex min-h-screen flex-col">

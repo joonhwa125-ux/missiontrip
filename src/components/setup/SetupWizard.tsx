@@ -33,7 +33,7 @@ export default function SetupWizard() {
     setImportResult(result);
     setImportError(null);
     setStep(3);
-    router.refresh(); // 서버 컴포넌트 재조회 → hasData 갱신 → "현재 데이터" 탭 활성화
+    router.replace("/setup?tab=data"); // 반영 완료 → 서버 재조회 + "현재 데이터" 탭 자동 전환
   };
 
   const handleImportError = (error: string) => {
