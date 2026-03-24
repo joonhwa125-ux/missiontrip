@@ -27,7 +27,7 @@ export default function PageHeader({ title, titleNode, superTitle, subtitle, bac
           {superTitle ? (
             <div className="flex flex-col">
               <span className="text-xs text-gray-400">{superTitle}</span>
-              <h1 className="text-3xl font-black leading-tight tracking-tight">
+              <h1 className="text-2xl font-black leading-tight tracking-tight">
                 {titleNode ?? title}
               </h1>
             </div>
