@@ -29,6 +29,10 @@ export default function AdminScheduleCard({
     ? formatTime(schedule.scheduled_time)
     : null;
   const scopeLabel = schedule.scope !== "all" ? SCOPE_LABEL[schedule.scope] : null;
+  const scopeBadgeClass =
+    schedule.scope === "advance"
+      ? "bg-cyan-100 text-cyan-800"
+      : "bg-orange-100 text-orange-800";
 
   const scopeMembers = filterMembersByScope(members, schedule.scope);
   const checkedCount = checkIns.filter((c) => !c.is_absent).length;
@@ -48,7 +52,7 @@ export default function AdminScheduleCard({
           <div className="flex-1">
             <p className="font-medium">
               {scopeLabel && (
-                <span className="mr-1 inline-block rounded bg-gray-700 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-white">
+                <span className={`mr-1 inline-block rounded px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight ${scopeBadgeClass}`}>
                   {scopeLabel}
                 </span>
               )}
@@ -104,7 +108,7 @@ export default function AdminScheduleCard({
           >
             <p className="font-medium">
               {scopeLabel && (
-                <span className="mr-1 inline-block rounded bg-gray-700 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-white">
+                <span className={`mr-1 inline-block rounded px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight ${scopeBadgeClass}`}>
                   {scopeLabel}
                 </span>
               )}
