@@ -12,7 +12,7 @@ interface Props {
 
 export default function PageHeader({ title, titleNode, superTitle, subtitle, backHref, rightSlot }: Props) {
   return (
-    <header className="border-b border-gray-100 bg-white px-4 py-3">
+    <header className="border-b border-gray-100 bg-white px-4 py-4">
       <div className="flex items-center justify-between">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           {backHref && (
@@ -27,7 +27,7 @@ export default function PageHeader({ title, titleNode, superTitle, subtitle, bac
           {superTitle ? (
             <div className="min-w-0 overflow-hidden">
               <span className="block truncate text-xs text-gray-400">{superTitle}</span>
-              <h1 className="font-black leading-tight tracking-tight text-[clamp(1.25rem,5vw,1.5rem)]">
+              <h1 className="mt-0.5 font-black leading-tight tracking-tight text-[clamp(1.25rem,5vw,1.5rem)]">
                 {titleNode ?? title}
               </h1>
             </div>
