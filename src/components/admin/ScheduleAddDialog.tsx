@@ -31,18 +31,19 @@ export default function ScheduleAddDialog({
   const [newTitle, setNewTitle] = useState("");
   const [newLocation, setNewLocation] = useState("");
   const [newDay, setNewDay] = useState("1");
-  const [newTime, setNewTime] = useState("");
+  const [newHour, setNewHour] = useState("");
+  const [newMinute, setNewMinute] = useState("");
   const [newScope, setNewScope] = useState<ScheduleScope>("all");
 
   const handleAdd = () => {
     if (!newTitle.trim()) return;
     startTransition(async () => {
       let scheduledTime: string | null = null;
-      if (newTime) {
+      if (newHour && newMinute) {
         const sameDay = schedules.find(
           (s) => s.day_number === parseInt(newDay) && s.scheduled_time
         );
-        scheduledTime = parseKSTTime(newTime, sameDay?.scheduled_time);
+        scheduledTime = parseKSTTime(`${newHour}:${newMinute}`, sameDay?.scheduled_time);
       }
       const res = await createSchedule(
         newTitle.trim(),
@@ -55,7 +56,8 @@ export default function ScheduleAddDialog({
         setNewTitle("");
         setNewLocation("");
         setNewDay("1");
-        setNewTime("");
+        setNewHour("");
+        setNewMinute("");
         setNewScope("all");
         onOpenChange(false);
         onRefresh();
@@ -117,13 +119,30 @@ export default function ScheduleAddDialog({
           </div>
           <div className="flex flex-col gap-1">
             <label className="px-1 text-xs font-medium text-muted-foreground">예정 시각 (선택)</label>
-            <input
-              type="time"
-              value={newTime}
-              onChange={(e) => setNewTime(e.target.value)}
-              className="w-full appearance-none rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
-              aria-label="예정 시각 (선택)"
-            />
+            <div className="flex gap-2">
+              <select
+                value={newHour}
+                onChange={(e) => setNewHour(e.target.value)}
+                className="flex-1 rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+                aria-label="시"
+              >
+                <option value="">시</option>
+                {Array.from({ length: 24 }, (_, i) => (
+                  <option key={i} value={String(i).padStart(2, "0")}>{i}시</option>
+                ))}
+              </select>
+              <select
+                value={newMinute}
+                onChange={(e) => setNewMinute(e.target.value)}
+                className="flex-1 rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+                aria-label="분"
+              >
+                <option value="">분</option>
+                {["00","05","10","15","20","25","30","35","40","45","50","55"].map((m) => (
+                  <option key={m} value={m}>{m}분</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
         <DialogFooter>

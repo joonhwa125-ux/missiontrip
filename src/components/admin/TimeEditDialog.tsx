@@ -31,13 +31,14 @@ export default function TimeEditDialog({
 }: Props) {
   const [, startTransition] = useTransition();
   const { broadcast } = useBroadcast();
-  const [timeValue, setTimeValue] = useState("");
+  const [timeHour, setTimeHour] = useState("");
+  const [timeMinute, setTimeMinute] = useState("");
 
   const handleConfirm = () => {
-    if (!schedule || !timeValue) return;
+    if (!schedule || !timeHour || !timeMinute) return;
     const targetId = schedule.id;
     startTransition(async () => {
-      const iso = parseKSTTime(timeValue, schedule.scheduled_time);
+      const iso = parseKSTTime(`${timeHour}:${timeMinute}`, schedule.scheduled_time);
       const res = await updateScheduleTime(targetId, iso);
       if (res.ok) {
         onSchedulesChange((prev) =>
@@ -50,7 +51,8 @@ export default function TimeEditDialog({
           scheduled_time: iso,
         });
         onToast("일정 시간이 변경되었어요");
-        setTimeValue("");
+        setTimeHour("");
+        setTimeMinute("");
         onClose();
       }
     });
@@ -61,7 +63,8 @@ export default function TimeEditDialog({
       open={!!schedule}
       onOpenChange={(o) => {
         if (!o) {
-          setTimeValue("");
+          setTimeHour("");
+          setTimeMinute("");
           onClose();
         }
       }}
@@ -71,13 +74,30 @@ export default function TimeEditDialog({
           <DialogTitle>예정 시각 변경</DialogTitle>
           <DialogDescription>{schedule?.title}</DialogDescription>
         </DialogHeader>
-        <input
-          type="time"
-          value={timeValue}
-          onChange={(e) => setTimeValue(e.target.value)}
-          className="w-full appearance-none rounded-xl border px-4 py-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
-          aria-label="예정 시각"
-        />
+        <div className="flex gap-2">
+          <select
+            value={timeHour}
+            onChange={(e) => setTimeHour(e.target.value)}
+            className="flex-1 rounded-xl border px-4 py-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+            aria-label="시"
+          >
+            <option value="">시</option>
+            {Array.from({ length: 24 }, (_, i) => (
+              <option key={i} value={String(i).padStart(2, "0")}>{i}시</option>
+            ))}
+          </select>
+          <select
+            value={timeMinute}
+            onChange={(e) => setTimeMinute(e.target.value)}
+            className="flex-1 rounded-xl border px-4 py-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+            aria-label="분"
+          >
+            <option value="">분</option>
+            {["00","05","10","15","20","25","30","35","40","45","50","55"].map((m) => (
+              <option key={m} value={m}>{m}분</option>
+            ))}
+          </select>
+        </div>
         <DialogFooter>
           <DialogClose className="min-h-11 flex-1 rounded-xl bg-gray-100 text-sm font-medium">
             취소
