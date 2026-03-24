@@ -31,19 +31,20 @@ export default function AdminScheduleCard({
   const totalGroups = scopeGroupIds.size;
   const progressPct = totalGroups > 0 ? Math.round((reportedCount / totalGroups) * 100) : 0;
 
-  // 후발 배지 (scope === "rear"인 경우만)
+  // location 우선, 없으면 title
+  const primaryText = schedule.location ?? schedule.title;
+
+  // 후발 배지
   const scopeBadge = scopeLabel ? (
     <span className="mr-1 inline-block rounded bg-orange-100 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-orange-800">
       {scopeLabel}
     </span>
   ) : null;
 
-  // 장소 + 시간 한 줄 (대기/완료 카드용)
+  // 대기/완료 카드 서브텍스트: "일정명 · 집결 HH:MM"
   const metaLine = (schedule.location || timeDisplay) ? (
     <p className="mt-0.5 flex flex-wrap items-center gap-x-1 text-sm text-muted-foreground">
-      {schedule.location && (
-        <><span aria-hidden="true">📍</span><span>{schedule.location}</span></>
-      )}
+      {schedule.location && <span>{schedule.title}</span>}
       {schedule.location && timeDisplay && <span aria-hidden="true">·</span>}
       {timeDisplay && <span>집결 {timeDisplay}</span>}
     </p>
@@ -68,18 +69,15 @@ export default function AdminScheduleCard({
           )}
         </div>
 
-        {/* 일정명 + 장소 */}
+        {/* 장소 (primary) + 일정명 (secondary) */}
         <p className="text-base font-semibold leading-snug">
-          {scopeBadge}{schedule.title}
+          {scopeBadge}{primaryText}
         </p>
         {schedule.location && (
-          <p className="mt-0.5 flex items-center gap-1 text-sm text-muted-foreground">
-            <span aria-hidden="true">📍</span>
-            {schedule.location}
-          </p>
+          <p className="mt-0.5 text-sm text-muted-foreground">{schedule.title}</p>
         )}
 
-        {/* 통계: 조 보고 + 인원 */}
+        {/* 통계 */}
         <div className="mt-3 flex items-center justify-between">
           <p className="text-sm font-medium" aria-live="polite">
             {reportedCount}/{totalGroups}조{" "}
@@ -131,9 +129,7 @@ export default function AdminScheduleCard({
             className="flex-1 text-left rounded-lg focus-visible:ring-2 focus-visible:ring-main-action"
             aria-label={`${schedule.title} 시간 수정`}
           >
-            <p className="font-medium">
-              {scopeBadge}{schedule.title}
-            </p>
+            <p className="font-medium">{scopeBadge}{primaryText}</p>
             {metaLine}
           </button>
           <button
@@ -157,9 +153,7 @@ export default function AdminScheduleCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
-          <p className="font-medium">
-            {scopeBadge}{schedule.title}
-          </p>
+          <p className="font-medium">{scopeBadge}{primaryText}</p>
           {metaLine}
         </div>
         <div className="flex flex-col items-end gap-1">
