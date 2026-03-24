@@ -209,16 +209,20 @@ export default function AdminScheduleCard({
         {scopeBadge}
       </div>
 
-      {/* 장소/일정명 */}
-      <p className="font-medium">{primaryText}</p>
-      {subtitle}
-
-      {/* 통계 — 현황 보기 버튼 위, 우정렬 */}
-      <p className="mt-3 flex items-center justify-end gap-1 text-sm text-muted-foreground" aria-live="polite">
-        <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
-        <span className="font-medium">{reportedCount}/{totalGroups}조</span>
-        <span className="text-xs">({checkedCount}/{totalMembers}명)</span>
-      </p>
+      {/* 장소/일정명 (좌) + 통계 (우) */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1">
+          <p className="font-medium">{primaryText}</p>
+          {subtitle}
+        </div>
+        <div className="flex flex-shrink-0 flex-col items-end gap-0.5 text-muted-foreground" aria-live="polite">
+          <p className="flex items-center gap-0.5 text-sm font-medium">
+            <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
+            {reportedCount}/{totalGroups}조
+          </p>
+          <p className="text-xs">({checkedCount}/{totalMembers}명)</p>
+        </div>
+      </div>
 
       <button
         onClick={onSummaryTap}
