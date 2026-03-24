@@ -166,13 +166,8 @@ export default function AdminBottomSheet({
                         />
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {checkedCount} / {totalCount}명
+                        {checkedCount} / {totalCount}명{absentCount > 0 ? ` 불참 ${absentCount}명` : ""}
                       </p>
-                      {absentCount > 0 && (
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          불참 {absentCount}명
-                        </p>
-                      )}
                     </button>
                   );
                 })}
