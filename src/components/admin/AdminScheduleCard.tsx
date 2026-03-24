@@ -134,7 +134,7 @@ export default function AdminScheduleCard({
       <div
         className="rounded-2xl bg-white p-4"
         role="region"
-        aria-label={`대기 일정: ${schedule.title}`}
+        aria-label={`예정 일정: ${schedule.title}`}
       >
         <div className="flex items-start justify-between gap-3">
           <button

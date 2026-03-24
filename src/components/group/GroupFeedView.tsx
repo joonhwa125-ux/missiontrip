@@ -253,7 +253,7 @@ function ScheduleCard({
                 : "bg-secondary text-muted-foreground"
             )}
           >
-            {status === "completed" ? "완료" : "대기"}
+            {status === "completed" ? "완료" : "예정"}
           </span>
           {status === "completed" && total > 0 && (
             <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
