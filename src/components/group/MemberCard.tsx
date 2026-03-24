@@ -45,7 +45,7 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
         {isAbsent ? (
           <button
             onClick={() => onCancel(user)}
-            className="min-h-11 min-w-16 rounded-xl bg-gray-200 px-3 text-sm font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="min-h-11 min-w-16 rounded-xl border border-gray-400 bg-gray-200 px-3 text-sm font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             aria-label={`${user.name} 불참 취소`}
           >
             {COPY.cancelButton}
@@ -53,7 +53,7 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
         ) : isChecked ? (
           <button
             onClick={() => onCancel(user)}
-            className="min-h-11 min-w-16 rounded-xl bg-gray-100 px-3 text-sm font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="min-h-11 min-w-16 rounded-xl border border-gray-400 bg-gray-100 px-3 text-sm font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             aria-label={`${user.name} 체크인 취소`}
           >
             {COPY.cancelButton}
