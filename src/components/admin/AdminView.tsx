@@ -295,7 +295,13 @@ export default function AdminView({
       {/* 통일 헤더 + 액션 아이콘 */}
       <PageHeader
         superTitle="2026 미션트립 · 관리자"
-        title="고찌"
+        title="Go찌Go찌"
+        titleNode={
+          <>
+            <span className="border-b-[3px] border-main-action pb-0.5">Go</span>찌
+            <span className="border-b-[3px] border-main-action pb-0.5">Go</span>찌
+          </>
+        }
         rightSlot={
           <div className="flex items-center">
             {activeSchedule && (
