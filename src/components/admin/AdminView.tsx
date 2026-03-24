@@ -294,13 +294,15 @@ export default function AdminView({
     <div className="flex min-h-full flex-col">
       {/* 통일 헤더 + 액션 아이콘 */}
       <PageHeader
-        superTitle="2026 미션트립 · 관리자"
+        superTitle="2026 미션트립"
         title="Go찌Go찌"
         titleNode={
-          <>
-            <span className="border-b-[3px] border-main-action pb-0.5">Go</span>찌
-            <span className="border-b-[3px] border-main-action pb-0.5">Go</span>찌
-          </>
+          <span className="flex items-center gap-2">
+            <span>Go찌Go찌</span>
+            <span className="rounded-full bg-gray-900 px-2.5 py-0.5 text-sm font-semibold text-white">
+              관리자
+            </span>
+          </span>
         }
         rightSlot={
           <div className="flex items-center">
