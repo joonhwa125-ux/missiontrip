@@ -171,7 +171,7 @@ function ScheduleCard({
   // 후발 배지 (waiting 카드 헤더용)
   const scopeLabel = schedule.scope === "rear" ? SCOPE_LABEL[schedule.scope] : null;
   const scopeBadge = scopeLabel ? (
-    <span className="inline-block rounded bg-orange-100 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-orange-800">
+    <span className="inline-block rounded bg-violet-100 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-violet-700">
       {scopeLabel}
     </span>
   ) : null;
