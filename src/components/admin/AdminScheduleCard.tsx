@@ -26,6 +26,7 @@ export default function AdminScheduleCard({
   const scopeMembers = filterMembersByScope(members, schedule.scope);
   const scopeMemberIds = new Set(scopeMembers.map((m) => m.id));
   const checkedCount = checkIns.filter((c) => !c.is_absent && scopeMemberIds.has(c.user_id)).length;
+  const absentCount = checkIns.filter((c) => c.is_absent && scopeMemberIds.has(c.user_id)).length;
   const totalMembers = scopeMembers.length;
   const scopeGroupIds = new Set(scopeMembers.map((m) => m.group_id));
   const totalGroups = scopeGroupIds.size;
@@ -98,13 +99,13 @@ export default function AdminScheduleCard({
         <p className="text-base font-semibold leading-snug">{primaryText}</p>
         {subtitle}
 
-        {/* 통계 */}
+        {/* 진행률 + 조·명 수 */}
         <div className="mt-3 flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">전체 진행률 {progressPct}%</p>
           <p className="text-sm font-medium" aria-live="polite">
-            {reportedCount}/{totalGroups}조{" "}
-            <span className="text-xs font-normal text-muted-foreground">보고완료</span>
+            {reportedCount}/{totalGroups}조
+            <span className="text-xs font-normal text-muted-foreground"> · {checkedCount}/{totalMembers}명</span>
           </p>
-          <p className="text-sm text-muted-foreground">{checkedCount}/{totalMembers}명</p>
         </div>
 
         {/* 프로그레스 바 */}
@@ -121,10 +122,11 @@ export default function AdminScheduleCard({
             style={{ width: `${progressPct}%` }}
           />
         </div>
-        <div className="mt-1 flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">전체 진행률 {progressPct}%</p>
-          <p className="text-xs text-muted-foreground">{totalGroups - reportedCount}조 대기 중</p>
-        </div>
+
+        {/* 불참 (있을 때만) */}
+        {absentCount > 0 && (
+          <p className="mt-1 text-xs text-muted-foreground">불참 {absentCount}명</p>
+        )}
 
         <button
           onClick={onSummaryTap}
