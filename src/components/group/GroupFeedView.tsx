@@ -75,9 +75,9 @@ export default function GroupFeedView({
         superTitle="2026 링키지랩 미션트립"
         title="혼디모영"
         titleNode={
-          <span className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
             <span>🍊 혼디모영</span>
-            <span className="rounded-full bg-gray-900 px-2.5 py-0.5 text-sm font-semibold text-white">
+            <span className="flex-shrink-0 rounded-full bg-gray-900 px-2 py-0.5 font-semibold text-white text-[clamp(0.6875rem,2.5vw,0.875rem)]">
               {groupName} 조장
             </span>
           </span>
