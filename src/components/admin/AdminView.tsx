@@ -294,7 +294,8 @@ export default function AdminView({
     <div className="flex min-h-full flex-col">
       {/* 통일 헤더 + 액션 아이콘 */}
       <PageHeader
-        title="실시간 현황"
+        superTitle="관리자 · 2026 미션트립"
+        title="고찌"
         rightSlot={
           <div className="flex items-center">
             {activeSchedule && (
