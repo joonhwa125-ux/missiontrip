@@ -211,8 +211,8 @@ export default function AdminScheduleCard({
       <p className="font-medium">{primaryText}</p>
       {subtitle}
 
-      {/* 통계 — 현황 보기 버튼 위, 좌정렬 */}
-      <p className="mt-3 flex items-center gap-1 text-sm text-muted-foreground" aria-live="polite">
+      {/* 통계 — 현황 보기 버튼 위, 우정렬 */}
+      <p className="mt-3 flex items-center justify-end gap-1 text-sm text-muted-foreground" aria-live="polite">
         <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
         <span className="font-medium">{reportedCount}/{totalGroups}조</span>
         <span className="text-xs">({checkedCount}/{totalMembers}명)</span>
