@@ -54,7 +54,7 @@ export default async function GroupPage() {
       .order("day_number")
       .order("sort_order"),
     supabase.from("groups").select("*").order("name"),
-    supabase.from("users").select("id, group_id, party"),
+    supabase.from("users").select("id, group_id, party, name, role"),
   ]);
 
   let checkIns: CheckIn[] = [];
@@ -113,7 +113,7 @@ export default async function GroupPage() {
       schedules={(schedules as Schedule[]) ?? []}
       allGroups={(allGroups as Group[]) ?? []}
       allCheckIns={allCheckIns}
-      allMembers={(allMembers ?? []).map((m) => ({ id: m.id, group_id: m.group_id, party: (m.party as "advance" | "rear") ?? null }))}
+      allMembers={(allMembers ?? []).map((m) => ({ id: m.id, group_id: m.group_id, party: (m.party as "advance" | "rear") ?? null, name: m.name, role: m.role }))}
       allReports={allReports}
       scheduleCounts={scheduleCounts}
       initialReported={initialReported}

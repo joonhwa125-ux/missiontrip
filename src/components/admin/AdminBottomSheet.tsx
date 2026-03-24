@@ -129,7 +129,7 @@ export default function AdminBottomSheet({
                       aria-label={`${group.name} 상세 보기`}
                     >
                       <div className="mb-2 flex items-center justify-between gap-1">
-                        <span className="truncate font-semibold">{group.name}</span>
+                        <span className="font-semibold leading-tight">{group.name}</span>
                         <span
                           className={cn(
                             "flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",

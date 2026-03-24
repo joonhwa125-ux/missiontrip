@@ -292,6 +292,12 @@ function GroupStatusGrid({
   // user_id -> group_id 매핑
   const userGroupMap = new Map(allMembers.map((m) => [m.id, m.group_id]));
 
+  // 조별 조장 이름
+  const groupLeaderMap = new Map<string, string>();
+  for (const m of allMembers) {
+    if (m.role === "leader") groupLeaderMap.set(m.group_id, m.name);
+  }
+
   // 조별 체크인 수 (불참 제외) + 조별 불참 수
   const groupCheckedCounts = new Map<string, number>();
   const groupAbsentCounts = new Map<string, number>();
@@ -336,6 +342,7 @@ function GroupStatusGrid({
                 <GroupMiniCard
                   key={g.id}
                   name={g.name}
+                  leaderName={groupLeaderMap.get(g.id)}
                   checked={checked}
                   total={total}
                   badge={badge}
@@ -352,12 +359,14 @@ function GroupStatusGrid({
 
 function GroupMiniCard({
   name,
+  leaderName,
   checked,
   total,
   badge,
   progress,
 }: {
   name: string;
+  leaderName?: string;
   checked: number;
   total: number;
   badge: GroupBadgeStatus;
@@ -367,7 +376,14 @@ function GroupMiniCard({
   return (
     <div className="rounded-xl border border-gray-200 bg-white px-3 py-2">
       <div className="mb-1 flex items-center justify-between gap-1">
-        <span className="truncate text-sm font-medium">{name}</span>
+        <div className="min-w-0">
+          <span className="block text-sm font-medium leading-tight">{name}</span>
+          {leaderName && (
+            <span className="block truncate text-[0.6875rem] text-muted-foreground">
+              {leaderName}
+            </span>
+          )}
+        </div>
         <span
           className={cn(
             "flex-shrink-0 rounded-full px-1.5 py-0.5 text-[0.625rem] font-medium leading-tight",

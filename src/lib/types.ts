@@ -31,11 +31,13 @@ export interface UserWithGroup extends User {
 /** 조장 화면용 멤버 (id, name, party) */
 export type GroupMember = Pick<User, "id" | "name" | "party">;
 
-/** 전체 현황용 멤버 (id, group_id, party) */
+/** 전체 현황용 멤버 (id, group_id, party, name, role) */
 export interface GroupMemberBrief {
   id: string;
   group_id: string;
   party: GroupParty | null;
+  name: string;
+  role: "member" | "leader" | "admin";
 }
 
 /** 관리자 화면용 멤버 (전화, 역할, 소속조 포함) */
