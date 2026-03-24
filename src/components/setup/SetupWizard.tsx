@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import PageHeader from "@/components/common/PageHeader";
 import DataSourceStep from "./DataSourceStep";
 import PreviewStep from "./PreviewStep";
 import ImportResultStep from "./ImportResultStep";
@@ -50,41 +49,34 @@ export default function SetupWizard() {
   };
 
   return (
-    <div className="mx-auto min-h-screen max-w-2xl bg-app-bg">
-      <PageHeader
-        title="설정"
-        backHref="/admin"
-        rightSlot={
-          <span className="text-sm font-medium opacity-70">
-            Step {step} / 3
-          </span>
-        }
-      />
+    <div className="mx-auto max-w-2xl px-4 py-6">
+      {/* 스텝 인디케이터 */}
+      <p className="mb-4 text-right text-xs text-muted-foreground" aria-live="polite">
+        Step {step} / 3
+      </p>
 
-      <main className="px-4 py-6">
-        {step === 1 && (
-          <DataSourceStep onPreviewReady={handlePreviewReady} />
-        )}
-        {step === 2 && previewData && (
-          <PreviewStep
-            data={previewData}
-            onImportDone={handleImportDone}
-            onImportError={handleImportError}
-            onBack={() => setStep(1)}
-          />
-        )}
-        {step === 3 && (
-          <ImportResultStep
-            result={importResult}
-            error={importError}
-            onReset={handleReset}
-          />
-        )}
+      {step === 1 && (
+        <DataSourceStep onPreviewReady={handlePreviewReady} />
+      )}
+      {step === 2 && previewData && (
+        <PreviewStep
+          data={previewData}
+          onImportDone={handleImportDone}
+          onImportError={handleImportError}
+          onBack={() => setStep(1)}
+        />
+      )}
+      {step === 3 && (
+        <ImportResultStep
+          result={importResult}
+          error={importError}
+          onReset={handleReset}
+        />
+      )}
 
-        <div className="mt-12 border-t pt-6">
-          <ResetDataButton />
-        </div>
-      </main>
+      <div className="mt-12 border-t pt-6">
+        <ResetDataButton />
+      </div>
     </div>
   );
 }

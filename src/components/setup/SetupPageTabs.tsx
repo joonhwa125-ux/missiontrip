@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { ChevronLeftIcon } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -28,11 +30,25 @@ export default function SetupPageTabs({ wizard, currentData, hasData }: Props) {
 
   return (
     <div className="flex min-h-screen flex-col">
-      {/* 상단 탭 */}
+      {/* 페이지 헤더 (단일) */}
+      <header className="flex items-center justify-between border-b border-gray-100 bg-white px-2 py-1">
+        <div className="flex items-center gap-1">
+          <Link
+            href="/admin"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-gray-900"
+            aria-label="관리자 화면으로 돌아가기"
+          >
+            <ChevronLeftIcon aria-hidden />
+          </Link>
+          <h1 className="text-lg font-bold">설정</h1>
+        </div>
+      </header>
+
+      {/* 탭 바 */}
       <div
         role="tablist"
         aria-label="셋업 메뉴"
-        className="flex gap-1 border-b border-gray-200 bg-white px-4 pt-2"
+        className="flex gap-1 border-b border-gray-200 bg-white px-4"
       >
         <button
           role="tab"
