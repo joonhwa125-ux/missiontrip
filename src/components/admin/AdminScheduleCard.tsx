@@ -104,7 +104,7 @@ export default function AdminScheduleCard({
           <p className="text-xs text-muted-foreground">전체 진행률 {progressPct}%</p>
           <p className="text-sm font-medium" aria-live="polite">
             {reportedCount}/{totalGroups}조
-            <span className="text-xs font-normal text-muted-foreground"> ({checkedCount}/{totalMembers}명)</span>
+            <span className="font-normal text-muted-foreground"> ({checkedCount}/{totalMembers}명)</span>
           </p>
         </div>
 
