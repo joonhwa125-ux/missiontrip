@@ -145,16 +145,18 @@ export default function AdminScheduleCard({
         role="region"
         aria-label={`예정 일정: ${schedule.title}`}
       >
-        {/* 헤더: 예정+시간 통합 배지 (좌, 탭하여 시간 수정) + 시작 버튼 (우) */}
+        {/* 헤더: 예정+시간 배지 (좌, 탭하여 시간 수정) + 후발 배지 + 시작 버튼 (우) */}
         <div className="mb-2 flex items-center justify-between gap-3">
-          <button
-            onClick={onTimeEdit}
-            className="inline-flex items-center gap-1 min-h-8 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-main-action"
-            aria-label={timeDisplay ? `집결 시간 ${timeDisplay} — 탭하여 수정` : "집결 시간 추가"}
-          >
-            {timeDisplay ? `예정 · 집결 ${timeDisplay}` : "예정 · + 시간"}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={onTimeEdit}
+              className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-main-action"
+              aria-label={timeDisplay ? `집결 시간 ${timeDisplay} — 탭하여 수정` : "집결 시간 추가"}
+            >
+              {timeDisplay ? `예정 · 집결 ${timeDisplay}` : "예정 · + 시간"}
+            </button>
             {scopeBadge}
-          </button>
+          </div>
           <button
             onClick={onActivate}
             className="flex-shrink-0 min-h-11 rounded-xl border border-gray-300 px-3 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-ring"
