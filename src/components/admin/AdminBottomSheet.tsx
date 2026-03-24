@@ -29,7 +29,6 @@ interface Props {
   isReadOnly: boolean;
   loading?: boolean;
   onClose: () => void;
-  onMembersChange: (members: AdminMember[]) => void;
   onCheckInsChange: React.Dispatch<React.SetStateAction<AdminCheckIn[]>>;
 }
 
@@ -42,7 +41,6 @@ export default function AdminBottomSheet({
   isReadOnly,
   loading,
   onClose,
-  onMembersChange,
   onCheckInsChange,
 }: Props) {
   const [drillGroup, setDrillGroup] = useState<Group | null>(null);
@@ -186,7 +184,6 @@ export default function AdminBottomSheet({
         checkIns={checkIns}
         activeSchedule={isReadOnly ? null : schedule}
         onClose={() => setDrillGroup(null)}
-        onMembersChange={onMembersChange}
         onCheckInsChange={onCheckInsChange}
       />
     </>

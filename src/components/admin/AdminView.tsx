@@ -372,7 +372,6 @@ export default function AdminView({
         isReadOnly={isBottomSheetReadOnly}
         loading={bottomSheetLoading}
         onClose={() => setBottomSheetSchedule(null)}
-        onMembersChange={setMembers}
         onCheckInsChange={handleBottomSheetCheckInsChange}
       />
 

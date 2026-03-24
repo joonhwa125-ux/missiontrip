@@ -2,9 +2,8 @@
 
 import { useState, useTransition, useMemo } from "react";
 import { useBroadcastCheckin } from "@/hooks/useBroadcastCheckin";
-import { PhoneIcon, ChevronDownIcon } from "@/components/ui/icons";
+import { PhoneIcon } from "@/components/ui/icons";
 import { createCheckin, deleteCheckin, markAbsent } from "@/actions/checkin";
-import { updateUserRole } from "@/actions/setup";
 import { COPY } from "@/lib/constants";
 import { formatTime } from "@/lib/utils";
 import {
@@ -23,9 +22,7 @@ type CheckIn = AdminCheckIn;
 
 type ConfirmAction =
   | { type: "absent"; member: Member }
-  | { type: "cancel"; member: Member }
-  | { type: "promote"; member: Member }
-  | { type: "demote"; member: Member };
+  | { type: "cancel"; member: Member };
 
 interface Props {
   group: Group | null;
@@ -33,7 +30,6 @@ interface Props {
   checkIns: CheckIn[];
   activeSchedule: Schedule | null;
   onClose: () => void;
-  onMembersChange: (members: Member[]) => void;
   onCheckInsChange: (updater: (prev: CheckIn[]) => CheckIn[]) => void;
 }
 
@@ -43,7 +39,6 @@ export default function AdminGroupDrillDown({
   checkIns,
   activeSchedule,
   onClose,
-  onMembersChange,
   onCheckInsChange,
 }: Props) {
   const [, startTransition] = useTransition();
@@ -127,27 +122,12 @@ export default function AdminGroupDrillDown({
     });
   }
 
-  function handleRoleChange(member: Member, newRole: "member" | "leader") {
-    startTransition(async () => {
-      const res = await updateUserRole(member.id, newRole);
-      if (res.ok) {
-        onMembersChange(
-          members.map((m) => (m.id === member.id ? { ...m, role: newRole } : m))
-        );
-      }
-    });
-  }
-
   function handleConfirm(action: ConfirmAction | null) {
     if (!action) return;
     setConfirm(null);
-
     if (action.type === "absent") handleAbsent(action.member);
     if (action.type === "cancel") handleCancel(action.member);
-    if (action.type === "promote") handleRoleChange(action.member, "leader");
-    if (action.type === "demote") handleRoleChange(action.member, "member");
   }
-
 
   return (
     <>
@@ -171,15 +151,12 @@ export default function AdminGroupDrillDown({
                 onCheckin={() => handleCheckin(m)}
                 onAbsent={() => setConfirm({ type: "absent", member: m })}
                 onCancel={() => setConfirm({ type: "cancel", member: m })}
-                onPromote={() => setConfirm({ type: "promote", member: m })}
-                onDemote={() => setConfirm({ type: "demote", member: m })}
               />
             ))}
           </ul>
         </DialogContent>
       </Dialog>
 
-      {/* 확인 모달 */}
       <ConfirmDialog
         action={confirm}
         onClose={() => setConfirm(null)}
@@ -197,8 +174,6 @@ interface MemberRowProps {
   onCheckin: () => void;
   onAbsent: () => void;
   onCancel: () => void;
-  onPromote: () => void;
-  onDemote: () => void;
 }
 
 function MemberRow({
@@ -208,31 +183,22 @@ function MemberRow({
   onCheckin,
   onAbsent,
   onCancel,
-  onPromote,
-  onDemote,
 }: MemberRowProps) {
   const isChecked = checkin && !checkin.is_absent;
   const isAbsent = checkin?.is_absent;
   const isLeader = member.role === "leader" || member.role === "admin_leader";
   const hasSchedule = !!activeSchedule;
 
-  const roleBadgeClass = isLeader
-    ? "flex items-center gap-0.5 rounded-lg border border-blue-200 bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 min-h-11 flex-shrink-0 focus-visible:ring-2 focus-visible:ring-blue-300"
-    : "flex items-center gap-0.5 rounded-lg border border-gray-200 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 min-h-11 flex-shrink-0 focus-visible:ring-2 focus-visible:ring-ring";
-
   return (
     <li className="rounded-xl bg-gray-50 px-3 py-2.5">
       {/* Row 1: 신원 */}
       <div className="flex items-center gap-2">
         <span className="min-w-0 flex-1 truncate font-medium">{member.name}</span>
-        <button
-          onClick={isLeader ? onDemote : onPromote}
-          className={roleBadgeClass}
-          aria-label={isLeader ? `${member.name} 조장 해제` : `${member.name} 조장 지정`}
-        >
-          {isLeader ? "조장" : "조원"}
-          <ChevronDownIcon aria-hidden />
-        </button>
+        {isLeader && (
+          <span className="flex-shrink-0 rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-500">
+            조장
+          </span>
+        )}
         {member.phone && (
           <a
             href={`tel:${member.phone}`}
@@ -321,14 +287,6 @@ function ConfirmDialog({ action, onClose, onConfirm }: ConfirmDialogProps) {
     cancel: {
       title: "체크인을 취소할까요?",
       desc: `${action.member.name}님의 체크인을 취소해요.`,
-    },
-    promote: {
-      title: `${action.member.name}을(를) 조장으로 지정할까요?`,
-      desc: "조장 권한이 부여됩니다.",
-    },
-    demote: {
-      title: `${action.member.name}의 조장 권한을 해제할까요?`,
-      desc: "조원으로 변경됩니다.",
     },
   };
 
