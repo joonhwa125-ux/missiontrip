@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -10,15 +11,15 @@ interface Props {
 }
 
 export default function SetupPageTabs({ wizard, currentData, hasData }: Props) {
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState<"upload" | "data">("upload");
 
-  // URL ?tab=data 파라미터로 초기 탭 결정 (import 완료 후 자동 전환용)
+  // ?tab=data URL 파라미터 변화 감지 → 탭 자동 전환
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("tab") === "data" && hasData) {
+    if (searchParams.get("tab") === "data" && hasData) {
       setTab("data");
     }
-  }, [hasData]);
+  }, [searchParams, hasData]);
 
   return (
     <div className="flex min-h-screen flex-col">

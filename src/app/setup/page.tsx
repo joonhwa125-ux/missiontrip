@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import SetupWizard from "@/components/setup/SetupWizard";
@@ -52,17 +53,19 @@ export default async function SetupPage() {
   const hasData = schedules.length > 0 || setupUsers.length > 0;
 
   return (
-    <SetupPageTabs
-      hasData={hasData}
-      wizard={<SetupWizard />}
-      currentData={
-        <CurrentDataView
-          schedules={schedules}
-          users={setupUsers}
-          groups={groups}
-          currentUserId={dbUser.id}
-        />
-      }
-    />
+    <Suspense>
+      <SetupPageTabs
+        hasData={hasData}
+        wizard={<SetupWizard />}
+        currentData={
+          <CurrentDataView
+            schedules={schedules}
+            users={setupUsers}
+            groups={groups}
+            currentUserId={dbUser.id}
+          />
+        }
+      />
+    </Suspense>
   );
 }
