@@ -286,9 +286,10 @@ function GroupStatusGrid({
     }
   }
 
-  // bus_name별 그룹핑
+  // 멤버가 0명인 그룹 제외 후 bus_name별 그룹핑
+  const nonEmptyGroups = allGroups.filter((g) => (groupMemberCounts.get(g.id) ?? 0) > 0);
   const busGroups = new Map<string, Group[]>();
-  for (const g of allGroups) {
+  for (const g of nonEmptyGroups) {
     const bus = g.bus_name ?? "미배정";
     if (!busGroups.has(bus)) busGroups.set(bus, []);
     busGroups.get(bus)!.push(g);

@@ -61,17 +61,19 @@ export default function AdminBottomSheet({
 
   const summaries = useMemo(
     () =>
-      groups.map((g) => {
-        const gMembers = scopeMembers.filter((m) => m.group_id === g.id);
-        const absentCount = gMembers.filter((m) => absentIds.has(m.id)).length;
-        const checkedCount = gMembers.filter(
-          (m) => checkedIds.has(m.id) && !absentIds.has(m.id)
-        ).length;
-        const totalCount = gMembers.length - absentCount;
-        const badge = getGroupBadgeStatus(totalCount, checkedCount, reportMap.has(g.id));
-        const leader = gMembers.find((m) => m.role === "leader");
-        return { group: g, totalCount, checkedCount, badge, leader };
-      }),
+      groups
+        .map((g) => {
+          const gMembers = scopeMembers.filter((m) => m.group_id === g.id);
+          const absentCount = gMembers.filter((m) => absentIds.has(m.id)).length;
+          const checkedCount = gMembers.filter(
+            (m) => checkedIds.has(m.id) && !absentIds.has(m.id)
+          ).length;
+          const totalCount = gMembers.length - absentCount;
+          const badge = getGroupBadgeStatus(totalCount, checkedCount, reportMap.has(g.id));
+          const leader = gMembers.find((m) => m.role === "leader");
+          return { group: g, totalCount, checkedCount, badge, leader, rawTotal: gMembers.length };
+        })
+        .filter((s) => s.rawTotal > 0),
     [groups, scopeMembers, checkedIds, absentIds, reportMap]
   );
 
