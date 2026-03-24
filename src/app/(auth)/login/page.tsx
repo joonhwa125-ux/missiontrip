@@ -40,7 +40,7 @@ function LoginContent() {
           >
             ✈
           </div>
-          <h1 className="text-2xl font-bold">🍊 몬딱GO</h1>
+          <h1 className="text-2xl font-bold">🍊 혼디모영</h1>
           <p className="text-sm text-muted-foreground">
             링키지랩 10주년 미션트립
           </p>

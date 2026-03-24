@@ -295,10 +295,10 @@ export default function AdminView({
       {/* 통일 헤더 + 액션 아이콘 */}
       <PageHeader
         superTitle="2026 링키지랩 미션트립"
-        title="몬딱GO"
+        title="혼디모영"
         titleNode={
           <span className="flex items-center gap-2">
-            <span>🍊 몬딱GO</span>
+            <span>🍊 혼디모영</span>
             <span className="rounded-full bg-gray-900 px-2.5 py-0.5 text-sm font-semibold text-white">
               관리자
             </span>
