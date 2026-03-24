@@ -12,9 +12,9 @@ interface Props {
 }
 
 const DAY_LABELS: Record<number, string> = {
-  1: '첫째 날',
-  2: '둘째 날',
-  3: '셋째 날',
+  1: '1일차',
+  2: '2일차',
+  3: '3일차',
 };
 
 export default function DayTabs({ days, selected, onChange, panelId, rightSlot }: Props) {
