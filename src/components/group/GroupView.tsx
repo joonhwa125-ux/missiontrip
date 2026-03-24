@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useRealtime } from "@/hooks/useRealtime";
+import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
 import { useToast } from "@/hooks/useToast";
 import { filterMembersByScope } from "@/lib/utils";
 import GroupFeedView from "./GroupFeedView";
@@ -68,18 +69,7 @@ export default function GroupView({
   }, []);
 
   // 백그라운드 복귀 시 서버 데이터 갱신 (탭 전환 후 stale 방지)
-  useEffect(() => {
-    let hiddenAt = 0;
-    const handleVisibility = () => {
-      if (document.hidden) {
-        hiddenAt = Date.now();
-      } else if (hiddenAt && Date.now() - hiddenAt > 3000) {
-        router.refresh();
-      }
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => document.removeEventListener("visibilitychange", handleVisibility);
-  }, [router]);
+  useVisibilityRefresh();
 
   // Realtime 구독 — GroupView 레벨 (feed <-> checkin 전환 시에도 유지)
   useRealtime(currentUser.group_id, false, {
