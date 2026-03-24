@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import PageHeader from "@/components/common/PageHeader";
 import DataSourceStep from "./DataSourceStep";
 import PreviewStep from "./PreviewStep";
@@ -17,6 +18,7 @@ interface ImportResult {
 }
 
 export default function SetupWizard() {
+  const router = useRouter();
   const [step, setStep] = useState<Step>(1);
   const [previewData, setPreviewData] = useState<SetupPreviewData | null>(null);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
@@ -31,6 +33,7 @@ export default function SetupWizard() {
     setImportResult(result);
     setImportError(null);
     setStep(3);
+    router.refresh(); // 서버 컴포넌트 재조회 → hasData 갱신 → "현재 데이터" 탭 활성화
   };
 
   const handleImportError = (error: string) => {
