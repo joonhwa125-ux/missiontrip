@@ -218,80 +218,29 @@ function MemberRow({
 
   return (
     <li className="rounded-xl bg-gray-50 px-3 py-2.5">
-      <div className="flex items-center justify-between gap-2">
-        {/* 왼쪽: 이름 + 역할 배지 + 전화 */}
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="truncate font-medium">{member.name}</span>
-          <span
-            className={
-              isLeader
-                ? "flex-shrink-0 rounded-full bg-main-action px-1.5 py-0.5 text-xs font-medium"
-                : "flex-shrink-0 rounded-full bg-gray-100 px-1.5 py-0.5 text-xs text-muted-foreground"
-            }
-          >
-            {isLeader ? "조장" : "조원"}
+      {/* Row 1: 신원 */}
+      <div className="flex items-center gap-2">
+        <span className="flex-1 font-medium">{member.name}</span>
+        {isLeader && (
+          <span className="flex-shrink-0 rounded-full bg-main-action px-1.5 py-0.5 text-xs font-medium">
+            조장
           </span>
-          {member.phone && (
-            <a
-              href={`tel:${member.phone}`}
-              className="flex min-h-11 min-w-11 items-center justify-center"
-              aria-label={`${member.name}에게 전화`}
-            >
-              <PhoneIcon />
-            </a>
-          )}
-        </div>
+        )}
+        {member.phone && (
+          <a
+            href={`tel:${member.phone}`}
+            className="flex min-h-11 min-w-11 items-center justify-center"
+            aria-label={`${member.name}에게 전화`}
+          >
+            <PhoneIcon />
+          </a>
+        )}
+      </div>
 
-        {/* 오른쪽: 상태/액션 + 조장 권한 */}
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          {!checkin && hasSchedule && (
-            <>
-              <button
-                onClick={onCheckin}
-                className="min-h-11 rounded-xl bg-main-action px-3 text-xs font-bold focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label={`${member.name} ${COPY.checkinButton}`}
-              >
-                {COPY.checkinButton}
-              </button>
-              <button
-                onClick={onAbsent}
-                className="min-h-11 rounded-xl border border-red-200 px-3 text-xs font-medium text-red-600 focus-visible:ring-2 focus-visible:ring-red-300"
-                aria-label={`${member.name} 불참 처리`}
-              >
-                {COPY.absent}
-              </button>
-            </>
-          )}
-          {isChecked && checkin?.checked_at && (
-            <span className="text-xs text-complete-check font-medium">
-              {formatTime(checkin.checked_at)} 확인
-            </span>
-          )}
-          {isAbsent && (
-            <>
-              <span className="text-xs text-muted-foreground font-medium">
-                {COPY.absent}
-              </span>
-              {hasSchedule && (
-                <button
-                  onClick={onCancel}
-                  className="min-h-11 rounded-xl border border-gray-300 px-3 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label={`${member.name} 불참 취소`}
-                >
-                  {COPY.cancelButton}
-                </button>
-              )}
-            </>
-          )}
-          {(isChecked && hasSchedule) && (
-            <button
-              onClick={onCancel}
-              className="min-h-11 rounded-xl border border-gray-300 px-3 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label={`${member.name} 체크인 취소`}
-            >
-              {COPY.cancelButton}
-            </button>
-          )}
+      {/* Row 2: 액션 */}
+      <div className="mt-1 flex items-center justify-between gap-1.5">
+        {/* 좌: 조장 권한 */}
+        <div>
           {isLeader ? (
             <button
               onClick={onDemote}
@@ -308,6 +257,62 @@ function MemberRow({
             >
               조장 지정
             </button>
+          )}
+        </div>
+
+        {/* 우: 체크인 액션 */}
+        <div className="flex items-center gap-1.5">
+          {!checkin && hasSchedule && (
+            <>
+              <button
+                onClick={onAbsent}
+                className="min-h-11 rounded-xl border border-red-200 px-3 text-xs font-medium text-red-600 focus-visible:ring-2 focus-visible:ring-red-300"
+                aria-label={`${member.name} 불참 처리`}
+              >
+                {COPY.absent}
+              </button>
+              <button
+                onClick={onCheckin}
+                className="min-h-11 rounded-xl bg-main-action px-3 text-xs font-bold focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label={`${member.name} ${COPY.checkinButton}`}
+              >
+                {COPY.checkinButton}
+              </button>
+            </>
+          )}
+          {isChecked && (
+            <>
+              {checkin?.checked_at && (
+                <span className="text-xs text-complete-check font-medium">
+                  {formatTime(checkin.checked_at)} 확인
+                </span>
+              )}
+              {hasSchedule && (
+                <button
+                  onClick={onCancel}
+                  className="min-h-11 rounded-xl border border-gray-300 px-3 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={`${member.name} 체크인 취소`}
+                >
+                  {COPY.cancelButton}
+                </button>
+              )}
+            </>
+          )}
+          {isAbsent && (
+            <>
+              <span className="text-xs text-muted-foreground font-medium">
+                {COPY.absent}
+              </span>
+              {hasSchedule && (
+                <button
+                  onClick={onCancel}
+                  className="min-h-11 rounded-xl border border-gray-300 px-3 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label={`${member.name} 불참 취소`}
+                >
+                  {COPY.cancelButton}
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
