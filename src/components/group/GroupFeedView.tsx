@@ -6,7 +6,7 @@ import { formatTime, cn, getScheduleStatus, sortSchedulesByStatus, getDefaultDay
 import PageHeader from "@/components/common/PageHeader";
 import DayTabs from "@/components/common/DayTabs";
 import { CheckIcon } from "@/components/ui/icons";
-import { COPY, GROUP_BADGE_STYLE } from "@/lib/constants";
+import { COPY, GROUP_BADGE_STYLE, isLeaderRole } from "@/lib/constants";
 import type { Schedule, CheckIn, Group, GroupMember, GroupMemberBrief, GroupBadgeStatus } from "@/lib/types";
 import {
   Dialog,
@@ -295,7 +295,7 @@ function GroupStatusGrid({
   // 조별 조장 이름
   const groupLeaderMap = new Map<string, string>();
   for (const m of allMembers) {
-    if (m.role === "leader" || m.role === "admin_leader") groupLeaderMap.set(m.group_id, m.name);
+    if (isLeaderRole(m.role)) groupLeaderMap.set(m.group_id, m.name);
   }
 
   // 조별 체크인 수 (불참 제외) + 조별 불참 수

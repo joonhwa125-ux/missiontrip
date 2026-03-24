@@ -66,7 +66,7 @@ export default function DayTabs({ days, selected, onChange, panelId, rightSlot }
                 tabIndex={isSelected ? 0 : -1}
                 onClick={() => onChange(day)}
                 className={cn(
-                  "min-h-11 flex-1 border-b-2 pb-3 text-sm font-semibold transition-all duration-200 focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-1",
+                  "min-h-11 flex-1 border-b-2 pb-3 text-base font-semibold transition-all duration-200 focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-1",
                   isSelected
                     ? "border-gray-900 text-gray-900"
                     : "border-transparent text-gray-400 hover:text-gray-600"

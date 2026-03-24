@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { isAdminRole } from "@/lib/constants";
 
 /** 현재 로그인 사용자의 DB 정보 조회 */
 export async function getCurrentUser() {
@@ -21,5 +22,5 @@ export async function getCurrentUser() {
 export async function requireAdmin() {
   const user = await getCurrentUser();
   if (!user) return null;
-  return (user.role === "admin" || user.role === "admin_leader") ? user : null;
+  return isAdminRole(user.role) ? user : null;
 }

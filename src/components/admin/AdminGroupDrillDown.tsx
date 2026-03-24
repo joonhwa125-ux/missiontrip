@@ -4,7 +4,7 @@ import { useState, useTransition, useMemo } from "react";
 import { useBroadcastCheckin } from "@/hooks/useBroadcastCheckin";
 import { PhoneIcon } from "@/components/ui/icons";
 import { createCheckin, deleteCheckin, markAbsent } from "@/actions/checkin";
-import { COPY } from "@/lib/constants";
+import { COPY, isLeaderRole } from "@/lib/constants";
 import { formatTime } from "@/lib/utils";
 import {
   Dialog,
@@ -186,7 +186,7 @@ function MemberRow({
 }: MemberRowProps) {
   const isChecked = checkin && !checkin.is_absent;
   const isAbsent = checkin?.is_absent;
-  const isLeader = member.role === "leader" || member.role === "admin_leader";
+  const isLeader = isLeaderRole(member.role);
   const hasSchedule = !!activeSchedule;
   return (
     <li className="flex min-h-[3rem] items-center gap-2 rounded-xl bg-gray-50 px-3">

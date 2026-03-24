@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+import { isAdminRole } from "@/lib/constants";
 
 import SetupWizard from "@/components/setup/SetupWizard";
 import SetupPageTabs from "@/components/setup/SetupPageTabs";
@@ -27,7 +28,7 @@ export default async function SetupPage() {
     .eq("email", user.email)
     .single();
 
-  if (!dbUser || (dbUser.role !== "admin" && dbUser.role !== "admin_leader")) {
+  if (!dbUser || !isAdminRole(dbUser.role)) {
     redirect("/login?error=unauthorized");
   }
 

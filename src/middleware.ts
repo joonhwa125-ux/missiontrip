@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
-import { ALLOWED_EMAIL_DOMAIN, ROLE_ROUTES } from "@/lib/constants";
+import { ALLOWED_EMAIL_DOMAIN, ROLE_ROUTES, isAdminRole } from "@/lib/constants";
 import type { UserRole } from "@/lib/types";
 
 // 인증 불필요 경로
@@ -57,7 +57,7 @@ export async function middleware(request: NextRequest) {
     const homeRoute = ROLE_ROUTES[role];
 
     // /setup 은 admin/admin_leader만 허용
-    if (pathname.startsWith("/setup") && role !== "admin" && role !== "admin_leader") {
+    if (pathname.startsWith("/setup") && !isAdminRole(role)) {
       return NextResponse.redirect(new URL(homeRoute, request.url));
     }
 

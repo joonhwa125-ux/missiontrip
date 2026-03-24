@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import { parseKSTTime } from "@/lib/utils";
+import { canCheckin } from "@/lib/constants";
 import type {
   ActionResult,
   SetupPreviewData,
@@ -355,7 +356,7 @@ function validateLeaderCount(
     const leaders = users.filter(
       (u) =>
         u.group_name === group.name &&
-        (u.role === "leader" || u.role === "admin" || u.role === "admin_leader")
+        canCheckin(u.role)
     );
     if (leaders.length === 0) {
       errors.push({

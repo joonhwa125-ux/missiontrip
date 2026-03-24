@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import { cn, getGroupBadgeStatus, filterMembersByScope } from "@/lib/utils";
-import { COPY, GROUP_BADGE_STYLE } from "@/lib/constants";
+import { COPY, GROUP_BADGE_STYLE, isLeaderRole } from "@/lib/constants";
 import {
   Dialog,
   DialogContent,
@@ -68,7 +68,7 @@ export default function AdminBottomSheet({
           ).length;
           const totalCount = gMembers.length - absentCount;
           const badge = getGroupBadgeStatus(totalCount, checkedCount, reportMap.has(g.id));
-          const leader = gMembers.find((m) => m.role === "leader" || m.role === "admin_leader");
+          const leader = gMembers.find((m) => isLeaderRole(m.role));
           return { group: g, totalCount, checkedCount, badge, leader, rawTotal: gMembers.length };
         })
         .filter((s) => s.rawTotal > 0),
@@ -180,7 +180,7 @@ export default function AdminBottomSheet({
 
       <AdminGroupDrillDown
         group={drillGroup}
-        members={members}
+        members={scopeMembers}
         checkIns={checkIns}
         activeSchedule={isReadOnly ? null : schedule}
         onClose={() => setDrillGroup(null)}

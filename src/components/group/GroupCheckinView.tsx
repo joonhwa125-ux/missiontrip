@@ -202,7 +202,8 @@ export default function GroupCheckinView({
             schedule_id: activeSchedule.id,
             pending_count: unchecked,
           };
-          await Promise.all([
+          // broadcast 실패는 DB 보고 성공에 영향 없음 — 각자 독립 처리
+          await Promise.allSettled([
             broadcast(CHANNEL_GLOBAL, EVENT_GROUP_REPORTED, reportPayload),
             broadcast(CHANNEL_ADMIN, EVENT_GROUP_REPORTED, reportPayload),
           ]);

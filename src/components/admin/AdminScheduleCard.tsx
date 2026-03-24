@@ -24,7 +24,8 @@ export default function AdminScheduleCard({
   const scopeLabel = schedule.scope === "rear" ? SCOPE_LABEL[schedule.scope] : null;
 
   const scopeMembers = filterMembersByScope(members, schedule.scope);
-  const checkedCount = checkIns.filter((c) => !c.is_absent).length;
+  const scopeMemberIds = new Set(scopeMembers.map((m) => m.id));
+  const checkedCount = checkIns.filter((c) => !c.is_absent && scopeMemberIds.has(c.user_id)).length;
   const totalMembers = scopeMembers.length;
   const scopeGroupIds = new Set(scopeMembers.map((m) => m.group_id));
   const totalGroups = scopeGroupIds.size;
@@ -120,7 +121,7 @@ export default function AdminScheduleCard({
 
         <button
           onClick={onSummaryTap}
-          className="mt-3 w-full min-h-11 rounded-xl bg-gray-50 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
+          className="mt-3 w-full min-h-11 rounded-xl bg-gray-50 px-4 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
           aria-label="전체 현황 보기"
         >
           전체 현황 보기 &gt;
@@ -184,7 +185,7 @@ export default function AdminScheduleCard({
       </div>
       <button
         onClick={onSummaryTap}
-        className="mt-2 w-full min-h-11 rounded-xl bg-gray-50 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action"
+        className="mt-2 w-full min-h-11 rounded-xl bg-gray-50 px-4 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action"
         aria-label="완료 일정 현황 보기"
       >
         현황 보기 &gt;

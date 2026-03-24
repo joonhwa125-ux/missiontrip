@@ -313,10 +313,10 @@ export default function AdminView({
             {activeSchedule && (
               <button
                 onClick={openCheckinSheet}
-                className="relative flex min-h-11 min-w-10 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
+                className="relative flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
                 aria-label={`${adminGroupName} 체크인 — 미확인 ${adminUncheckedCount}명`}
               >
-                <UsersIcon aria-hidden />
+                <UsersIcon className="h-6 w-6" aria-hidden />
                 {adminUncheckedCount > 0 && (
                   <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[0.625rem] font-bold leading-none text-white">
                     {adminUncheckedCount}
@@ -326,17 +326,17 @@ export default function AdminView({
             )}
             <button
               onClick={() => setAddOpen(true)}
-              className="flex min-h-11 min-w-10 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
               aria-label="일정 추가"
             >
-              <PlusIcon aria-hidden />
+              <PlusIcon className="h-6 w-6" aria-hidden />
             </button>
             <Link
               href="/setup"
-              className="flex min-h-11 min-w-10 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
               aria-label="설정"
             >
-              <SettingsIcon aria-hidden />
+              <SettingsIcon className="h-6 w-6" aria-hidden />
             </Link>
           </div>
         }

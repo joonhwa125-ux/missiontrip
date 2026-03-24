@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { isAdminRole } from "@/lib/constants";
 import AdminView from "@/components/admin/AdminView";
 import type { Group, Schedule } from "@/lib/types";
 
@@ -27,7 +28,7 @@ export default async function AdminPage() {
     .eq("email", authUser.email ?? "")
     .single();
 
-  if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "admin_leader")) redirect("/");
+  if (!currentUser || !isAdminRole(currentUser.role)) redirect("/");
 
   const [
     { data: groups },
