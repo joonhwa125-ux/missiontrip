@@ -71,7 +71,18 @@ export default function GroupFeedView({
   return (
     <div className="flex-1 overflow-y-auto">
       {/* 통일 헤더 */}
-      <PageHeader title="인원 체크" subtitle={groupName} />
+      <PageHeader
+        superTitle={`2026 링키지랩 미션트립 · ${groupName}`}
+        title="Go찌Go찌"
+        titleNode={
+          <span className="flex items-center gap-2">
+            <span>Go찌Go찌</span>
+            <span className="rounded-full bg-gray-900 px-2.5 py-0.5 text-sm font-semibold text-white">
+              조장
+            </span>
+          </span>
+        }
+      />
 
       {/* 일차 탭 + 일정 타임라인 */}
       <DayTabs days={days} selected={selectedDay} onChange={setSelectedDay} panelId="group-feed-panel" />

@@ -294,7 +294,7 @@ export default function AdminView({
     <div className="flex min-h-full flex-col">
       {/* 통일 헤더 + 액션 아이콘 */}
       <PageHeader
-        superTitle="2026 미션트립"
+        superTitle="2026 링키지랩 미션트립"
         title="Go찌Go찌"
         titleNode={
           <span className="flex items-center gap-2">
