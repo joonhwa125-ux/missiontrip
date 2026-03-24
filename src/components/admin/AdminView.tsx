@@ -152,15 +152,19 @@ export default function AdminView({
     [adminMembers]
   );
 
-  // 내 조 미확인 카운트 — 체크인 기록이 아예 없는 인원 (탑승완료·불참 모두 "확인됨")
+  // 내 조 미확인 카운트 — scope 필터 적용 후, 체크인 기록이 없는 인원
+  // (후발 일정 활성 시 선발 조원은 카운트 제외)
   const adminUncheckedCount = useMemo(() => {
     if (!activeSchedule) return 0;
+    const scopeMembers = filterMembersByScope(adminMembers, activeSchedule.scope);
+    if (scopeMembers.length === 0) return 0;
+    const scopeMemberIds = new Set(scopeMembers.map((m) => m.id));
     const ciList = checkInsMap[activeSchedule.id] ?? [];
     const confirmedIds = new Set(
-      ciList.filter((ci) => adminMemberIds.has(ci.user_id)).map((ci) => ci.user_id)
+      ciList.filter((ci) => scopeMemberIds.has(ci.user_id)).map((ci) => ci.user_id)
     );
-    return adminMembers.filter((m) => !confirmedIds.has(m.id)).length;
-  }, [activeSchedule, checkInsMap, adminMemberIds, adminMembers]);
+    return scopeMembers.filter((m) => !confirmedIds.has(m.id)).length;
+  }, [activeSchedule, checkInsMap, adminMembers]);
 
   // Sheet 열 때 현재 체크인 데이터로 초기화
   const openCheckinSheet = useCallback(() => {
