@@ -10,11 +10,26 @@ import {
   EVENT_SCHEDULE_UPDATED,
   EVENT_CHECKIN_UPDATED,
   EVENT_GROUP_REPORTED,
+  BROADCAST_SUBSCRIBE_TIMEOUT_MS,
 } from "@/lib/constants";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
 // 채널 레지스트리: useRealtime과 useBroadcast 간 동일 topic 채널 공유
-const channelRegistry = new Map<string, RealtimeChannel>();
+// Set 사용으로 동일 채널명 재등록 시 덮어쓰기 방지 (StrictMode 이중 마운트 안전)
+const channelRegistry = new Map<string, Set<RealtimeChannel>>();
+
+function registerChannel(name: string, ch: RealtimeChannel): void {
+  const set = channelRegistry.get(name) ?? new Set<RealtimeChannel>();
+  set.add(ch);
+  channelRegistry.set(name, set);
+}
+
+function unregisterChannel(ch: RealtimeChannel): void {
+  channelRegistry.forEach((set, key) => {
+    set.delete(ch);
+    if (set.size === 0) channelRegistry.delete(key);
+  });
+}
 
 interface RealtimeCallbacks {
   onScheduleActivated?: (payload: { schedule_id: string; title: string }) => void;
@@ -88,7 +103,7 @@ export function useRealtime(
       .subscribe(makeStatusHandler(CHANNEL_GLOBAL));
 
     channels.push(globalChannel);
-    channelRegistry.set(CHANNEL_GLOBAL, globalChannel);
+    registerChannel(CHANNEL_GLOBAL, globalChannel);
 
     // group:{groupId} 채널 — 조장
     if (groupId) {
@@ -101,7 +116,7 @@ export function useRealtime(
         .subscribe(makeStatusHandler(groupChannelName));
 
       channels.push(groupChannel);
-      channelRegistry.set(groupChannelName, groupChannel);
+      registerChannel(groupChannelName, groupChannel);
     }
 
     // admin 채널 — 관리자 (보고 + 체크인 업데이트 수신)
@@ -117,7 +132,7 @@ export function useRealtime(
         .subscribe(makeStatusHandler(CHANNEL_ADMIN));
 
       channels.push(adminChannel);
-      channelRegistry.set(CHANNEL_ADMIN, adminChannel);
+      registerChannel(CHANNEL_ADMIN, adminChannel);
     }
 
     channelsRef.current = channels;
@@ -126,10 +141,7 @@ export function useRealtime(
       clearTimeout(reconnectTimerRef.current);
       erroredRef.current.clear(); // StrictMode 재마운트 시 false positive 방지
       channels.forEach((ch) => {
-        // 레지스트리에서도 제거
-        channelRegistry.forEach((val, key) => {
-          if (val === ch) channelRegistry.delete(key);
-        });
+        unregisterChannel(ch);
         supabase.removeChannel(ch);
       });
     };
@@ -155,8 +167,9 @@ export function useBroadcast() {
 
   const broadcast = useCallback(
     async (channelName: string, event: string, payload: Record<string, unknown>) => {
-      // 1) useRealtime이 이미 구독 중인 채널 재사용
-      const existing = channelRegistry.get(channelName);
+      // 1) useRealtime이 이미 구독 중인 채널 재사용 (Set에서 첫 번째 활성 채널 선택)
+      const existingSet = channelRegistry.get(channelName);
+      const existing = existingSet ? Array.from(existingSet)[0] : undefined;
       if (existing) {
         await existing.send({ type: "broadcast", event, payload });
         return;
@@ -170,13 +183,17 @@ export function useBroadcast() {
         channel = supabaseRef.current.channel(channelName, {
           config: { broadcast: { self: true } },
         });
-        await new Promise<void>((resolve) => {
-          channel!.subscribe((status) => {
-            if (status === "SUBSCRIBED" || status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
-              resolve();
-            }
-          });
-        });
+        // T1-2: BROADCAST_SUBSCRIBE_TIMEOUT_MS 후 강제 resolve — subscribe 콜백 미도달 시 무한 대기 방지
+        await Promise.race([
+          new Promise<void>((resolve) => {
+            channel!.subscribe((status) => {
+              if (status === "SUBSCRIBED" || status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+                resolve();
+              }
+            });
+          }),
+          new Promise<void>((resolve) => setTimeout(resolve, BROADCAST_SUBSCRIBE_TIMEOUT_MS)),
+        ]);
         own.set(channelName, channel);
       }
 

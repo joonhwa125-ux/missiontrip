@@ -8,6 +8,9 @@ export const OFFLINE_PENDING_KEY = "mtrip_pending";
 export const OFFLINE_PENDING_REPORTS_KEY = "mtrip_pending_reports";
 export const ACTIVE_SCHEDULE_KEY = "mtrip_active_schedule";
 
+// Realtime
+export const BROADCAST_SUBSCRIBE_TIMEOUT_MS = 5_000; // broadcast 채널 구독 최대 대기 시간
+
 // Realtime 채널명
 export const CHANNEL_GLOBAL = "global";
 export const CHANNEL_ADMIN = "admin";
