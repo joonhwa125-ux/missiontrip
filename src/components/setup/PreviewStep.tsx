@@ -129,8 +129,8 @@ export default function PreviewStep({
                 <th className="sticky left-0 z-10 min-w-[96px] bg-gray-50 px-3 py-2">이름</th>
                 <th className="min-w-[110px] px-3 py-2">전화번호</th>
                 <th className="min-w-[80px] px-3 py-2">역할</th>
-                <th className="min-w-[72px] px-3 py-2">소속조</th>
-                <th className="min-w-[52px] px-3 py-2">선후발</th>
+                <th className="min-w-[96px] px-3 py-2">소속조</th>
+                <th className="min-w-[64px] px-3 py-2">선후발</th>
               </tr>
             </thead>
             <tbody>
