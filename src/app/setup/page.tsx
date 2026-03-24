@@ -27,7 +27,7 @@ export default async function SetupPage() {
     .eq("email", user.email)
     .single();
 
-  if (!dbUser || dbUser.role !== "admin") {
+  if (!dbUser || (dbUser.role !== "admin" && dbUser.role !== "admin_leader")) {
     redirect("/login?error=unauthorized");
   }
 
