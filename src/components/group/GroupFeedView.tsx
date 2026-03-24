@@ -257,30 +257,33 @@ function ScheduleCard({
 
   return (
     <div className="rounded-2xl bg-white p-4 opacity-55">
-      {/* 헤더: 완료 배지 + 집결시간 배지 + 후발 배지 (좌) + 카운트 (우) */}
-      <div className="mb-1.5 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1">
-          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
-            완료
+      {/* 헤더: 완료 배지 + 집결시간 배지 + 후발 배지 */}
+      <div className="mb-1.5 flex items-center gap-1">
+        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+          완료
+        </span>
+        {timeDisplay && (
+          <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
+            집결 {timeDisplay}
           </span>
-          {timeDisplay && (
-            <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
-              집결 {timeDisplay}
-            </span>
+        )}
+        {scopeBadge}
+      </div>
+      {/* 장소/일정명 (좌) + 카운트 (우하단) */}
+      <div className="flex items-end justify-between gap-2">
+        <div>
+          <p className="font-medium">{primaryText}</p>
+          {schedule.location && (
+            <p className="mt-0.5 text-sm text-muted-foreground">{schedule.title}</p>
           )}
-          {scopeBadge}
         </div>
         {total > 0 && (
-          <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+          <span className="flex-shrink-0 flex items-center gap-0.5 text-xs text-muted-foreground">
             <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
             {completedCount}/{total}명
           </span>
         )}
       </div>
-      <p className="font-medium">{primaryText}</p>
-      {schedule.location && (
-        <p className="mt-0.5 text-sm text-muted-foreground">{schedule.title}</p>
-      )}
     </div>
   );
 }
