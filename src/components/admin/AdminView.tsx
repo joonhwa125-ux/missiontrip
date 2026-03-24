@@ -314,7 +314,7 @@ export default function AdminView({
         }
         rightSlot={
           <div className="-mr-2 flex items-center">
-            {activeSchedule && (
+            {activeSchedule && adminCheckinMembers.length > 0 && (
               <button
                 onClick={openCheckinSheet}
                 className="relative flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
