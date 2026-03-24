@@ -267,7 +267,7 @@ export default function GroupCheckinView({
               <div key={m.id} className="relative flex-shrink-0">
                 <div
                   className={cn(
-                    "flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold",
+                    "flex h-11 w-11 items-center justify-center rounded-full text-[0.625rem] font-bold",
                     absent
                       ? "bg-gray-200 text-gray-500"
                       : checked
@@ -276,7 +276,7 @@ export default function GroupCheckinView({
                   )}
                   aria-label={`${m.name} ${absent ? "불참" : checked ? "탑승 완료" : "미탑승"}`}
                 >
-                  {m.name.charAt(0)}
+                  {m.name.slice(0, 3)}
                 </div>
                 {checked && !absent && (
                   <span

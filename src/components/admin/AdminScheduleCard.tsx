@@ -123,7 +123,7 @@ export default function AdminScheduleCard({
           className="mt-3 w-full min-h-11 rounded-xl bg-gray-50 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
           aria-label="전체 현황 보기"
         >
-          전체 현황 보기 →
+          전체 현황 보기 &gt;
         </button>
       </div>
     );
