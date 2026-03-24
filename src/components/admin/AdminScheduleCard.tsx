@@ -149,10 +149,11 @@ export default function AdminScheduleCard({
         <div className="mb-2 flex items-center justify-between gap-3">
           <button
             onClick={onTimeEdit}
-            className="min-h-8 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-main-action"
+            className="inline-flex items-center gap-1 min-h-8 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-main-action"
             aria-label={timeDisplay ? `집결 시간 ${timeDisplay} — 탭하여 수정` : "집결 시간 추가"}
           >
             {timeDisplay ? `예정 · 집결 ${timeDisplay}` : "예정 · + 시간"}
+            {scopeBadge}
           </button>
           <button
             onClick={onActivate}
@@ -164,7 +165,7 @@ export default function AdminScheduleCard({
         </div>
 
         {/* 장소/일정명 */}
-        <p className="font-medium">{primaryText}{scopeBadge}</p>
+        <p className="font-medium">{primaryText}</p>
         {subtitle}
       </div>
     );
