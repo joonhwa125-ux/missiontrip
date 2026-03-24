@@ -193,12 +193,14 @@ function MemberRow({
     <li className="rounded-xl bg-gray-50 px-3 py-2.5">
       {/* Row 1: 신원 */}
       <div className="flex items-center gap-2">
-        <span className="min-w-0 flex-1 truncate font-medium">{member.name}</span>
-        {isLeader && (
-          <span className="flex-shrink-0 rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-500">
-            조장
-          </span>
-        )}
+        <div className="flex min-w-0 flex-1 items-center gap-1.5">
+          <span className="truncate font-medium">{member.name}</span>
+          {isLeader && (
+            <span className="flex-shrink-0 rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-500">
+              조장
+            </span>
+          )}
+        </div>
         {member.phone && (
           <a
             href={`tel:${member.phone}`}
@@ -209,6 +211,7 @@ function MemberRow({
           </a>
         )}
       </div>
+
 
       {/* Row 2: 체크인 액션 (우측 정렬) */}
       <div className="mt-1 flex items-center justify-end gap-1.5">
