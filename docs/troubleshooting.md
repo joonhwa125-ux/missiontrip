@@ -167,8 +167,7 @@ process.env.NEXT_PUBLIC_SUPABASE_URL
 
 ### 해결
 
-`requireEnv()` 패턴은 서버 전용 파일(`server.ts`)에만 적용한다.
-클라이언트 파일(`client.ts`)은 리터럴 접근을 유지하고, 주석으로 이유를 명시한다.
+`client.ts`는 리터럴 접근을 유지하고, 주석으로 이유를 명시한다.
 
 ```typescript
 // client.ts — 브라우저 전용
@@ -180,14 +179,10 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 }
-
-// server.ts — 서버 전용 (requireEnv 적용 가능)
-function requireEnv(key: string): string {
-  const val = process.env[key];
-  if (!val) throw new Error(`환경 변수 ${key}가 없어요.`);
-  return val;
-}
 ```
+
+> ⚠️ **주의:** 이 1차 해결에서 "server.ts에는 requireEnv 적용 가능"이라 결론 내렸으나 이는 잘못된 판단이었다.
+> server.ts에 동일하게 적용하자 에러가 재발했다 → TSG-004 참조.
 
 ### 교훈
 
@@ -202,6 +197,115 @@ function requireEnv(key: string): string {
 - [ ] `process.env.NEXT_PUBLIC_FOO` (리터럴 ✅) vs `process.env["NEXT_PUBLIC_FOO"]` (동적 ❌)
 - [ ] 에러 발생 파일이 `"use client"` 또는 브라우저 API(`window`, `navigator`)를 사용하는지 확인
 - [ ] Next.js 공식 문서 [Environment Variables](https://nextjs.org/docs/app/building-your-application/configuring/environment-variables) 참고
+
+---
+
+## TSG-004: server.ts에 requireEnv() 적용 후 동일 에러 재발 (패턴 일반화 오류)
+
+**일시:** 2026-03-24
+**심각도:** High — Vercel 배포 후 브라우저 콘솔에 에러 지속
+**영향 범위:** 인증이 필요한 모든 페이지 (SSR 실패)
+**선행 이슈:** TSG-003
+
+### 증상
+
+TSG-003 해결 후 "server.ts는 서버 전용이니 requireEnv() 적용 가능"이라 판단하여
+`server.ts`의 `NEXT_PUBLIC_SUPABASE_URL` 접근도 동적 키 방식으로 변경.
+Vercel에 배포하자 동일한 에러 재발:
+
+```
+Error: 환경 변수 NEXT_PUBLIC_SUPABASE_URL가 없어요. .env.local을 확인해주세요.
+  at a (117-b98045fc74f10635.js:1)
+  at y (page-8481b78082139a44.js:1:5593)
+  at rE (fd9d1056-be5dff4774564a1e.js:1:40341)
+```
+
+Vercel 환경변수 미설정이 원인이라 판단 → 변수 설정 확인 → 이미 설정되어 있음.
+Redeploy 시도 → 에러 지속.
+
+### 근본 원인
+
+TSG-003의 결론이 불완전했다.
+"동적 접근은 클라이언트 번들에서만 문제"라는 가정이 틀렸다.
+
+**실제 메커니즘:**
+
+Next.js는 `NEXT_PUBLIC_*` 변수를 **빌드 시 정적 치환**한다. 이 치환은 리터럴 접근에만 적용된다.
+`server.ts`가 서버 전용 파일이라도 해당 코드가 클라이언트 번들에 포함될 수 있는
+경로가 존재하며, 그 경우 동적 접근 `process.env[key]`는 `undefined`를 반환한다.
+
+```
+스택 트레이스 분석:
+117-b98045fc74f10635.js   ← requireEnv() 함수 (공유 청크에 포함됨)
+640-78a22547ba94a830.js   ← createClient() 호출
+page-8481b78082139a44.js  ← 페이지 컴포넌트 (클라이언트 번들)
+fd9d1056-...              ← React 런타임 (renderWithHooks 등)
+```
+
+`server.ts`의 `requireEnv`가 공유 청크(`117-...`)에 포함되어
+React가 클라이언트 렌더링 중 이를 호출 → `process.env["NEXT_PUBLIC_SUPABASE_URL"]`
+→ `undefined` → 에러 throw.
+
+**근본 실수: 패턴 일반화 오류**
+
+```typescript
+// ❌ "서버 파일이니 괜찮겠지"라는 잘못된 가정
+// server.ts
+function requireEnv(key: string): string {
+  return process.env[key];  // NEXT_PUBLIC_*에도 동적 접근
+}
+requireEnv("NEXT_PUBLIC_SUPABASE_URL")  // 클라이언트 번들 포함 시 undefined
+requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+```
+
+기존 `middleware.ts`가 이미 리터럴 접근을 쓰고 있었다.
+이유를 파악하지 않고 `requireEnv()` 패턴을 일괄 적용한 것이 실수였다.
+
+### 해결
+
+`NEXT_PUBLIC_*`는 `server.ts`에서도 리터럴 접근으로 변경.
+서버 전용 변수(`SUPABASE_SERVICE_ROLE_KEY`)만 동적 접근 유지.
+
+```typescript
+// server.ts — 최종 올바른 구현
+// NEXT_PUBLIC_* → 리터럴 접근 (middleware.ts와 동일)
+// SUPABASE_SERVICE_ROLE_KEY → requireServerEnv() 동적 접근 (서버 전용)
+function requireServerEnv(key: string): string {
+  const val = process.env[key];
+  if (!val) throw new Error(`서버 환경 변수 ${key}가 없어요.`);
+  return val;
+}
+
+export function createClient() {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,     // ✅ 리터럴
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, // ✅ 리터럴
+    { ... }
+  );
+}
+
+export function createServiceClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,      // ✅ 리터럴
+    requireServerEnv("SUPABASE_SERVICE_ROLE_KEY"), // ✅ 서버 전용만 동적
+    { ... }
+  );
+}
+```
+
+### 교훈
+
+- **`NEXT_PUBLIC_*` 환경변수는 서버 파일 포함 전체 코드베이스에서 리터럴 접근만 사용한다**
+- "서버 파일이니 괜찮겠지"는 틀린 가정 — Next.js 번들러는 서버/클라이언트 경계를 예측하기 어렵다
+- 기존 패턴(`middleware.ts`의 리터럴 접근)에는 이유가 있다 — 새 패턴 도입 전 기존 코드의 의도를 먼저 파악한다
+- **"Vercel 환경변수가 없어서"라는 1차 진단이 틀렸다** — 에러 메시지만 보고 인프라 문제로 단정하지 않는다
+
+### 진단 체크리스트
+
+- [ ] `process.env[` 패턴이 `NEXT_PUBLIC_*` 변수에 사용되고 있지 않은지 전체 검색
+- [ ] Vercel 환경변수가 실제로 설정되어 있는지 확인하기 전에 먼저 코드를 검토한다
+- [ ] 에러 스택 트레이스의 파일명이 `.js` 해시 형태면 클라이언트 번들 포함 가능성 확인
+- [ ] 기존 코드에서 동일 케이스를 어떻게 처리했는지 참고한다 (`middleware.ts` 패턴)
 
 ---
 
