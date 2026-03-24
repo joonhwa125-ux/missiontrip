@@ -122,15 +122,15 @@ export default function PreviewStep({
         className="max-h-96 overflow-auto rounded-xl bg-white"
       >
         {tab === "users" ? (
-          <table className="w-full text-sm">
+          <table className="text-sm">
             <thead className="sticky top-0 bg-gray-50">
               <tr className="text-left text-xs text-muted-foreground">
-                <th className="px-3 py-2">#</th>
-                <th className="px-3 py-2">이름</th>
-                <th className="px-3 py-2">전화번호</th>
-                <th className="px-3 py-2">역할</th>
-                <th className="px-3 py-2">소속조</th>
-                <th className="px-3 py-2">선후발</th>
+                <th className="min-w-[36px] px-3 py-2">#</th>
+                <th className="sticky left-0 z-10 min-w-[96px] bg-gray-50 px-3 py-2">이름</th>
+                <th className="min-w-[110px] px-3 py-2">전화번호</th>
+                <th className="min-w-[80px] px-3 py-2">역할</th>
+                <th className="min-w-[72px] px-3 py-2">소속조</th>
+                <th className="min-w-[52px] px-3 py-2">선후발</th>
               </tr>
             </thead>
             <tbody>
@@ -143,7 +143,7 @@ export default function PreviewStep({
                   )}
                 >
                   <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
-                  <td className="px-3 py-2 font-medium">{u.name}</td>
+                  <td className="sticky left-0 z-10 bg-white px-3 py-2 font-medium shadow-[1px_0_0_0_#e5e7eb]">{u.name}</td>
                   <td className="px-3 py-2">{u.phone ?? "-"}</td>
                   <td className="px-3 py-2">{u.role}</td>
                   <td className="px-3 py-2">{u.group_name}</td>
@@ -153,15 +153,15 @@ export default function PreviewStep({
             </tbody>
           </table>
         ) : (
-          <table className="w-full text-sm">
+          <table className="text-sm">
             <thead className="sticky top-0 bg-gray-50">
               <tr className="text-left text-xs text-muted-foreground">
-                <th className="px-3 py-2">일차</th>
-                <th className="px-3 py-2">순서</th>
-                <th className="px-3 py-2">일정명</th>
-                <th className="px-3 py-2">장소</th>
-                <th className="px-3 py-2">시각</th>
-                <th className="px-3 py-2">대상</th>
+                <th className="min-w-[48px] px-3 py-2">일차</th>
+                <th className="min-w-[36px] px-3 py-2">순서</th>
+                <th className="min-w-[140px] px-3 py-2">일정명</th>
+                <th className="min-w-[100px] px-3 py-2">장소</th>
+                <th className="min-w-[56px] px-3 py-2">시각</th>
+                <th className="min-w-[48px] px-3 py-2">대상</th>
               </tr>
             </thead>
             <tbody>

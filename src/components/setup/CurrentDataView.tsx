@@ -100,16 +100,16 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
       {/* 일정 테이블 */}
       {tab === "schedules" && (
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          <table className="w-full text-sm">
+          <table className="text-sm">
             <thead className="bg-gray-50">
               <tr className="text-left text-xs text-muted-foreground">
-                <th className="px-3 py-2">일차</th>
-                <th className="px-3 py-2">순</th>
-                <th className="px-3 py-2">장소</th>
-                <th className="px-3 py-2">일정명</th>
-                <th className="px-3 py-2">시각</th>
-                <th className="px-3 py-2">대상</th>
-                <th className="px-3 py-2 text-right">작업</th>
+                <th className="min-w-[48px] px-3 py-2">일차</th>
+                <th className="min-w-[36px] px-3 py-2">순</th>
+                <th className="min-w-[100px] px-3 py-2">장소</th>
+                <th className="min-w-[140px] px-3 py-2">일정명</th>
+                <th className="min-w-[56px] px-3 py-2">시각</th>
+                <th className="min-w-[48px] px-3 py-2">대상</th>
+                <th className="min-w-[88px] px-3 py-2 text-right">작업</th>
               </tr>
             </thead>
             <tbody>
@@ -120,8 +120,8 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
                 <tr key={s.id} className="border-t border-gray-100">
                   <td className="px-3 py-2">{s.day_number}일</td>
                   <td className="px-3 py-2">{s.sort_order}</td>
-                  <td className="max-w-[100px] truncate px-3 py-2 text-xs text-muted-foreground">{s.location ?? "-"}</td>
-                  <td className="max-w-[140px] truncate px-3 py-2">{s.title}</td>
+                  <td className="px-3 py-2 text-xs text-muted-foreground">{s.location ?? "-"}</td>
+                  <td className="px-3 py-2">{s.title}</td>
                   <td className="px-3 py-2 text-xs">{s.scheduled_time ? formatTime(s.scheduled_time) : "-"}</td>
                   <td className="px-3 py-2 text-xs">{SCOPE_LABEL[s.scope]}</td>
                   <td className="px-3 py-2">
@@ -140,15 +140,15 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
       {/* 참가자 테이블 */}
       {tab === "users" && (
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          <table className="w-full text-sm">
+          <table className="text-sm">
             <thead className="bg-gray-50">
               <tr className="text-left text-xs text-muted-foreground">
-                <th className="px-3 py-2">이름</th>
-                <th className="px-3 py-2">전화</th>
-                <th className="px-3 py-2">역할</th>
-                <th className="px-3 py-2">소속조</th>
-                <th className="px-3 py-2">선후발</th>
-                <th className="px-3 py-2 text-right">작업</th>
+                <th className="sticky left-0 z-10 min-w-[96px] bg-gray-50 px-3 py-2">이름</th>
+                <th className="min-w-[110px] px-3 py-2">전화</th>
+                <th className="min-w-[80px] px-3 py-2">역할</th>
+                <th className="min-w-[72px] px-3 py-2">소속조</th>
+                <th className="min-w-[52px] px-3 py-2">선후발</th>
+                <th className="min-w-[88px] px-3 py-2 text-right">작업</th>
               </tr>
             </thead>
             <tbody>
@@ -157,7 +157,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
               )}
               {users.map((u) => (
                 <tr key={u.id} className="border-t border-gray-100">
-                  <td className="px-3 py-2 font-medium">{u.name}</td>
+                  <td className="sticky left-0 z-10 bg-white px-3 py-2 font-medium shadow-[1px_0_0_0_#e5e7eb]">{u.name}</td>
                   <td className="px-3 py-2 text-xs">{u.phone ?? "-"}</td>
                   <td className="px-3 py-2 text-xs">{ROLE_LABEL[u.role]}</td>
                   <td className="px-3 py-2 text-xs">{groupMap.get(u.group_id) ?? "-"}</td>
