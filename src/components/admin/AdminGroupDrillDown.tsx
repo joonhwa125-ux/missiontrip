@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useMemo } from "react";
 import { useBroadcastCheckin } from "@/hooks/useBroadcastCheckin";
-import { PhoneIcon } from "@/components/ui/icons";
+import { PhoneIcon, ChevronDownIcon } from "@/components/ui/icons";
 import { createCheckin, deleteCheckin, markAbsent } from "@/actions/checkin";
 import { updateUserRole } from "@/actions/setup";
 import { COPY } from "@/lib/constants";
@@ -216,16 +216,23 @@ function MemberRow({
   const isLeader = member.role === "leader" || member.role === "admin_leader";
   const hasSchedule = !!activeSchedule;
 
+  const roleBadgeClass = isLeader
+    ? "flex items-center gap-0.5 rounded-full border border-blue-200 bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 min-h-11 flex-shrink-0 focus-visible:ring-2 focus-visible:ring-blue-300"
+    : "flex items-center gap-0.5 rounded-full border border-gray-200 bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 min-h-11 flex-shrink-0 focus-visible:ring-2 focus-visible:ring-ring";
+
   return (
     <li className="rounded-xl bg-gray-50 px-3 py-2.5">
-      {/* Row 1: 신원 */}
+      {/* Row 1: 신원 + 역할 배지-버튼 */}
       <div className="flex items-center gap-2">
         <span className="flex-1 font-medium">{member.name}</span>
-        {isLeader && (
-          <span className="flex-shrink-0 rounded-full bg-main-action px-1.5 py-0.5 text-xs font-medium">
-            조장
-          </span>
-        )}
+        <button
+          onClick={isLeader ? onDemote : onPromote}
+          className={roleBadgeClass}
+          aria-label={isLeader ? `${member.name} 조장 해제` : `${member.name} 조장 지정`}
+        >
+          {isLeader ? "조장" : "조원"}
+          <ChevronDownIcon aria-hidden />
+        </button>
         {member.phone && (
           <a
             href={`tel:${member.phone}`}
@@ -237,84 +244,60 @@ function MemberRow({
         )}
       </div>
 
-      {/* Row 2: 액션 */}
-      <div className="mt-1 flex items-center justify-between gap-1.5">
-        {/* 좌: 조장 권한 */}
-        <div>
-          {isLeader ? (
+      {/* Row 2: 체크인 액션 */}
+      <div className="mt-1 flex items-center justify-end gap-1.5">
+        {!checkin && hasSchedule && (
+          <>
             <button
-              onClick={onDemote}
-              className="min-h-11 rounded-xl border border-gray-300 px-3 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label={`${member.name} 조장 해제`}
+              onClick={onAbsent}
+              className="min-h-11 rounded-xl border border-red-200 px-3 text-xs font-medium text-red-600 focus-visible:ring-2 focus-visible:ring-red-300"
+              aria-label={`${member.name} 불참 처리`}
             >
-              조장 해제
+              {COPY.absent}
             </button>
-          ) : (
             <button
-              onClick={onPromote}
-              className="min-h-11 rounded-xl border border-blue-200 px-3 text-xs font-medium text-blue-600 focus-visible:ring-2 focus-visible:ring-blue-300"
-              aria-label={`${member.name} 조장 지정`}
+              onClick={onCheckin}
+              className="min-h-11 rounded-xl bg-main-action px-3 text-xs font-bold focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={`${member.name} ${COPY.checkinButton}`}
             >
-              조장 지정
+              {COPY.checkinButton}
             </button>
-          )}
-        </div>
-
-        {/* 우: 체크인 액션 */}
-        <div className="flex items-center gap-1.5">
-          {!checkin && hasSchedule && (
-            <>
-              <button
-                onClick={onAbsent}
-                className="min-h-11 rounded-xl border border-red-200 px-3 text-xs font-medium text-red-600 focus-visible:ring-2 focus-visible:ring-red-300"
-                aria-label={`${member.name} 불참 처리`}
-              >
-                {COPY.absent}
-              </button>
-              <button
-                onClick={onCheckin}
-                className="min-h-11 rounded-xl bg-main-action px-3 text-xs font-bold focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label={`${member.name} ${COPY.checkinButton}`}
-              >
-                {COPY.checkinButton}
-              </button>
-            </>
-          )}
-          {isChecked && (
-            <>
-              {checkin?.checked_at && (
-                <span className="text-xs text-complete-check font-medium">
-                  {formatTime(checkin.checked_at)} 확인
-                </span>
-              )}
-              {hasSchedule && (
-                <button
-                  onClick={onCancel}
-                  className="min-h-11 rounded-xl border border-gray-300 px-3 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label={`${member.name} 체크인 취소`}
-                >
-                  {COPY.cancelButton}
-                </button>
-              )}
-            </>
-          )}
-          {isAbsent && (
-            <>
-              <span className="text-xs text-muted-foreground font-medium">
-                {COPY.absent}
+          </>
+        )}
+        {isChecked && (
+          <>
+            {checkin?.checked_at && (
+              <span className="text-xs text-complete-check font-medium">
+                {formatTime(checkin.checked_at)} 확인
               </span>
-              {hasSchedule && (
-                <button
-                  onClick={onCancel}
-                  className="min-h-11 rounded-xl border border-gray-300 px-3 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label={`${member.name} 불참 취소`}
-                >
-                  {COPY.cancelButton}
-                </button>
-              )}
-            </>
-          )}
-        </div>
+            )}
+            {hasSchedule && (
+              <button
+                onClick={onCancel}
+                className="min-h-11 rounded-xl border border-gray-300 px-3 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label={`${member.name} 체크인 취소`}
+              >
+                {COPY.cancelButton}
+              </button>
+            )}
+          </>
+        )}
+        {isAbsent && (
+          <>
+            <span className="text-xs text-muted-foreground font-medium">
+              {COPY.absent}
+            </span>
+            {hasSchedule && (
+              <button
+                onClick={onCancel}
+                className="min-h-11 rounded-xl border border-gray-300 px-3 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                aria-label={`${member.name} 불참 취소`}
+              >
+                {COPY.cancelButton}
+              </button>
+            )}
+          </>
+        )}
       </div>
     </li>
   );
