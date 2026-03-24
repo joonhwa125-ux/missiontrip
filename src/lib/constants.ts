@@ -99,11 +99,11 @@ export const GROUP_BADGE_STYLE: Record<
 export const COPY = {
   notChecked: "확인 전",
   checked: (time: string) => `${time} 탑승 완료`,
-  checkinButton: "탔어요!",
+  checkinButton: "왔수다!",
   cancelButton: "취소",
   totalCount: (checked: number, total: number) => `${checked} / ${total}명 탑승 완료`,
   allComplete: (groupName: string) => `${groupName} 전원 탑승 완료!`,
-  reportButtonComplete: "우리 조 다 탔어요! 보고하기",
+  reportButtonComplete: "우리 조 다 왔수다! 보고하기",
   reportButtonDone: "보고 완료!",
   reportButtonPending: (n: number) => `${n}명 남았어요`,
   absent: "불참",

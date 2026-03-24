@@ -9,7 +9,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // 메인 액션 (탔어요!, 보고 버튼)
+        // 메인 액션 (왔수다!, 보고 버튼)
         default: "bg-main-action text-foreground hover:bg-yellow-400 active:bg-yellow-500",
         // 취소 버튼
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
