@@ -14,9 +14,14 @@ export default function SetupPageTabs({ wizard, currentData, hasData }: Props) {
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<"upload" | "data">("upload");
 
-  // ?tab=data URL 파라미터 변화 감지 → 탭 자동 전환
+  // 탭 결정 우선순위:
+  // 1. ?tab=upload 명시 → 업로드 탭
+  // 2. hasData=true → 현재 데이터 탭 (재진입 시에도 편집 뷰 바로 접근)
+  // 3. 그 외 → 업로드 탭
   useEffect(() => {
-    if (searchParams.get("tab") === "data" && hasData) {
+    if (searchParams.get("tab") === "upload") {
+      setTab("upload");
+    } else if (hasData) {
       setTab("data");
     }
   }, [searchParams, hasData]);

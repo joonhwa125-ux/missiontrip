@@ -46,6 +46,7 @@ export default function SetupWizard() {
     setPreviewData(null);
     setImportResult(null);
     setImportError(null);
+    router.replace("/setup?tab=upload"); // 데이터 있어도 업로드 탭으로 명시 이동
   };
 
   return (
