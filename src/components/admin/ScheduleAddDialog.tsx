@@ -115,13 +115,16 @@ export default function ScheduleAddDialog({
               </select>
             </div>
           </div>
-          <input
-            type="time"
-            value={newTime}
-            onChange={(e) => setNewTime(e.target.value)}
-            className="w-full appearance-none rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
-            aria-label="예정 시각 (선택)"
-          />
+          <div className="flex flex-col gap-1">
+            <label className="px-1 text-xs font-medium text-muted-foreground">예정 시각 (선택)</label>
+            <input
+              type="time"
+              value={newTime}
+              onChange={(e) => setNewTime(e.target.value)}
+              className="w-full appearance-none rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+              aria-label="예정 시각 (선택)"
+            />
+          </div>
         </div>
         <DialogFooter>
           <DialogClose className="min-h-11 flex-1 rounded-xl bg-gray-100 text-sm font-medium">
