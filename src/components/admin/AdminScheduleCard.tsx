@@ -49,7 +49,7 @@ export default function AdminScheduleCard({
 
   // 후발 배지
   const scopeBadge = scopeLabel ? (
-    <span className="mr-1 inline-block rounded bg-orange-100 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-orange-800">
+    <span className="ml-1 inline-block rounded bg-orange-100 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-orange-800">
       {scopeLabel}
     </span>
   ) : null;
@@ -95,7 +95,7 @@ export default function AdminScheduleCard({
 
         {/* 장소 (primary) + 일정명 (secondary) */}
         <p className="text-base font-semibold leading-snug">
-          {scopeBadge}{primaryText}
+          {primaryText}{scopeBadge}
         </p>
         {subtitle}
 
@@ -156,7 +156,7 @@ export default function AdminScheduleCard({
         {/* 장소/일정명 + 활성화 버튼 (기존 우측 위치 유지) */}
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
-            <p className="font-medium">{scopeBadge}{primaryText}</p>
+            <p className="font-medium">{primaryText}{scopeBadge}</p>
             {subtitle}
           </div>
           <button
@@ -193,7 +193,7 @@ export default function AdminScheduleCard({
       {/* 장소/일정명 + 조 통계 */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
-          <p className="font-medium">{scopeBadge}{primaryText}</p>
+          <p className="font-medium">{primaryText}{scopeBadge}</p>
           {subtitle}
         </div>
         <div className="flex flex-col items-end gap-0.5">
