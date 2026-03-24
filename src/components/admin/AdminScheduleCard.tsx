@@ -53,7 +53,7 @@ export default function AdminScheduleCard({
   if (status === "active") {
     return (
       <div
-        className="rounded-2xl ring-2 ring-main-action bg-main-action/20 p-4"
+        className="rounded-2xl ring-2 ring-main-action bg-white p-4"
         role="region"
         aria-label={`진행중 일정: ${schedule.title}`}
       >
@@ -63,7 +63,7 @@ export default function AdminScheduleCard({
             진행중
           </span>
           {timeDisplay && (
-            <span className="rounded bg-black/10 px-1.5 py-0.5 text-xs text-gray-700">
+            <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
               집결 {timeDisplay}
             </span>
           )}
@@ -88,7 +88,7 @@ export default function AdminScheduleCard({
 
         {/* 프로그레스 바 */}
         <div
-          className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-black/10"
+          className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-gray-100"
           role="progressbar"
           aria-valuenow={progressPct}
           aria-valuemin={0}
@@ -107,7 +107,7 @@ export default function AdminScheduleCard({
 
         <button
           onClick={onSummaryTap}
-          className="mt-3 w-full min-h-11 rounded-xl bg-white/60 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
+          className="mt-3 w-full min-h-11 rounded-xl bg-gray-50 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
           aria-label="전체 현황 보기"
         >
           전체 현황 보기 →
