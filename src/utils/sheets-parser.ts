@@ -207,7 +207,8 @@ export function parseSchedulesSheet(rows: string[][]): {
     const row = rows[i];
     if (!row || row.every((c) => !c)) continue;
 
-    const dayNumber = parseInt(row[0], 10);
+    const dayRaw = row[0]?.trim() ?? "";
+    const dayNumber = parseInt(dayRaw.replace(/\D/g, ""), 10);
     const sortOrder = parseInt(row[1], 10);
     const location = row[2]?.trim() || null;
     const title = row[3]?.trim();
