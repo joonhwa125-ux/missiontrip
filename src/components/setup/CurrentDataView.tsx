@@ -102,14 +102,14 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
           <table className="text-sm">
             <thead className="bg-gray-50">
-              <tr className="text-center text-xs text-muted-foreground">
-                <th className="min-w-[48px] px-3 py-2">일차</th>
-                <th className="min-w-[36px] px-3 py-2">순</th>
-                <th className="min-w-[120px] px-3 py-2">장소</th>
-                <th className="min-w-[160px] px-3 py-2">일정명</th>
-                <th className="min-w-[56px] px-3 py-2">시각</th>
-                <th className="min-w-[48px] px-3 py-2">대상</th>
-                <th className="min-w-[88px] px-3 py-2 text-right">작업</th>
+              <tr className="text-xs text-muted-foreground">
+                <th className="min-w-[48px] px-3 py-2 text-center">일차</th>
+                <th className="min-w-[36px] px-3 py-2 text-center">순</th>
+                <th className="min-w-[120px] px-3 py-2 text-left">장소</th>
+                <th className="min-w-[160px] px-3 py-2 text-left">일정명</th>
+                <th className="min-w-[56px] px-3 py-2 text-center">시각</th>
+                <th className="min-w-[48px] px-3 py-2 text-center">대상</th>
+                <th className="min-w-[108px] px-3 py-2 text-right">작업</th>
               </tr>
             </thead>
             <tbody>
@@ -118,12 +118,12 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
               )}
               {schedules.map((s) => (
                 <tr key={s.id} className="border-t border-gray-100">
-                  <td className="px-3 py-2">{s.day_number}일</td>
-                  <td className="px-3 py-2">{s.sort_order}</td>
+                  <td className="px-3 py-2 text-center">{s.day_number}일</td>
+                  <td className="px-3 py-2 text-center">{s.sort_order}</td>
                   <td className="px-3 py-2 text-xs text-muted-foreground">{s.location ?? "-"}</td>
                   <td className="px-3 py-2">{s.title}</td>
-                  <td className="px-3 py-2 text-xs">{s.scheduled_time ? formatTime(s.scheduled_time) : "-"}</td>
-                  <td className="px-3 py-2 text-xs">{SCOPE_LABEL[s.scope]}</td>
+                  <td className="px-3 py-2 text-center text-xs">{s.scheduled_time ? formatTime(s.scheduled_time) : "-"}</td>
+                  <td className="px-3 py-2 text-center text-xs">{SCOPE_LABEL[s.scope]}</td>
                   <td className="px-3 py-2">
                     <div className="flex justify-end gap-1">
                       <button onClick={() => setEditSchedule(s)} className="min-h-11 rounded-lg bg-gray-100 px-2 text-xs font-medium focus-visible:ring-2 focus-visible:ring-main-action" aria-label={`${s.title} 수정`}>수정</button>
@@ -142,12 +142,12 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
           <table className="text-sm">
             <thead className="bg-gray-50">
-              <tr className="text-center text-xs text-muted-foreground">
-                <th className="sticky left-0 z-10 min-w-[96px] bg-gray-50 px-3 py-2">이름</th>
-                <th className="min-w-[110px] px-3 py-2">전화</th>
-                <th className="min-w-[80px] px-3 py-2">역할</th>
-                <th className="min-w-[96px] px-3 py-2">소속조</th>
-                <th className="min-w-[64px] px-3 py-2">선후발</th>
+              <tr className="text-xs text-muted-foreground">
+                <th className="sticky left-0 z-10 min-w-[96px] bg-gray-50 px-3 py-2 text-left">이름</th>
+                <th className="min-w-[110px] px-3 py-2 text-left">전화</th>
+                <th className="min-w-[80px] px-3 py-2 text-center">역할</th>
+                <th className="min-w-[96px] px-3 py-2 text-center">소속조</th>
+                <th className="min-w-[64px] px-3 py-2 text-center">선후발</th>
                 <th className="min-w-[108px] px-3 py-2 text-right">작업</th>
               </tr>
             </thead>
@@ -159,9 +159,9 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
                 <tr key={u.id} className="border-t border-gray-100">
                   <td className="sticky left-0 z-10 bg-white px-3 py-2 font-medium shadow-[1px_0_0_0_#e5e7eb]">{u.name}</td>
                   <td className="px-3 py-2 text-xs">{u.phone ?? "-"}</td>
-                  <td className="px-3 py-2 text-xs">{ROLE_LABEL[u.role]}</td>
-                  <td className="px-3 py-2 text-xs">{groupMap.get(u.group_id) ?? "-"}</td>
-                  <td className="px-3 py-2 text-xs">{PARTY_LABEL(u.party)}</td>
+                  <td className="px-3 py-2 text-center text-xs">{ROLE_LABEL[u.role]}</td>
+                  <td className="px-3 py-2 text-center text-xs">{groupMap.get(u.group_id) ?? "-"}</td>
+                  <td className="px-3 py-2 text-center text-xs">{PARTY_LABEL(u.party)}</td>
                   <td className="px-3 py-2">
                     <div className="flex justify-end gap-1">
                       <button onClick={() => setEditUser(u)} className="min-h-11 rounded-lg bg-gray-100 px-2 text-xs font-medium focus-visible:ring-2 focus-visible:ring-main-action" aria-label={`${u.name} 수정`}>수정</button>

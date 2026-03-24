@@ -124,13 +124,13 @@ export default function PreviewStep({
         {tab === "users" ? (
           <table className="text-sm">
             <thead className="sticky top-0 bg-gray-50">
-              <tr className="text-center text-xs text-muted-foreground">
-                <th className="min-w-[36px] px-3 py-2">#</th>
-                <th className="sticky left-0 z-10 min-w-[96px] bg-gray-50 px-3 py-2">이름</th>
-                <th className="min-w-[110px] px-3 py-2">전화번호</th>
-                <th className="min-w-[80px] px-3 py-2">역할</th>
-                <th className="min-w-[96px] px-3 py-2">소속조</th>
-                <th className="min-w-[64px] px-3 py-2">선후발</th>
+              <tr className="text-xs text-muted-foreground">
+                <th className="min-w-[36px] px-3 py-2 text-center">#</th>
+                <th className="sticky left-0 z-10 min-w-[96px] bg-gray-50 px-3 py-2 text-left">이름</th>
+                <th className="min-w-[110px] px-3 py-2 text-left">전화번호</th>
+                <th className="min-w-[80px] px-3 py-2 text-center">역할</th>
+                <th className="min-w-[96px] px-3 py-2 text-center">소속조</th>
+                <th className="min-w-[64px] px-3 py-2 text-center">선후발</th>
               </tr>
             </thead>
             <tbody>
@@ -142,12 +142,12 @@ export default function PreviewStep({
                     errorRows.has(i + 2) && "bg-red-50"
                   )}
                 >
-                  <td className="px-3 py-2 text-muted-foreground">{i + 1}</td>
+                  <td className="px-3 py-2 text-center text-muted-foreground">{i + 1}</td>
                   <td className="sticky left-0 z-10 bg-white px-3 py-2 font-medium shadow-[1px_0_0_0_#e5e7eb]">{u.name}</td>
                   <td className="px-3 py-2">{u.phone ?? "-"}</td>
-                  <td className="px-3 py-2">{u.role}</td>
-                  <td className="px-3 py-2">{u.group_name}</td>
-                  <td className="px-3 py-2">{u.party ? (SCOPE_LABEL[u.party] ?? "-") : "-"}</td>
+                  <td className="px-3 py-2 text-center">{u.role}</td>
+                  <td className="px-3 py-2 text-center">{u.group_name}</td>
+                  <td className="px-3 py-2 text-center">{u.party ? (SCOPE_LABEL[u.party] ?? "-") : "-"}</td>
                 </tr>
               ))}
             </tbody>
@@ -155,24 +155,24 @@ export default function PreviewStep({
         ) : (
           <table className="text-sm">
             <thead className="sticky top-0 bg-gray-50">
-              <tr className="text-center text-xs text-muted-foreground">
-                <th className="min-w-[48px] px-3 py-2">일차</th>
-                <th className="min-w-[36px] px-3 py-2">순서</th>
-                <th className="min-w-[160px] px-3 py-2">일정명</th>
-                <th className="min-w-[120px] px-3 py-2">장소</th>
-                <th className="min-w-[56px] px-3 py-2">시각</th>
-                <th className="min-w-[48px] px-3 py-2">대상</th>
+              <tr className="text-xs text-muted-foreground">
+                <th className="min-w-[48px] px-3 py-2 text-center">일차</th>
+                <th className="min-w-[36px] px-3 py-2 text-center">순서</th>
+                <th className="min-w-[160px] px-3 py-2 text-left">일정명</th>
+                <th className="min-w-[120px] px-3 py-2 text-left">장소</th>
+                <th className="min-w-[56px] px-3 py-2 text-center">시각</th>
+                <th className="min-w-[48px] px-3 py-2 text-center">대상</th>
               </tr>
             </thead>
             <tbody>
               {data.schedules.map((s, i) => (
                 <tr key={i} className="border-t">
-                  <td className="px-3 py-2">{s.day_number}</td>
-                  <td className="px-3 py-2">{s.sort_order}</td>
+                  <td className="px-3 py-2 text-center">{s.day_number}</td>
+                  <td className="px-3 py-2 text-center">{s.sort_order}</td>
                   <td className="px-3 py-2 font-medium">{s.title}</td>
                   <td className="px-3 py-2">{s.location ?? "-"}</td>
-                  <td className="px-3 py-2">{s.scheduled_time ?? "-"}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-2 text-center">{s.scheduled_time ?? "-"}</td>
+                  <td className="px-3 py-2 text-center">
                     {s.scope === "all" ? "전체" : (SCOPE_LABEL[s.scope] ?? s.scope)}
                   </td>
                 </tr>
