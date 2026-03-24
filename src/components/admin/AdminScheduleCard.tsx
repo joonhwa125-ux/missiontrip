@@ -50,7 +50,7 @@ export default function AdminScheduleCard({
 
   // 후발 배지
   const scopeBadge = scopeLabel ? (
-    <span className="inline-block rounded bg-orange-100 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-orange-800">
+    <span className="inline-block rounded bg-violet-100 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-violet-700">
       {scopeLabel}
     </span>
   ) : null;
@@ -209,20 +209,16 @@ export default function AdminScheduleCard({
         {scopeBadge}
       </div>
 
-      {/* 장소/일정명 (좌) + 통계 (우) */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1">
-          <p className="font-medium">{primaryText}</p>
-          {subtitle}
-        </div>
-        <div className="flex flex-shrink-0 flex-col items-end gap-0.5 text-muted-foreground" aria-live="polite">
-          <p className="flex items-center gap-0.5 text-sm font-medium">
-            <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
-            {reportedCount}/{totalGroups}조
-          </p>
-          <p className="text-xs">({checkedCount}/{totalMembers}명)</p>
-        </div>
-      </div>
+      {/* 장소/일정명 */}
+      <p className="font-medium">{primaryText}</p>
+      {subtitle}
+
+      {/* 통계 — 하단 */}
+      <p className="mt-2 flex items-center gap-1 text-sm text-muted-foreground" aria-live="polite">
+        <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
+        {reportedCount}/{totalGroups}조
+        <span className="font-normal"> ({checkedCount}/{totalMembers}명)</span>
+      </p>
 
       <button
         onClick={onSummaryTap}
