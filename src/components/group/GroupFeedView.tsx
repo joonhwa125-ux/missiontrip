@@ -176,15 +176,6 @@ function ScheduleCard({
     </span>
   ) : null;
 
-  // 완료 카드 서브텍스트: "일정명 · 집결 HH:MM"
-  const metaLine = (schedule.location || timeDisplay) ? (
-    <p className="mt-0.5 flex flex-wrap items-center gap-x-1 text-sm text-muted-foreground">
-      {schedule.location && <span>{schedule.title}</span>}
-      {schedule.location && timeDisplay && <span aria-hidden="true">·</span>}
-      {timeDisplay && <span>집결 {timeDisplay}</span>}
-    </p>
-  ) : null;
-
   if (status === "active") {
     const checked = checkIns.filter((c) => !c.is_absent).length;
     const absentCount = checkIns.filter((c) => c.is_absent).length;
@@ -196,13 +187,16 @@ function ScheduleCard({
           className="w-full text-left min-h-11 focus-visible:ring-2 focus-visible:ring-main-action rounded-lg"
           aria-label={`${schedule.title} 체크인 화면으로 이동`}
         >
-          {/* 헤더: 진행중 pill + 집결 시간 */}
+          {/* 헤더: 진행중 pill + 후발 배지 (좌) + 집결 시간 (우) */}
           <div className="mb-2 flex items-center justify-between">
-            <span className="rounded-full bg-main-action px-2 py-0.5 text-xs font-bold text-gray-900">
-              진행중
-            </span>
+            <div className="flex items-center gap-1">
+              <span className="rounded-full bg-main-action px-2 py-0.5 text-xs font-bold text-gray-900">
+                진행중
+              </span>
+              {scopeBadge}
+            </div>
             {timeDisplay && (
-              <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
+              <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
                 집결 {timeDisplay}
               </span>
             )}
@@ -265,23 +259,30 @@ function ScheduleCard({
 
   return (
     <div className="rounded-2xl bg-white p-4 opacity-55">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex-1">
-          <p className="font-medium">{primaryText}</p>
-          {metaLine}
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          <span className="flex-shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+      {/* 헤더: 완료 배지 + 집결시간 배지 + 후발 배지 (좌) + 카운트 (우) */}
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1">
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
             완료
           </span>
-          {total > 0 && (
-            <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
-              <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
-              {completedCount}/{total}명
+          {timeDisplay && (
+            <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
+              집결 {timeDisplay}
             </span>
           )}
+          {scopeBadge}
         </div>
+        {total > 0 && (
+          <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+            <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
+            {completedCount}/{total}명
+          </span>
+        )}
       </div>
+      <p className="font-medium">{primaryText}</p>
+      {schedule.location && (
+        <p className="mt-0.5 text-sm text-muted-foreground">{schedule.title}</p>
+      )}
     </div>
   );
 }
