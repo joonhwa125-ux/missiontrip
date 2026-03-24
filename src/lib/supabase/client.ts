@@ -1,14 +1,10 @@
 import { createBrowserClient } from "@supabase/ssr";
 
-function requireEnv(key: string): string {
-  const val = process.env[key];
-  if (!val) throw new Error(`환경 변수 ${key}가 없어요. .env.local을 확인해주세요.`);
-  return val;
-}
-
+// NEXT_PUBLIC_* 환경변수는 Next.js가 빌드 시 정적 치환하므로
+// 반드시 리터럴로 참조해야 함 (동적 접근 process.env[key] 불가)
 export function createClient() {
   return createBrowserClient(
-    requireEnv("NEXT_PUBLIC_SUPABASE_URL"),
-    requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 }

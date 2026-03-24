@@ -11,6 +11,12 @@ interface Props {
   rightSlot?: React.ReactNode;
 }
 
+const DAY_LABELS: Record<number, string> = {
+  1: '첫째 날',
+  2: '둘째 날',
+  3: '셋째 날',
+};
+
 export default function DayTabs({ days, selected, onChange, panelId, rightSlot }: Props) {
   const tablistRef = useRef<HTMLDivElement>(null);
 
@@ -66,7 +72,7 @@ export default function DayTabs({ days, selected, onChange, panelId, rightSlot }
                     : "border-transparent text-gray-400 hover:text-gray-600"
                 )}
               >
-                {day}일차
+                {DAY_LABELS[day] ?? `${day}일차`}
               </button>
             );
           })}
