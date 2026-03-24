@@ -29,7 +29,7 @@ export default function SetupPageTabs({ wizard, currentData, hasData }: Props) {
   }, [searchParams, hasData]);
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="mx-auto flex w-full max-w-lg flex-col min-h-screen bg-app-bg">
       {/* 페이지 헤더 (단일) */}
       <header className="flex items-center justify-between border-b border-gray-100 bg-white px-2 py-1">
         <div className="flex items-center gap-1">
@@ -52,21 +52,6 @@ export default function SetupPageTabs({ wizard, currentData, hasData }: Props) {
       >
         <button
           role="tab"
-          id="tab-upload"
-          aria-selected={tab === "upload"}
-          aria-controls="panel-upload"
-          onClick={() => setTab("upload")}
-          className={cn(
-            "min-h-11 rounded-t-lg px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action",
-            tab === "upload"
-              ? "border-b-2 border-gray-900 text-gray-900"
-              : "text-muted-foreground hover:text-gray-600"
-          )}
-        >
-          데이터 업로드
-        </button>
-        <button
-          role="tab"
           id="tab-data"
           aria-selected={tab === "data"}
           aria-controls="panel-data"
@@ -82,6 +67,21 @@ export default function SetupPageTabs({ wizard, currentData, hasData }: Props) {
         >
           현재 데이터
           {!hasData && <span className="ml-1 text-xs">(없음)</span>}
+        </button>
+        <button
+          role="tab"
+          id="tab-upload"
+          aria-selected={tab === "upload"}
+          aria-controls="panel-upload"
+          onClick={() => setTab("upload")}
+          className={cn(
+            "min-h-11 rounded-t-lg px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action",
+            tab === "upload"
+              ? "border-b-2 border-gray-900 text-gray-900"
+              : "text-muted-foreground hover:text-gray-600"
+          )}
+        >
+          데이터 업로드
         </button>
       </div>
 
