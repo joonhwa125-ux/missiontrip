@@ -1,16 +1,11 @@
 "use client";
 
 import { useState, useTransition, useMemo } from "react";
-import { useBroadcast } from "@/hooks/useRealtime";
+import { useBroadcastCheckin } from "@/hooks/useBroadcastCheckin";
+import { PhoneIcon } from "@/components/ui/icons";
 import { createCheckin, deleteCheckin, markAbsent } from "@/actions/checkin";
 import { updateUserRole } from "@/actions/setup";
-import {
-  CHANNEL_GLOBAL,
-  CHANNEL_GROUP_PREFIX,
-  CHANNEL_ADMIN,
-  EVENT_CHECKIN_UPDATED,
-  COPY,
-} from "@/lib/constants";
+import { COPY } from "@/lib/constants";
 import { formatTime } from "@/lib/utils";
 import {
   Dialog,
@@ -52,7 +47,7 @@ export default function AdminGroupDrillDown({
   onCheckInsChange,
 }: Props) {
   const [, startTransition] = useTransition();
-  const { broadcast } = useBroadcast();
+  const broadcastCheckin = useBroadcastCheckin(group?.id ?? "", activeSchedule?.id);
   const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
 
   const groupMembers = useMemo(
@@ -94,7 +89,7 @@ export default function AdminGroupDrillDown({
     startTransition(async () => {
       const res = await createCheckin(member.id, activeSchedule.id);
       if (res.ok) {
-        await broadcastCheckin(member.group_id, member.id, "insert");
+        await broadcastCheckin(member.id, "insert");
       } else {
         onCheckInsChange((prev) => prev.filter((c) => c.user_id !== member.id));
       }
@@ -108,7 +103,7 @@ export default function AdminGroupDrillDown({
     startTransition(async () => {
       const res = await markAbsent(member.id, activeSchedule.id);
       if (res.ok) {
-        await broadcastCheckin(member.group_id, member.id, "insert", true);
+        await broadcastCheckin(member.id, "insert", true);
       } else {
         onCheckInsChange((prev) => prev.filter((c) => c.user_id !== member.id));
       }
@@ -125,7 +120,7 @@ export default function AdminGroupDrillDown({
     startTransition(async () => {
       const res = await deleteCheckin(member.id, activeSchedule.id);
       if (res.ok) {
-        await broadcastCheckin(member.group_id, member.id, "delete");
+        await broadcastCheckin(member.id, "delete");
       } else if (removed) {
         onCheckInsChange((prev) => [...prev, removed!]);
       }
@@ -153,19 +148,6 @@ export default function AdminGroupDrillDown({
     if (action.type === "demote") handleRoleChange(action.member, "member");
   }
 
-  async function broadcastCheckin(groupId: string, userId: string, action: "insert" | "delete", isAbsent = false) {
-    const payload = {
-      user_id: userId,
-      schedule_id: activeSchedule?.id ?? "",
-      action,
-      is_absent: isAbsent,
-    };
-    await Promise.all([
-      broadcast(CHANNEL_GLOBAL, EVENT_CHECKIN_UPDATED, payload),
-      broadcast(`${CHANNEL_GROUP_PREFIX}${groupId}`, EVENT_CHECKIN_UPDATED, payload),
-      broadcast(CHANNEL_ADMIN, EVENT_CHECKIN_UPDATED, payload),
-    ]);
-  }
 
   return (
     <>
@@ -255,9 +237,7 @@ function MemberRow({
               className="flex min-h-11 min-w-11 items-center justify-center"
               aria-label={`${member.name}에게 전화`}
             >
-              <svg className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-              </svg>
+              <PhoneIcon />
             </a>
           )}
         </div>

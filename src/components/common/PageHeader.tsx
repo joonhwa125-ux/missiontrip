@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronLeftIcon } from "@/components/ui/icons";
 
 interface Props {
   title: string;
@@ -18,9 +19,7 @@ export default function PageHeader({ title, subtitle, backHref, rightSlot }: Pro
               className="flex min-h-11 min-w-11 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-gray-900"
               aria-label="뒤로 가기"
             >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-              </svg>
+              <ChevronLeftIcon aria-hidden />
             </Link>
           )}
           <h1 className="text-lg font-bold">{title}</h1>

@@ -60,34 +60,23 @@ export default async function GroupPage() {
   let initialReported = false;
 
   if (activeSchedule) {
-    const queries = [
+    const [{ data: allCi }, { data: allReportsData }] = await Promise.all([
       supabase
         .from("check_ins")
         .select("*")
         .eq("schedule_id", activeSchedule.id),
-    ];
+      supabase
+        .from("group_reports")
+        .select("group_id")
+        .eq("schedule_id", activeSchedule.id),
+    ]);
 
-    if (members?.length) {
-      queries.push(
-        supabase
-          .from("check_ins")
-          .select("*")
-          .eq("schedule_id", activeSchedule.id)
-          .in("user_id", members.map((m) => m.id))
-      );
-    }
+    const allData = allCi ?? [];
+    allCheckIns = allData as typeof allCheckIns;
 
-    const results = await Promise.all(queries);
-    allCheckIns = (results[0].data ?? []) as typeof allCheckIns;
-    if (results[1]) {
-      checkIns = (results[1].data as CheckIn[]) ?? [];
-    }
+    const memberIds = new Set(members?.map((m) => m.id) ?? []);
+    checkIns = allData.filter((ci) => memberIds.has(ci.user_id)) as CheckIn[];
 
-    // 전체 보고 상태 조회 (GroupStatusGrid용 + 자신의 보고 여부)
-    const { data: allReportsData } = await supabase
-      .from("group_reports")
-      .select("group_id")
-      .eq("schedule_id", activeSchedule.id);
     allReports = allReportsData ?? [];
     initialReported = allReports.some((r) => r.group_id === currentUser.group_id);
   }

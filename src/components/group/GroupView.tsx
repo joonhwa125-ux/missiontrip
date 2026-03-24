@@ -3,17 +3,13 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useRealtime } from "@/hooks/useRealtime";
+import { useToast } from "@/hooks/useToast";
+import { filterMembersByScope } from "@/lib/utils";
 import GroupFeedView from "./GroupFeedView";
 import GroupCheckinView from "./GroupCheckinView";
-import type { Schedule, CheckIn, Group, GroupMember } from "@/lib/types";
+import type { Schedule, CheckIn, Group, GroupMember, GroupMemberBrief } from "@/lib/types";
 
 type Member = GroupMember;
-
-interface AllMember {
-  id: string;
-  group_id: string;
-  party: "advance" | "rear" | null;
-}
 
 interface Props {
   currentUser: { id: string; group_id: string };
@@ -24,7 +20,7 @@ interface Props {
   schedules: Schedule[];
   allGroups: Group[];
   allCheckIns: { user_id: string; is_absent: boolean }[];
-  allMembers: AllMember[];
+  allMembers: GroupMemberBrief[];
   allReports: { group_id: string }[];
   scheduleCounts: Record<string, number>;
   initialReported: boolean;
@@ -53,7 +49,7 @@ export default function GroupView({
   const [allCheckInsState, setAllCheckInsState] = useState(allCheckIns);
   const [allReportsState, setAllReportsState] = useState(initialReports);
   const [reported, setReported] = useState(initialReported);
-  const [toast, setToast] = useState<string | null>(null);
+  const { toast, showToast } = useToast();
   // CR-009: activeSchedule을 state로 관리 — 체크인 뷰에서도 Realtime 갱신 반영
   const [currentSchedule, setCurrentSchedule] = useState(activeSchedule);
 
@@ -84,14 +80,6 @@ export default function GroupView({
     document.addEventListener("visibilitychange", handleVisibility);
     return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, [router]);
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 5000);
-    return () => clearTimeout(timer);
-  }, [toast]);
-
-  const showToast = useCallback((msg: string) => setToast(msg), []);
 
   // Realtime 구독 — GroupView 레벨 (feed <-> checkin 전환 시에도 유지)
   useRealtime(currentUser.group_id, false, {
@@ -172,11 +160,8 @@ export default function GroupView({
     });
   }, [checkIns, members]);
 
-  // scope 기반 멤버 필터링: 선발/후발 일정이면 해당 party 멤버만
   const checkinMembers = useMemo(() => {
-    const scope = currentSchedule?.scope;
-    if (!scope || scope === "all") return members;
-    return members.filter((m) => m.party === scope);
+    return filterMembersByScope(members, currentSchedule?.scope ?? "all");
   }, [members, currentSchedule?.scope]);
 
   // 보고 완료 시 allReportsState에 즉시 반영 (self-echo 미도달 대응)

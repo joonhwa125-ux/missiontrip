@@ -4,8 +4,9 @@ import { useState, useCallback, useEffect, useMemo, useRef, type SetStateAction 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useRealtime } from "@/hooks/useRealtime";
+import { useToast } from "@/hooks/useToast";
 import { fetchScheduleCheckIns } from "@/actions/schedule";
-import { sortSchedulesByStatus, getDefaultDay } from "@/lib/utils";
+import { sortSchedulesByStatus, getDefaultDay, filterMembersByScope } from "@/lib/utils";
 import PageHeader from "@/components/common/PageHeader";
 import DayTabs from "@/components/common/DayTabs";
 import AdminScheduleList from "./AdminScheduleList";
@@ -20,8 +21,6 @@ import {
 } from "@/components/ui/dialog";
 import type { Group, Schedule, AdminMember, AdminCheckIn, AdminReport, CheckIn } from "@/lib/types";
 
-type Report = AdminReport;
-
 interface Props {
   currentUser: { id: string; group_id: string };
   groups: Group[];
@@ -29,7 +28,7 @@ interface Props {
   activeSchedule: Schedule | null;
   schedules: Schedule[];
   initialCheckInsMap: Record<string, AdminCheckIn[]>;
-  initialReportsMap: Record<string, Report[]>;
+  initialReportsMap: Record<string, AdminReport[]>;
 }
 
 export default function AdminView({
@@ -46,7 +45,7 @@ export default function AdminView({
   const [members, setMembers] = useState(initialMembers);
   const [checkInsMap, setCheckInsMap] = useState(initialCheckInsMap);
   const [reportsMap, setReportsMap] = useState(initialReportsMap);
-  const [toast, setToast] = useState<string | null>(null);
+  const { toast, showToast } = useToast();
 
   // 서버 prop → state 동기화 (router.refresh() / 페이지 재진입 시)
   // useState는 초기값만 사용하므로, prop이 바뀌면 수동으로 state를 갱신해야 한다.
@@ -111,8 +110,11 @@ export default function AdminView({
     return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, [router, activeSchedule]);
 
-  // 일차 탭
-  const days = Array.from(new Set(schedules.map((s) => s.day_number))).sort();
+  // J-2: 일차 탭 메모이제이션
+  const days = useMemo(
+    () => Array.from(new Set(schedules.map((s) => s.day_number))).sort(),
+    [schedules]
+  );
   const [selectedDay, setSelectedDay] = useState(() => getDefaultDay(schedules));
 
   // 바텀시트 대상 일정
@@ -209,14 +211,6 @@ export default function AdminView({
     router.refresh();
   }, [router]);
 
-  const showToast = useCallback((msg: string) => setToast(msg), []);
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => setToast(null), 5000);
-    return () => clearTimeout(timer);
-  }, [toast]);
-
   // Realtime 구독
   useRealtime(null, true, {
     onScheduleActivated: () => router.refresh(),
@@ -227,7 +221,7 @@ export default function AdminView({
       showToast("일정 시간이 변경되었어요");
     },
     onCheckinUpdated: ({ user_id, schedule_id, action, is_absent }) => {
-      const sid = schedule_id || activeSchedule?.id;
+      const sid = schedule_id?.length ? schedule_id : activeSchedule?.id;
       if (!sid) return;
       setCheckInsMap((prev) => {
         const list = prev[sid] ?? [];
@@ -239,7 +233,7 @@ export default function AdminView({
       });
     },
     onGroupReported: ({ group_id, schedule_id, pending_count }) => {
-      const sid = schedule_id || activeSchedule?.id;
+      const sid = schedule_id?.length ? schedule_id : activeSchedule?.id;
       if (!sid) return;
       setReportsMap((prev) => {
         const list = prev[sid] ?? [];
@@ -277,6 +271,29 @@ export default function AdminView({
   const isBottomSheetReadOnly = bottomSheetSchedule
     ? !bottomSheetSchedule.is_active
     : false;
+
+  const adminCheckinMembers = useMemo(() => {
+    const filtered = filterMembersByScope(adminMembers, activeSchedule?.scope ?? "all");
+    return filtered.map((m) => ({ id: m.id, name: m.name, party: m.party }));
+  }, [activeSchedule?.scope, adminMembers]);
+
+  // B-3: 내 조 Sheet 보고 시 reportsMap 즉시 반영
+  const handleSheetReported = useCallback(() => {
+    if (!activeSchedule) return;
+    const sid = activeSchedule.id;
+    setReportsMap((prev) => {
+      const list = prev[sid] ?? [];
+      if (list.some((r) => r.group_id === currentUser.group_id)) return prev;
+      return {
+        ...prev,
+        [sid]: [...list, {
+          group_id: currentUser.group_id,
+          pending_count: 0,
+          reported_at: new Date().toISOString(),
+        }],
+      };
+    });
+  }, [activeSchedule, currentUser.group_id]);
 
   return (
     <div className="flex min-h-full flex-col">
@@ -339,7 +356,6 @@ export default function AdminView({
           allSchedules={schedules}
           checkInsMap={checkInsMap}
           reportsMap={reportsMap}
-          groups={groups}
           members={members}
           activeSchedule={activeSchedule}
           onBottomSheet={openBottomSheet}
@@ -387,13 +403,7 @@ export default function AdminView({
             <GroupCheckinView
               currentUser={currentUser}
               groupName={adminGroupName}
-              members={(() => {
-                const scope = activeSchedule?.scope;
-                const filtered = (!scope || scope === "all")
-                  ? adminMembers
-                  : adminMembers.filter((m) => m.party === scope);
-                return filtered.map((m) => ({ id: m.id, name: m.name, party: m.party }));
-              })()}
+              members={adminCheckinMembers}
               activeSchedule={activeSchedule}
               checkIns={sheetCheckIns}
               setCheckIns={setSheetCheckIns}
@@ -406,6 +416,7 @@ export default function AdminView({
                     )
                   : false
               }
+              onReported={handleSheetReported}
             />
           </div>
         </DialogContent>

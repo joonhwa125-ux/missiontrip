@@ -2,6 +2,7 @@
 
 import { COPY } from "@/lib/constants";
 import { formatTime, cn } from "@/lib/utils";
+import { CheckIcon } from "@/components/ui/icons";
 import type { CheckIn, GroupMember } from "@/lib/types";
 
 type Member = GroupMember;
@@ -40,15 +41,7 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
             className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-complete-check"
             aria-hidden="true"
           >
-            <svg
-              className="h-4 w-4 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={3}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+            <CheckIcon className="h-4 w-4 text-white" aria-hidden />
           </div>
         ) : (
           <div

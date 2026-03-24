@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdmin, getCurrentUser } from "@/lib/auth";
 import type { ActionResult, ScheduleScope } from "@/lib/types";
 
 // 일정 활성화 (RPC — 트랜잭션으로 동시 활성화 방지)
@@ -77,11 +77,14 @@ export async function fetchScheduleCheckIns(scheduleId: string): Promise<{
   checkIns: { user_id: string; is_absent: boolean; checked_at: string }[];
   reports: { group_id: string; pending_count: number; reported_at: string }[];
 }> {
+  const actor = await getCurrentUser();
+  if (!actor || !["leader", "admin"].includes(actor.role))
+    return { checkIns: [], reports: [] };
   const supabase = createServiceClient();
   const [{ data: checkIns }, { data: reports }] = await Promise.all([
     supabase
       .from("check_ins")
-      .select("*")
+      .select("user_id, is_absent, checked_at")
       .eq("schedule_id", scheduleId),
     supabase
       .from("group_reports")
@@ -91,7 +94,7 @@ export async function fetchScheduleCheckIns(scheduleId: string): Promise<{
   return {
     checkIns: (checkIns ?? []).map((ci) => ({
       user_id: ci.user_id,
-      is_absent: ci.is_absent ?? false,
+      is_absent: ci.is_absent,
       checked_at: ci.checked_at,
     })),
     reports: reports ?? [],

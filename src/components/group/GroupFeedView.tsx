@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
-import { formatTime, cn, getScheduleStatus, sortSchedulesByStatus, getDefaultDay } from "@/lib/utils";
+import { formatTime, cn, getScheduleStatus, sortSchedulesByStatus, getDefaultDay, getGroupBadgeStatus, filterMembersByScope } from "@/lib/utils";
 import PageHeader from "@/components/common/PageHeader";
 import DayTabs from "@/components/common/DayTabs";
-import { COPY } from "@/lib/constants";
-import type { Schedule, CheckIn, Group, GroupMember, GroupBadgeStatus } from "@/lib/types";
+import { CheckIcon } from "@/components/ui/icons";
+import { COPY, GROUP_BADGE_STYLE } from "@/lib/constants";
+import type { Schedule, CheckIn, Group, GroupMember, GroupMemberBrief, GroupBadgeStatus } from "@/lib/types";
 import {
   Dialog,
   DialogContent,
@@ -17,12 +18,6 @@ import {
 
 type Member = GroupMember;
 
-interface AllMember {
-  id: string;
-  group_id: string;
-  party: "advance" | "rear" | null;
-}
-
 interface Props {
   groupName: string;
   schedules: Schedule[];
@@ -32,7 +27,7 @@ interface Props {
   scheduleCounts: Record<string, number>;
   allGroups: Group[];
   allCheckIns: { user_id: string; is_absent: boolean }[];
-  allMembers: AllMember[];
+  allMembers: GroupMemberBrief[];
   allReports: { group_id: string }[];
   onEnterCheckin: () => void;
 }
@@ -64,7 +59,10 @@ export default function GroupFeedView({
       (s.scope === "advance" && hasAdvance) ||
       (s.scope === "rear" && hasRear)
   );
-  const days = Array.from(new Set(mySchedules.map((s) => s.day_number))).sort();
+  const days = useMemo(
+    () => Array.from(new Set(mySchedules.map((s) => s.day_number))).sort(),
+    [mySchedules]
+  );
   const [selectedDay, setSelectedDay] = useState(() => getDefaultDay(mySchedules));
   const daySchedules = sortSchedulesByStatus(
     mySchedules.filter((s) => s.day_number === selectedDay)
@@ -155,11 +153,7 @@ function ScheduleCard({
   const timeDisplay = schedule.scheduled_time
     ? formatTime(schedule.scheduled_time)
     : null;
-  // scope 기반 멤버 필터링: advance/rear 일정 → 해당 party 멤버만
-  const scopeMembers =
-    schedule.scope === "all"
-      ? members
-      : members.filter((m) => m.party === schedule.scope);
+  const scopeMembers = filterMembersByScope(members, schedule.scope);
   const total = scopeMembers.length;
 
   if (status === "active") {
@@ -244,16 +238,7 @@ function ScheduleCard({
           </span>
           {status === "completed" && total > 0 && (
             <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
-              <svg
-                className="h-3 w-3 text-complete-check"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={3}
-                aria-hidden="true"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-              </svg>
+              <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
               {completedCount}/{total}명
             </span>
           )}
@@ -273,15 +258,12 @@ function GroupStatusGrid({
 }: {
   allGroups: Group[];
   allCheckIns: { user_id: string; is_absent: boolean }[];
-  allMembers: AllMember[];
+  allMembers: GroupMemberBrief[];
   allReports: { group_id: string }[];
   scope: "all" | "advance" | "rear";
 }) {
   const reportedIds = new Set(allReports.map((r) => r.group_id));
-  // scope 기반 멤버 필터링: 선발/후발 일정이면 해당 party 멤버만 카운트
-  const scopeMembers = scope === "all"
-    ? allMembers
-    : allMembers.filter((m) => m.party === scope);
+  const scopeMembers = filterMembersByScope(allMembers, scope);
   // 조별 인원 수 계산
   const groupMemberCounts = new Map<string, number>();
   for (const m of scopeMembers) {
@@ -328,7 +310,7 @@ function GroupStatusGrid({
               const absent = groupAbsentCounts.get(g.id) ?? 0;
               const total = rawTotal - absent;
               const checked = groupCheckedCounts.get(g.id) ?? 0;
-              const badge = getBadgeStatus(total, checked, reportedIds.has(g.id));
+              const badge = getGroupBadgeStatus(total, checked, reportedIds.has(g.id));
               const progress = total > 0 ? (checked / total) * 100 : 0;
               return (
                 <GroupMiniCard
@@ -348,20 +330,6 @@ function GroupStatusGrid({
   );
 }
 
-const FEED_BADGE: Record<GroupBadgeStatus, { bg: string; text: string; label: string }> = {
-  reported: { bg: "bg-[#EAF3DE]", text: "text-[#27500A]", label: "보고완료" },
-  all_checked: { bg: "bg-main-action", text: "text-[#3C1E1E]", label: "전원확인" },
-  in_progress: { bg: "bg-progress-badge", text: "text-[#633806]", label: "진행중" },
-  not_started: { bg: "bg-secondary", text: "text-muted-foreground", label: "시작전" },
-};
-
-function getBadgeStatus(total: number, checked: number, hasReport: boolean): GroupBadgeStatus {
-  if (total === 0 || checked === 0) return "not_started";
-  if (checked < total) return "in_progress";
-  if (hasReport) return "reported";
-  return "all_checked";
-}
-
 function GroupMiniCard({
   name,
   checked,
@@ -375,7 +343,7 @@ function GroupMiniCard({
   badge: GroupBadgeStatus;
   progress: number;
 }) {
-  const b = FEED_BADGE[badge];
+  const b = GROUP_BADGE_STYLE[badge];
   return (
     <div className="rounded-xl border border-gray-200 bg-white px-3 py-2">
       <div className="mb-1 flex items-center justify-between gap-1">

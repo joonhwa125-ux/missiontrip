@@ -2,10 +2,12 @@
 
 import { useState, useCallback, useTransition, useMemo, type Dispatch, type SetStateAction } from "react";
 import { useBroadcast } from "@/hooks/useRealtime";
+import { useBroadcastCheckin } from "@/hooks/useBroadcastCheckin";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { createCheckin, deleteCheckin, markAbsent } from "@/actions/checkin";
 import { submitReport } from "@/actions/report";
 import MemberCard from "./MemberCard";
+import { CheckIcon, ChevronLeftIcon } from "@/components/ui/icons";
 import {
   Dialog,
   DialogContent,
@@ -19,8 +21,6 @@ import {
   COPY,
   CHANNEL_GLOBAL,
   CHANNEL_ADMIN,
-  CHANNEL_GROUP_PREFIX,
-  EVENT_CHECKIN_UPDATED,
   EVENT_GROUP_REPORTED,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -56,22 +56,12 @@ export default function GroupCheckinView({
   const [cancelTarget, setCancelTarget] = useState<{ member: Member; isAbsent: boolean } | null>(null);
   const [absentTarget, setAbsentTarget] = useState<Member | null>(null);
   const [reported, setReported] = useState(initialReported);
+  const [reportOpen, setReportOpen] = useState(false);
   const [, startTransition] = useTransition();
 
   const { isOnline, pendingCount, addPending, addPendingReport } = useOfflineSync();
   const { broadcast } = useBroadcast();
-
-  const broadcastCheckin = useCallback(
-    async (userId: string, action: "insert" | "delete", isAbsent = false) => {
-      const payload = { user_id: userId, schedule_id: activeSchedule?.id ?? "", action, is_absent: isAbsent };
-      await Promise.all([
-        broadcast(CHANNEL_GLOBAL, EVENT_CHECKIN_UPDATED, payload),
-        broadcast(`${CHANNEL_GROUP_PREFIX}${currentUser.group_id}`, EVENT_CHECKIN_UPDATED, payload),
-        broadcast(CHANNEL_ADMIN, EVENT_CHECKIN_UPDATED, payload),
-      ]);
-    },
-    [activeSchedule, currentUser.group_id, broadcast]
-  );
+  const broadcastCheckin = useBroadcastCheckin(currentUser.group_id, activeSchedule?.id);
 
   const handleCheckin = useCallback(
     async (userId: string) => {
@@ -223,7 +213,7 @@ export default function GroupCheckinView({
         showToast("서버 연결에 실패했어요. 다시 시도해주세요.");
       }
     });
-  }, [activeSchedule, members, checkIns, currentUser.group_id, broadcast, isOnline, addPendingReport, showToast]);
+  }, [activeSchedule, members, checkIns, currentUser.group_id, broadcast, isOnline, addPendingReport, showToast, onReported]);
 
   // CR-005: checkIns → 불참/확인/미확인 정확히 분리
   const checkedIds = useMemo(() => new Set(checkIns.map((c) => c.user_id)), [checkIns]);
@@ -256,15 +246,7 @@ export default function GroupCheckinView({
             className="flex min-h-11 min-w-11 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-main-action"
             aria-label="일정 피드로 돌아가기"
           >
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-            </svg>
+            <ChevronLeftIcon aria-hidden />
           </button>
           <div>
             <h1 className="text-lg font-bold">{groupName} 체크인</h1>
@@ -301,19 +283,7 @@ export default function GroupCheckinView({
                     className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-complete-check"
                     aria-hidden="true"
                   >
-                    <svg
-                      className="h-2.5 w-2.5 text-white"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={3}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
+                    <CheckIcon className="h-2.5 w-2.5 text-white" aria-hidden />
                   </span>
                 )}
               </div>
@@ -373,26 +343,19 @@ export default function GroupCheckinView({
             {COPY.offline(pendingCount)}
           </div>
         )}
-        {allComplete || reported ? (
+        {reported ? (
           <button
-            onClick={() => !reported && handleReport()}
-            className={cn(
-              "w-full min-h-11 rounded-2xl py-4 text-base font-bold transition-colors focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2",
-              reported
-                ? "bg-complete-card text-[#27500A]"
-                : "bg-main-action"
-            )}
+            className="w-full min-h-11 rounded-2xl py-4 text-base font-bold bg-complete-card text-[#27500A] focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2"
           >
-            {reported ? COPY.reportButtonDone : COPY.reportButtonComplete}
+            {COPY.reportButtonDone}
           </button>
         ) : (
-          <p
-            className="w-full rounded-2xl bg-gray-100 py-4 text-center text-base font-bold text-gray-700"
-            role="status"
-            aria-live="polite"
+          <button
+            onClick={() => allComplete ? handleReport() : setReportOpen(true)}
+            className="w-full min-h-11 rounded-2xl py-4 text-base font-bold bg-main-action transition-colors focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2"
           >
-            {COPY.reportButtonPending(uncheckedCount)}
-          </p>
+            {allComplete ? COPY.reportButtonComplete : COPY.reportButtonPending(uncheckedCount)}
+          </button>
         )}
       </div>
 
@@ -450,7 +413,27 @@ export default function GroupCheckinView({
         </DialogContent>
       </Dialog>
 
-      {/* 보고 확인 모달 제거: 전원 완료 시에만 보고 가능 */}
+      {/* 미완료 보고 확인 모달 */}
+      <Dialog open={reportOpen} onOpenChange={setReportOpen}>
+        <DialogContent hideClose>
+          <DialogHeader>
+            <DialogTitle>
+              {uncheckedCount}명이 아직이에요. 그래도 보고할까요?
+            </DialogTitle>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose className="min-h-11 flex-1 rounded-xl bg-gray-100 text-sm font-medium">
+              취소
+            </DialogClose>
+            <button
+              onClick={() => { setReportOpen(false); handleReport(); }}
+              className="min-h-11 flex-1 rounded-xl bg-main-action text-sm font-bold focus-visible:ring-2 focus-visible:ring-main-action"
+            >
+              보고하기
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

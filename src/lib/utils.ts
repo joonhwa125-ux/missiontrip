@@ -1,6 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import type { Schedule, ScheduleStatus } from "./types";
+import type { Schedule, ScheduleStatus, GroupBadgeStatus, GroupParty, ScheduleScope } from "./types";
 
 // shadcn/ui 표준 cn 유틸
 export function cn(...inputs: ClassValue[]) {
@@ -83,4 +83,21 @@ export function getDefaultDay(schedules: Schedule[]): number {
     .filter((s) => s.activated_at)
     .sort((a, b) => new Date(b.activated_at!).getTime() - new Date(a.activated_at!).getTime());
   return lastActivated[0]?.day_number ?? 1;
+}
+
+// 조 배지 상태 판별
+export function getGroupBadgeStatus(total: number, checked: number, hasReport: boolean): GroupBadgeStatus {
+  if (total === 0 || checked === 0) return "not_started";
+  if (checked < total) return "in_progress";
+  if (hasReport) return "reported";
+  return "all_checked";
+}
+
+// scope 기반 멤버 필터링 (선발/후발 일정 → 해당 party만)
+export function filterMembersByScope<T extends { party: GroupParty | null }>(
+  members: T[],
+  scope: ScheduleScope
+): T[] {
+  if (scope === "all") return members;
+  return members.filter((m) => m.party === scope);
 }

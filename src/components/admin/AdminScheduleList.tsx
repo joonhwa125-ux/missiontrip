@@ -3,22 +3,20 @@
 import { useState, useEffect, useRef, useCallback, useTransition, useMemo } from "react";
 import { activateSchedule } from "@/actions/schedule";
 import { useBroadcast } from "@/hooks/useRealtime";
+import { filterMembersByScope } from "@/lib/utils";
 import { CHANNEL_GLOBAL, COPY, EVENT_SCHEDULE_ACTIVATED } from "@/lib/constants";
-import type { Schedule, AdminCheckIn, AdminMember, AdminReport, Group } from "@/lib/types";
+import type { Schedule, AdminCheckIn, AdminMember, AdminReport } from "@/lib/types";
 import AdminScheduleCard from "@/components/admin/AdminScheduleCard";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter, DialogClose,
 } from "@/components/ui/dialog";
 
-type Report = AdminReport;
-
 interface Props {
   schedules: Schedule[];
   allSchedules: Schedule[];
   checkInsMap: Record<string, AdminCheckIn[]>;
-  reportsMap: Record<string, Report[]>;
-  groups: Group[];
+  reportsMap: Record<string, AdminReport[]>;
   members: AdminMember[];
   activeSchedule: Schedule | null;
   onBottomSheet: (s: Schedule) => void;
@@ -38,7 +36,7 @@ function calcUncheckedCount(
 }
 
 export default function AdminScheduleList({
-  schedules, allSchedules, checkInsMap, reportsMap, groups, members,
+  schedules, allSchedules, checkInsMap, reportsMap, members,
   activeSchedule, onBottomSheet, onTimeEdit, onToast, onRefresh,
 }: Props) {
   const [, startTransition] = useTransition();
@@ -50,12 +48,10 @@ export default function AdminScheduleList({
     () => (activeSchedule ? checkInsMap[activeSchedule.id] ?? [] : []),
     [activeSchedule, checkInsMap]
   );
-  // scope 기반 멤버 카운트 (선발/후발 일정은 해당 party만)
-  const totalMemberCount = useMemo(() => {
-    const scope = activeSchedule?.scope;
-    if (!scope || scope === "all") return members.length;
-    return members.filter((m) => m.party === scope).length;
-  }, [activeSchedule?.scope, members]);
+  const totalMemberCount = useMemo(
+    () => filterMembersByScope(members, activeSchedule?.scope ?? "all").length,
+    [activeSchedule?.scope, members]
+  );
 
 
   // -- 일정 활성화 Server Action --
@@ -119,7 +115,6 @@ export default function AdminScheduleList({
             schedule={s}
             checkIns={checkInsMap[s.id] ?? []}
             reports={reportsMap[s.id] ?? []}
-            groups={groups}
             members={members}
             onSummaryTap={() => onBottomSheet(s)}
             onActivate={() => handleActivateClick(s)}

@@ -72,6 +72,17 @@ export const COLORS = {
   appBg: "#F5F3EF",
 } as const;
 
+// 조 배지 스타일 (AdminBottomSheet + GroupFeedView 공통)
+export const GROUP_BADGE_STYLE: Record<
+  import("./types").GroupBadgeStatus,
+  { bg: string; text: string; label: string }
+> = {
+  reported: { bg: "bg-[#EAF3DE]", text: "text-[#27500A]", label: "보고완료" },
+  all_checked: { bg: "bg-main-action", text: "text-[#3C1E1E]", label: "전원확인" },
+  in_progress: { bg: "bg-progress-badge", text: "text-[#633806]", label: "진행중" },
+  not_started: { bg: "bg-secondary", text: "text-muted-foreground", label: "시작전" },
+};
+
 // UI 문구 (PRD 8.2)
 export const COPY = {
   notChecked: "확인 전",
@@ -86,7 +97,7 @@ export const COPY = {
   absent: "불참",
   offline: (n: number) => `오프라인 상태예요. ${n}건 저장 중 — 연결되면 자동으로 보낼게요`,
   scheduleAlert: (title: string) => `새로운 일정이 시작되었어요: ${title}`,
-  uncheckedWarning: (n: number) => `${n}명이 미확인 상태예요`,
+  uncheckedWarning: (n: number) => `현재 일정에 ${n}명이 미확인 상태예요`,
   uncheckedWarningQuestion: "그래도 전환할까요?",
   emptySchedule: "현재 진행 중인 일정이 없어요",
   totalSummary: (checked: number, total: number) => `전체 ${checked}/${total}명 확인`,

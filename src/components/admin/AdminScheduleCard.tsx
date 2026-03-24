@@ -1,20 +1,14 @@
 "use client";
 
-import { formatTime, getScheduleStatus } from "@/lib/utils";
+import { formatTime, getScheduleStatus, filterMembersByScope } from "@/lib/utils";
+import { CheckIcon } from "@/components/ui/icons";
 import { SCOPE_LABEL } from "@/lib/constants";
-import type { Schedule, AdminCheckIn, AdminMember, Group } from "@/lib/types";
-
-interface Report {
-  group_id: string;
-  pending_count: number;
-  reported_at: string;
-}
+import type { Schedule, AdminCheckIn, AdminMember, AdminReport } from "@/lib/types";
 
 interface Props {
   schedule: Schedule;
   checkIns: AdminCheckIn[];
-  reports: Report[];
-  groups: Group[];
+  reports: AdminReport[];
   members: AdminMember[];
   onSummaryTap: () => void;
   onActivate: () => void;
@@ -25,7 +19,6 @@ export default function AdminScheduleCard({
   schedule,
   checkIns,
   reports,
-  groups,
   members,
   onSummaryTap,
   onActivate,
@@ -37,14 +30,12 @@ export default function AdminScheduleCard({
     : null;
   const scopeLabel = schedule.scope !== "all" ? SCOPE_LABEL[schedule.scope] : null;
 
-  // scope 기반 멤버 필터링 (선발/후발 일정은 해당 party만 카운트)
-  const scopeMembers = schedule.scope === "all"
-    ? members
-    : members.filter((m) => m.party === schedule.scope);
+  const scopeMembers = filterMembersByScope(members, schedule.scope);
   const checkedCount = checkIns.filter((c) => !c.is_absent).length;
   const totalMembers = scopeMembers.length;
   const reportedCount = new Set(reports.map((r) => r.group_id)).size;
-  const totalGroups = groups.length;
+  const scopeGroupIds = new Set(scopeMembers.map((m) => m.group_id));
+  const totalGroups = scopeGroupIds.size;
 
   if (status === "active") {
     return (
@@ -175,16 +166,7 @@ export default function AdminScheduleCard({
             완료
           </span>
           <p className="flex items-center gap-0.5 text-sm font-medium text-muted-foreground">
-            <svg
-              className="h-3 w-3 text-complete-check"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={3}
-              aria-hidden="true"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
+            <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
             {reportedCount}/{totalGroups}조
           </p>
           <p className="text-xs text-muted-foreground">

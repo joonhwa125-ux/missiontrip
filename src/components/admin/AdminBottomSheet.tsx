@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { cn } from "@/lib/utils";
-import { COPY } from "@/lib/constants";
+import { cn, getGroupBadgeStatus, filterMembersByScope } from "@/lib/utils";
+import { COPY, GROUP_BADGE_STYLE } from "@/lib/constants";
 import {
   Dialog,
   DialogContent,
@@ -11,42 +11,26 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import AdminGroupDrillDown from "./AdminGroupDrillDown";
+import { PhoneIcon } from "@/components/ui/icons";
 import type {
   Group,
   Schedule,
-  GroupBadgeStatus,
   AdminMember,
   AdminCheckIn,
   AdminReport,
 } from "@/lib/types";
-
-type Report = AdminReport;
 
 interface Props {
   schedule: Schedule | null;
   groups: Group[];
   members: AdminMember[];
   checkIns: AdminCheckIn[];
-  reports: Report[];
+  reports: AdminReport[];
   isReadOnly: boolean;
   loading?: boolean;
   onClose: () => void;
   onMembersChange: (members: AdminMember[]) => void;
   onCheckInsChange: React.Dispatch<React.SetStateAction<AdminCheckIn[]>>;
-}
-
-const BADGE: Record<GroupBadgeStatus, { bg: string; text: string; label: string }> = {
-  reported: { bg: "bg-[#EAF3DE]", text: "text-[#27500A]", label: "보고완료" },
-  all_checked: { bg: "bg-main-action", text: "text-[#3C1E1E]", label: "전원확인" },
-  in_progress: { bg: "bg-progress-badge", text: "text-[#633806]", label: "진행중" },
-  not_started: { bg: "bg-secondary", text: "text-muted-foreground", label: "시작전" },
-};
-
-function getBadge(total: number, checked: number, hasReport: boolean): GroupBadgeStatus {
-  if (total === 0 || checked === 0) return "not_started";
-  if (checked < total) return "in_progress";
-  if (hasReport) return "reported";
-  return "all_checked";
 }
 
 export default function AdminBottomSheet({
@@ -70,12 +54,10 @@ export default function AdminBottomSheet({
   );
   const reportMap = useMemo(() => new Map(reports.map((r) => [r.group_id, r])), [reports]);
 
-  // scope 기반 멤버 필터링 (선발/후발 일정은 해당 party만 카운트)
-  const scopeMembers = useMemo(() => {
-    const scope = schedule?.scope;
-    if (!scope || scope === "all") return members;
-    return members.filter((m) => m.party === scope);
-  }, [schedule?.scope, members]);
+  const scopeMembers = useMemo(
+    () => filterMembersByScope(members, schedule?.scope ?? "all"),
+    [schedule?.scope, members]
+  );
 
   const summaries = useMemo(
     () =>
@@ -86,7 +68,7 @@ export default function AdminBottomSheet({
           (m) => checkedIds.has(m.id) && !absentIds.has(m.id)
         ).length;
         const totalCount = gMembers.length - absentCount;
-        const badge = getBadge(totalCount, checkedCount, reportMap.has(g.id));
+        const badge = getGroupBadgeStatus(totalCount, checkedCount, reportMap.has(g.id));
         const leader = gMembers.find((m) => m.role === "leader");
         return { group: g, totalCount, checkedCount, badge, leader };
       }),
@@ -135,7 +117,7 @@ export default function AdminBottomSheet({
               <h3 className="mb-2 text-sm font-bold text-muted-foreground">{busName}</h3>
               <div className="grid grid-cols-2 gap-2 [&>*:last-child:nth-child(odd)]:col-span-2">
                 {busSummaries.map(({ group, totalCount, checkedCount, badge, leader }) => {
-                  const b = BADGE[badge];
+                  const b = GROUP_BADGE_STYLE[badge];
                   const progress = totalCount > 0 ? (checkedCount / totalCount) * 100 : 0;
                   return (
                     <button
@@ -206,13 +188,5 @@ export default function AdminBottomSheet({
         onCheckInsChange={onCheckInsChange}
       />
     </>
-  );
-}
-
-function PhoneIcon() {
-  return (
-    <svg className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-    </svg>
   );
 }
