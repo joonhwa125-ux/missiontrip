@@ -146,7 +146,7 @@ export default function AdminScheduleCard({
         aria-label={`예정 일정: ${schedule.title}`}
       >
         {/* 헤더: 예정+시간 배지 + 후발 배지 */}
-        <div className="mb-2 flex items-center gap-1.5">
+        <div className="mb-2 flex items-center gap-1">
           <button
             onClick={onTimeEdit}
             className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-main-action"
