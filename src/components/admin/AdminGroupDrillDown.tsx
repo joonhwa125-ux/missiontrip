@@ -136,10 +136,10 @@ export default function AdminGroupDrillDown({
           <div className="flex-shrink-0 px-6 pt-6">
             <DialogHeader>
               <DialogTitle>{group.name}</DialogTitle>
+              <DialogDescription aria-live="polite">
+                {checkedCount}/{totalCount}명 확인
+              </DialogDescription>
             </DialogHeader>
-            <DialogDescription aria-live="polite">
-              {checkedCount}/{totalCount}명 확인
-            </DialogDescription>
           </div>
           <ul className="space-y-2 overflow-y-auto px-6 pb-6">
             {sorted.map((m) => (
@@ -296,8 +296,8 @@ function ConfirmDialog({ action, onClose, onConfirm }: ConfirmDialogProps) {
       <DialogContent hideClose>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{desc}</DialogDescription>
         </DialogHeader>
-        <DialogDescription>{desc}</DialogDescription>
         <DialogFooter>
           <DialogClose
             className="min-h-11 flex-1 rounded-xl bg-gray-100 text-sm font-medium"

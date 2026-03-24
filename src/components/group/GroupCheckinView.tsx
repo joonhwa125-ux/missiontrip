@@ -370,10 +370,10 @@ export default function GroupCheckinView({
             <DialogTitle>
               {cancelTarget?.isAbsent ? COPY.absentCancel : "체크인을 취소할까요?"}
             </DialogTitle>
+            <DialogDescription>
+              {cancelTarget?.member.name}님의 {cancelTarget?.isAbsent ? "불참" : "탑승 확인"}을 취소해요.
+            </DialogDescription>
           </DialogHeader>
-          <DialogDescription className="text-center">
-            {cancelTarget?.member.name}님의 {cancelTarget?.isAbsent ? "불참" : "탑승 확인"}을 취소해요.
-          </DialogDescription>
           <DialogFooter>
             <DialogClose className="min-h-11 flex-1 rounded-xl bg-gray-100 text-sm font-medium">
               아니요
@@ -396,10 +396,10 @@ export default function GroupCheckinView({
         <DialogContent hideClose>
           <DialogHeader>
             <DialogTitle>불참 처리할까요?</DialogTitle>
+            <DialogDescription>
+              {absentTarget?.name}님을 불참 처리해요. 탑승 카운트에서 제외돼요.
+            </DialogDescription>
           </DialogHeader>
-          <DialogDescription className="text-center">
-            {absentTarget?.name}님을 불참 처리해요. 탑승 카운트에서 제외돼요.
-          </DialogDescription>
           <DialogFooter>
             <DialogClose className="min-h-11 flex-1 rounded-xl bg-gray-100 text-sm font-medium">
               아니요
