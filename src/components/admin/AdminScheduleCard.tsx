@@ -16,18 +16,11 @@ interface Props {
 }
 
 export default function AdminScheduleCard({
-  schedule,
-  checkIns,
-  reports,
-  members,
-  onSummaryTap,
-  onActivate,
-  onTimeEdit,
+  schedule, checkIns, reports, members,
+  onSummaryTap, onActivate, onTimeEdit,
 }: Props) {
   const status = getScheduleStatus(schedule);
-  const timeDisplay = schedule.scheduled_time
-    ? formatTime(schedule.scheduled_time)
-    : null;
+  const timeDisplay = schedule.scheduled_time ? formatTime(schedule.scheduled_time) : null;
   const scopeLabel = schedule.scope === "rear" ? SCOPE_LABEL[schedule.scope] : null;
 
   const scopeMembers = filterMembersByScope(members, schedule.scope);
@@ -36,6 +29,25 @@ export default function AdminScheduleCard({
   const reportedCount = new Set(reports.map((r) => r.group_id)).size;
   const scopeGroupIds = new Set(scopeMembers.map((m) => m.group_id));
   const totalGroups = scopeGroupIds.size;
+  const progressPct = totalGroups > 0 ? Math.round((reportedCount / totalGroups) * 100) : 0;
+
+  // 후발 배지 (scope === "rear"인 경우만)
+  const scopeBadge = scopeLabel ? (
+    <span className="mr-1 inline-block rounded bg-orange-100 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-orange-800">
+      {scopeLabel}
+    </span>
+  ) : null;
+
+  // 장소 + 시간 한 줄 (대기/완료 카드용)
+  const metaLine = (schedule.location || timeDisplay) ? (
+    <p className="mt-0.5 flex flex-wrap items-center gap-x-1 text-sm text-muted-foreground">
+      {schedule.location && (
+        <><span aria-hidden="true">📍</span><span>{schedule.location}</span></>
+      )}
+      {schedule.location && timeDisplay && <span aria-hidden="true">·</span>}
+      {timeDisplay && <span>집결 {timeDisplay}</span>}
+    </p>
+  ) : null;
 
   if (status === "active") {
     return (
@@ -44,46 +56,63 @@ export default function AdminScheduleCard({
         role="region"
         aria-label={`진행중 일정: ${schedule.title}`}
       >
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex-1">
-            <p className="font-medium">
-              {scopeLabel && (
-                <span className="mr-1 inline-block rounded bg-orange-100 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-orange-800">
-                  {scopeLabel}
-                </span>
-              )}
-              {schedule.location ?? schedule.title}
-            </p>
-            {schedule.location && (
-              <p className="text-sm text-muted-foreground">
-                {schedule.title}
-              </p>
-            )}
-            {timeDisplay && (
-              <p className="mt-0.5 text-sm text-muted-foreground">
-                {timeDisplay}
-              </p>
-            )}
-          </div>
-          <div className="flex flex-col items-end gap-1">
-            <span className="flex-shrink-0 rounded-full bg-main-action px-2 py-0.5 text-xs font-bold text-gray-900">
-              진행중
+        {/* 헤더: 진행중 pill + 집결 시간 */}
+        <div className="mb-2 flex items-center justify-between">
+          <span className="rounded-full bg-main-action px-2 py-0.5 text-xs font-bold text-gray-900">
+            진행중
+          </span>
+          {timeDisplay && (
+            <span className="rounded bg-black/10 px-1.5 py-0.5 text-xs text-gray-700">
+              집결 {timeDisplay}
             </span>
-            <p className="text-sm font-medium" aria-live="polite">
-              {reportedCount}/{totalGroups}조
-            </p>
-            <p className="text-xs text-muted-foreground">
-              ({checkedCount}/{totalMembers}명)
-            </p>
-          </div>
+          )}
+        </div>
+
+        {/* 일정명 + 장소 */}
+        <p className="text-base font-semibold leading-snug">
+          {scopeBadge}{schedule.title}
+        </p>
+        {schedule.location && (
+          <p className="mt-0.5 flex items-center gap-1 text-sm text-muted-foreground">
+            <span aria-hidden="true">📍</span>
+            {schedule.location}
+          </p>
+        )}
+
+        {/* 통계: 조 보고 + 인원 */}
+        <div className="mt-3 flex items-center justify-between">
+          <p className="text-sm font-medium" aria-live="polite">
+            {reportedCount}/{totalGroups}조{" "}
+            <span className="text-xs font-normal text-muted-foreground">보고완료</span>
+          </p>
+          <p className="text-sm text-muted-foreground">{checkedCount}/{totalMembers}명</p>
+        </div>
+
+        {/* 프로그레스 바 */}
+        <div
+          className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-black/10"
+          role="progressbar"
+          aria-valuenow={progressPct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`조 보고 진행률 ${progressPct}%`}
+        >
+          <div
+            className="h-full rounded-full bg-main-action transition-all"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+        <div className="mt-1 flex items-center justify-between">
+          <p className="text-xs text-muted-foreground">전체 진행률 {progressPct}%</p>
+          <p className="text-xs text-muted-foreground">{totalGroups - reportedCount}조 대기 중</p>
         </div>
 
         <button
           onClick={onSummaryTap}
-          className="mt-2 w-full min-h-11 rounded-xl bg-white/60 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
+          className="mt-3 w-full min-h-11 rounded-xl bg-white/60 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
           aria-label="전체 현황 보기"
         >
-          전체 현황 보기 &gt;
+          전체 현황 보기 →
         </button>
       </div>
     );
@@ -96,34 +125,20 @@ export default function AdminScheduleCard({
         role="region"
         aria-label={`대기 일정: ${schedule.title}`}
       >
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start justify-between gap-3">
           <button
             onClick={onTimeEdit}
             className="flex-1 text-left rounded-lg focus-visible:ring-2 focus-visible:ring-main-action"
             aria-label={`${schedule.title} 시간 수정`}
           >
             <p className="font-medium">
-              {scopeLabel && (
-                <span className="mr-1 inline-block rounded bg-orange-100 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-orange-800">
-                  {scopeLabel}
-                </span>
-              )}
-              {schedule.location ?? schedule.title}
+              {scopeBadge}{schedule.title}
             </p>
-            {schedule.location && (
-              <p className="text-sm text-muted-foreground">
-                {schedule.title}
-              </p>
-            )}
-            {timeDisplay && (
-              <p className="mt-0.5 text-sm text-muted-foreground">
-                {timeDisplay}
-              </p>
-            )}
+            {metaLine}
           </button>
           <button
             onClick={onActivate}
-            className="flex-shrink-0 min-h-11 rounded-xl bg-gray-900 px-3 text-xs font-bold text-white focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex-shrink-0 min-h-11 rounded-xl border border-gray-300 px-3 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-ring"
             aria-label={`${schedule.title} 활성화`}
           >
             활성화
@@ -143,23 +158,9 @@ export default function AdminScheduleCard({
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
           <p className="font-medium">
-            {scopeLabel && (
-              <span className="mr-1 inline-block rounded bg-gray-700 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-white">
-                {scopeLabel}
-              </span>
-            )}
-            {schedule.location ?? schedule.title}
+            {scopeBadge}{schedule.title}
           </p>
-          {schedule.location && (
-            <p className="text-sm text-muted-foreground">
-              {schedule.title}
-            </p>
-          )}
-          {timeDisplay && (
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              {timeDisplay}
-            </p>
-          )}
+          {metaLine}
         </div>
         <div className="flex flex-col items-end gap-1">
           <span className="flex-shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-muted-foreground">

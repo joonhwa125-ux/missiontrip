@@ -41,12 +41,12 @@ export default function DayTabs({ days, selected, onChange, panelId, rightSlot }
   );
 
   return (
-    <div className="border-b border-gray-100 bg-white px-4 py-2">
+    <div className="bg-white px-4 pt-1">
       <div className="flex items-center gap-2">
         <div
           ref={tablistRef}
           role="tablist"
-          className="flex flex-1 rounded-xl bg-gray-100 p-1"
+          className="flex flex-1"
           onKeyDown={handleKeyDown}
         >
           {days.map((day) => {
@@ -60,10 +60,10 @@ export default function DayTabs({ days, selected, onChange, panelId, rightSlot }
                 tabIndex={isSelected ? 0 : -1}
                 onClick={() => onChange(day)}
                 className={cn(
-                  "min-h-9 flex-1 rounded-lg text-sm font-semibold transition-all duration-200 focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-1",
+                  "min-h-10 flex-1 border-b-2 pb-2 text-sm font-semibold transition-all duration-200 focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-1",
                   isSelected
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-500 hover:text-gray-700"
+                    ? "border-gray-900 text-gray-900"
+                    : "border-transparent text-gray-400 hover:text-gray-600"
                 )}
               >
                 {day}일차
@@ -72,7 +72,7 @@ export default function DayTabs({ days, selected, onChange, panelId, rightSlot }
           })}
         </div>
         {rightSlot && (
-          <div className="flex flex-shrink-0 items-center">
+          <div className="flex flex-shrink-0 items-center pb-2">
             {rightSlot}
           </div>
         )}
