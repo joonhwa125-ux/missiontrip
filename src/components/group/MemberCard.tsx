@@ -22,8 +22,12 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
   return (
     <li
       className={cn(
-        "flex min-h-[4.5rem] items-center justify-between rounded-2xl px-4 transition-colors",
-        isAbsent ? "bg-gray-100" : isChecked ? "bg-complete-card" : "bg-white"
+        "flex min-h-[4.5rem] items-center justify-between rounded-2xl border px-4 transition-colors",
+        isAbsent
+          ? "border-[#EBE8E3] bg-gray-100"
+          : isChecked
+          ? "border-[#EBE8E3] bg-app-bg"
+          : "border-[#E0DDD8] bg-white"
       )}
     >
       <div className="flex items-center gap-3">
@@ -48,13 +52,8 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
           />
         )}
         <div>
-          <p className="text-base font-medium">{user.name}</p>
-          <p
-            className={cn(
-              "text-sm",
-              isAbsent ? "text-muted-foreground" : isChecked ? "text-[#27500A]" : "text-muted-foreground"
-            )}
-          >
+          <p className={cn("text-base font-medium", (isChecked || isAbsent) && "text-muted-foreground")}>{user.name}</p>
+          <p className="text-sm text-muted-foreground">
             {isAbsent
               ? COPY.absent
               : isChecked
