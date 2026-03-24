@@ -145,20 +145,15 @@ export default function AdminScheduleCard({
         role="region"
         aria-label={`예정 일정: ${schedule.title}`}
       >
-        {/* 헤더: 예정 pill (좌) + 집결 시간 (우) — active와 동일 구조 */}
-        <div className="mb-2 flex items-center justify-between">
-          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-            예정
-          </span>
-          {timeBadge}
-        </div>
-
-        {/* 장소/일정명 + 활성화 버튼 (기존 우측 위치 유지) */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1">
-            <p className="font-medium">{primaryText}{scopeBadge}</p>
-            {subtitle}
-          </div>
+        {/* 헤더: 예정+시간 통합 배지 (좌, 탭하여 시간 수정) + 시작 버튼 (우) */}
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <button
+            onClick={onTimeEdit}
+            className="min-h-8 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-main-action"
+            aria-label={timeDisplay ? `집결 시간 ${timeDisplay} — 탭하여 수정` : "집결 시간 추가"}
+          >
+            {timeDisplay ? `예정 · 집결 ${timeDisplay}` : "예정 · + 시간"}
+          </button>
           <button
             onClick={onActivate}
             className="flex-shrink-0 min-h-11 rounded-xl border border-gray-300 px-3 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-ring"
@@ -167,6 +162,10 @@ export default function AdminScheduleCard({
             시작
           </button>
         </div>
+
+        {/* 장소/일정명 */}
+        <p className="font-medium">{primaryText}{scopeBadge}</p>
+        {subtitle}
       </div>
     );
   }
