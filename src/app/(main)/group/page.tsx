@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import GroupView from "@/components/group/GroupView";
 import type { CheckIn, Schedule, Group, GroupParty } from "@/lib/types";
+
+export const metadata: Metadata = { title: "조장" };
 
 export default async function GroupPage() {
   // 인증 확인은 쿠키 기반 클라이언트

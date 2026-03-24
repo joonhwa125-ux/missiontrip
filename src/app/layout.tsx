@@ -2,7 +2,10 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "혼디모영",
+  title: {
+    template: "%s | 혼디모영",
+    default: "혼디모영",
+  },
   description: "링키지랩 10주년 미션트립 인원관리 시스템",
 };
 

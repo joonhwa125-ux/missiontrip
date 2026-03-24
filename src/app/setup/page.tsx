@@ -1,6 +1,9 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
+
+export const metadata: Metadata = { title: "셋업" };
 import SetupWizard from "@/components/setup/SetupWizard";
 import SetupPageTabs from "@/components/setup/SetupPageTabs";
 import CurrentDataView from "@/components/setup/CurrentDataView";

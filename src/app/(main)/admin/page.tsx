@@ -1,7 +1,10 @@
+import type { Metadata } from "next";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import AdminView from "@/components/admin/AdminView";
 import type { Group, Schedule } from "@/lib/types";
+
+export const metadata: Metadata = { title: "관리자" };
 
 // Next.js 서버 컴포넌트 캐싱 완전 차단 — 매 요청마다 fresh 데이터 보장
 export const dynamic = "force-dynamic";
