@@ -35,7 +35,7 @@ export default function ResetDataButton() {
       <button
         onClick={openStep1}
         disabled={isPending}
-        className="min-h-11 text-sm font-medium text-red-500 focus-visible:ring-2 focus-visible:ring-red-500 disabled:opacity-50"
+        className="min-h-11 rounded-xl border border-red-300 px-4 text-sm font-medium text-red-500 focus-visible:ring-2 focus-visible:ring-red-500 disabled:opacity-50"
       >
         {isPending ? "초기화 중..." : "전체 데이터 초기화"}
       </button>
