@@ -102,9 +102,8 @@ export default function AdminScheduleCard({
         {/* 진행률 + 조·명 수 */}
         <div className="mt-3 flex items-center justify-between">
           <p className="text-xs text-muted-foreground">전체 진행률 {progressPct}%</p>
-          <p className="text-sm font-medium" aria-live="polite">
-            {reportedCount}/{totalGroups}조
-            <span className="text-sm font-normal text-muted-foreground"> ({checkedCount}/{totalMembers}명)</span>
+          <p className="text-sm font-medium text-gray-700" aria-live="polite">
+            {reportedCount}/{totalGroups}조 ({checkedCount}/{totalMembers}명)
           </p>
         </div>
 
