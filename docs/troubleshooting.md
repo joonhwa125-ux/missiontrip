@@ -191,14 +191,16 @@ function requireEnv(key: string): string {
 
 ### 교훈
 
-- `client.ts`와 `server.ts`는 **실행 환경이 다르다** — 동일한 패턴을 기계적으로 적용하기 전에 파일이 브라우저/서버 중 어디서 실행되는지 먼저 확인한다
-- `createBrowserClient`가 보이면 브라우저 번들 제약 적용 대상임을 즉시 인식한다
+- **`NEXT_PUBLIC_*` 환경변수는 어느 파일에서든 리터럴 접근만 사용한다** — `server.ts`도 예외 없음
+- 서버 전용 변수(`SUPABASE_SERVICE_ROLE_KEY` 등 `NEXT_PUBLIC_` 접두사 없는 것)만 `requireServerEnv()` 동적 접근 허용
+- `middleware.ts`가 리터럴 접근을 쓰는 것도 같은 이유 — 이 패턴을 전체 코드베이스에서 일관되게 유지한다
 - 새로운 유틸 함수를 여러 파일에 적용할 때, 각 파일의 실행 환경 차이를 개별 검토한다
 
 ### 진단 체크리스트
 
+- [ ] `NEXT_PUBLIC_*` 변수를 동적 키로 접근하고 있지 않은지 확인: `grep "process.env\[" src/`
+- [ ] `process.env.NEXT_PUBLIC_FOO` (리터럴 ✅) vs `process.env["NEXT_PUBLIC_FOO"]` (동적 ❌)
 - [ ] 에러 발생 파일이 `"use client"` 또는 브라우저 API(`window`, `navigator`)를 사용하는지 확인
-- [ ] `process.env` 접근 방식이 리터럴인지 동적 키인지 확인
 - [ ] Next.js 공식 문서 [Environment Variables](https://nextjs.org/docs/app/building-your-application/configuring/environment-variables) 참고
 
 ---
