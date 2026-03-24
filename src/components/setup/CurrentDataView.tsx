@@ -77,8 +77,8 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
         </div>
       )}
 
-      {/* 서브 탭 */}
-      <div role="tablist" aria-label="데이터 종류" className="mb-3 flex gap-2">
+      {/* 서브 탭 — DayTabs와 동일한 밑줄 방식 */}
+      <div role="tablist" aria-label="데이터 종류" className="mb-3 flex border-b">
         {(["schedules", "users"] as const).map((t) => (
           <button
             key={t}
@@ -86,8 +86,10 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
             aria-selected={tab === t}
             onClick={() => setTab(t)}
             className={cn(
-              "min-h-11 rounded-xl px-4 text-sm font-medium focus-visible:ring-2 focus-visible:ring-main-action",
-              tab === t ? "bg-gray-900 text-white" : "bg-white text-muted-foreground"
+              "min-h-11 flex-1 border-b-2 pb-2 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-main-action",
+              tab === t
+                ? "border-gray-900 text-gray-900"
+                : "border-transparent text-gray-400 hover:text-gray-600"
             )}
           >
             {t === "schedules" ? `일정 (${schedules.length}개)` : `참가자 (${users.length}명)`}

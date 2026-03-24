@@ -80,7 +80,7 @@ export const GROUP_BADGE_STYLE: Record<
   reported: { bg: "bg-[#EAF3DE]", text: "text-[#27500A]", label: "보고완료" },
   all_checked: { bg: "bg-main-action", text: "text-[#3C1E1E]", label: "전원확인" },
   in_progress: { bg: "bg-progress-badge", text: "text-[#633806]", label: "진행중" },
-  not_started: { bg: "bg-secondary", text: "text-muted-foreground", label: "시작전" },
+  not_started: { bg: "bg-secondary", text: "text-muted-foreground", label: "미시작" },
 };
 
 // UI 문구 (PRD 8.2)

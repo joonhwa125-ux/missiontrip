@@ -88,26 +88,32 @@ export default function ScheduleAddDialog({
             aria-label="장소"
           />
           <div className="grid grid-cols-2 gap-2">
-            <select
-              value={newDay}
-              onChange={(e) => setNewDay(e.target.value)}
-              className="w-full rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
-              aria-label="일차"
-            >
-              <option value="1">1일차</option>
-              <option value="2">2일차</option>
-              <option value="3">3일차</option>
-            </select>
-            <select
-              value={newScope}
-              onChange={(e) => setNewScope(e.target.value as ScheduleScope)}
-              className="w-full rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
-              aria-label="대상"
-            >
-              <option value="all">전체</option>
-              <option value="advance">선발</option>
-              <option value="rear">후발</option>
-            </select>
+            <div className="flex flex-col gap-1">
+              <label className="px-1 text-xs font-medium text-muted-foreground">일차</label>
+              <select
+                value={newDay}
+                onChange={(e) => setNewDay(e.target.value)}
+                className="w-full rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+                aria-label="일차"
+              >
+                <option value="1">1일차</option>
+                <option value="2">2일차</option>
+                <option value="3">3일차</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="px-1 text-xs font-medium text-muted-foreground">적용 대상</label>
+              <select
+                value={newScope}
+                onChange={(e) => setNewScope(e.target.value as ScheduleScope)}
+                className="w-full rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+                aria-label="적용 대상"
+              >
+                <option value="all">전체</option>
+                <option value="advance">선발</option>
+                <option value="rear">후발</option>
+              </select>
+            </div>
           </div>
           <div className="relative">
             <input
@@ -131,7 +137,7 @@ export default function ScheduleAddDialog({
           <button
             onClick={handleAdd}
             disabled={!newTitle.trim()}
-            className="min-h-11 flex-1 rounded-xl bg-main-action text-sm font-bold focus-visible:ring-2 focus-visible:ring-main-action disabled:opacity-50"
+            className="min-h-11 flex-1 rounded-xl bg-main-action text-sm font-bold text-[#3C1E1E] focus-visible:ring-2 focus-visible:ring-main-action disabled:opacity-50"
             aria-label="일정 추가 확인"
           >
             추가

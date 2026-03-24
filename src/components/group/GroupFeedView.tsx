@@ -195,6 +195,18 @@ function ScheduleCard({
           <p className="mt-1.5 text-sm font-medium" aria-live="polite">
             {checked}/{effectiveTotal}명 탑승 완료
           </p>
+          <div
+            className="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100"
+            role="progressbar"
+            aria-valuenow={checked}
+            aria-valuemax={effectiveTotal}
+            aria-label={`${checked}/${effectiveTotal}명 탑승`}
+          >
+            <div
+              className="h-full rounded-full bg-complete-check transition-all"
+              style={{ width: effectiveTotal > 0 ? `${Math.round((checked / effectiveTotal) * 100)}%` : "0%" }}
+            />
+          </div>
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onStatusOpen(); }}
