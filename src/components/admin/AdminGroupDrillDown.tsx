@@ -188,13 +188,11 @@ function MemberRow({
   const isAbsent = checkin?.is_absent;
   const isLeader = member.role === "leader" || member.role === "admin_leader";
   const hasSchedule = !!activeSchedule;
-  const displayName = member.name.split('.')[0];
-
   return (
     <li className="flex min-h-[3rem] items-center gap-2 rounded-xl bg-gray-50 px-3">
       {/* 이름 + 조장 배지 */}
       <div className="flex min-w-0 flex-1 items-center gap-1.5">
-        <span className="truncate font-medium">{displayName}</span>
+        <span className="truncate font-medium">{member.name}</span>
         {isLeader && (
           <span className="flex-shrink-0 rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-500">
             조장
