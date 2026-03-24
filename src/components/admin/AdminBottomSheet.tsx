@@ -131,7 +131,7 @@ export default function AdminBottomSheet({
                       <div className="mb-1.5">
                         <span
                           className={cn(
-                            "inline-block rounded-full px-2 py-0.5 text-[0.8125rem] font-medium",
+                            "inline-block -ml-1 rounded-full px-2 py-0.5 text-[0.8125rem] font-medium",
                             b.bg,
                             b.text
                           )}

@@ -5,7 +5,7 @@ export default function AdminLoading() {
     <div className="flex min-h-full flex-col">
       <PageHeader
         title="혼디모영"
-        superTitle="2026 미션트립 · 관리자"
+        superTitle="2026 링키지랩 미션트립"
         titleNode={
           <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
             <span>🍊 혼디모영</span>
