@@ -72,13 +72,13 @@ export default function GroupFeedView({
     <div className="flex-1 overflow-y-auto">
       {/* 통일 헤더 */}
       <PageHeader
-        superTitle={`2026 링키지랩 미션트립 · ${groupName}`}
+        superTitle="2026 링키지랩 미션트립"
         title="Go찌Go찌"
         titleNode={
           <span className="flex items-center gap-2">
             <span>Go찌Go찌</span>
             <span className="rounded-full bg-gray-900 px-2.5 py-0.5 text-sm font-semibold text-white">
-              조장
+              {groupName} 조장
             </span>
           </span>
         }
