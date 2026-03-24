@@ -69,7 +69,7 @@ export default function AdminBottomSheet({
           const totalCount = gMembers.length - absentCount;
           const badge = getGroupBadgeStatus(totalCount, checkedCount, reportMap.has(g.id));
           const leader = gMembers.find((m) => isLeaderRole(m.role));
-          return { group: g, totalCount, checkedCount, badge, leader, rawTotal: gMembers.length };
+          return { group: g, totalCount, checkedCount, absentCount, badge, leader, rawTotal: gMembers.length };
         })
         .filter((s) => s.rawTotal > 0),
     [groups, scopeMembers, checkedIds, absentIds, reportMap]
@@ -116,7 +116,7 @@ export default function AdminBottomSheet({
             <section key={busName} className="mb-4">
               <h3 className="mb-2 text-sm font-bold text-muted-foreground">{busName}</h3>
               <div className="grid grid-cols-2 gap-2 [&>*:last-child:nth-child(odd)]:col-span-2">
-                {busSummaries.map(({ group, totalCount, checkedCount, badge, leader }) => {
+                {busSummaries.map(({ group, totalCount, checkedCount, absentCount, badge, leader }) => {
                   const b = GROUP_BADGE_STYLE[badge];
                   const progress = totalCount > 0 ? (checkedCount / totalCount) * 100 : 0;
                   return (
@@ -168,6 +168,11 @@ export default function AdminBottomSheet({
                       <p className="text-xs text-muted-foreground">
                         {checkedCount} / {totalCount}명
                       </p>
+                      {absentCount > 0 && (
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          불참 {absentCount}명
+                        </p>
+                      )}
                     </button>
                   );
                 })}

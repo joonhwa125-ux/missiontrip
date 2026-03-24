@@ -30,7 +30,6 @@ export default function AdminScheduleCard({
   const scopeGroupIds = new Set(scopeMembers.map((m) => m.group_id));
   const totalGroups = scopeGroupIds.size;
 
-  // 바텀시트 배지와 동일 기준: 전원체크인(불참 제외) + 보고레코드 존재 시에만 "보고완료"
   const reportMap = new Set(reports.map((r) => r.group_id));
   const checkedIds = new Set(checkIns.filter((c) => !c.is_absent).map((c) => c.user_id));
   const absentIds = new Set(checkIns.filter((c) => c.is_absent).map((c) => c.user_id));
@@ -55,14 +54,29 @@ export default function AdminScheduleCard({
     </span>
   ) : null;
 
-  // 대기/완료 카드 서브텍스트: "일정명 · 집결 HH:MM"
-  const metaLine = (schedule.location || timeDisplay) ? (
-    <p className="mt-0.5 flex flex-wrap items-center gap-x-1 text-sm text-muted-foreground">
-      {schedule.location && <span>{schedule.title}</span>}
-      {schedule.location && timeDisplay && <span aria-hidden="true">·</span>}
-      {timeDisplay && <span>집결 {timeDisplay}</span>}
-    </p>
+  // 부제목: location이 있을 때 title을 보조로 (시간 제거 — 헤더 배지로 이동)
+  const subtitle = schedule.location ? (
+    <p className="mt-0.5 text-sm text-muted-foreground">{schedule.title}</p>
   ) : null;
+
+  // 공통 시간 배지 — 집결 시간 (우측 상단)
+  const timeBadge = timeDisplay ? (
+    <button
+      onClick={onTimeEdit}
+      className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600 focus-visible:ring-2 focus-visible:ring-main-action"
+      aria-label={`집결 시간 ${timeDisplay} — 탭하여 수정`}
+    >
+      집결 {timeDisplay}
+    </button>
+  ) : (
+    <button
+      onClick={onTimeEdit}
+      className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-400 focus-visible:ring-2 focus-visible:ring-main-action"
+      aria-label="집결 시간 추가"
+    >
+      + 시간 추가
+    </button>
+  );
 
   if (status === "active") {
     return (
@@ -71,25 +85,19 @@ export default function AdminScheduleCard({
         role="region"
         aria-label={`진행중 일정: ${schedule.title}`}
       >
-        {/* 헤더: 진행중 pill + 집결 시간 */}
+        {/* 헤더: 진행중 pill (좌) + 집결 시간 (우) */}
         <div className="mb-2 flex items-center justify-between">
           <span className="rounded-full bg-main-action px-2 py-0.5 text-xs font-bold text-gray-900">
             진행중
           </span>
-          {timeDisplay && (
-            <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
-              집결 {timeDisplay}
-            </span>
-          )}
+          {timeBadge}
         </div>
 
         {/* 장소 (primary) + 일정명 (secondary) */}
         <p className="text-base font-semibold leading-snug">
           {scopeBadge}{primaryText}
         </p>
-        {schedule.location && (
-          <p className="mt-0.5 text-sm text-muted-foreground">{schedule.title}</p>
-        )}
+        {subtitle}
 
         {/* 통계 */}
         <div className="mt-3 flex items-center justify-between">
@@ -137,15 +145,20 @@ export default function AdminScheduleCard({
         role="region"
         aria-label={`예정 일정: ${schedule.title}`}
       >
+        {/* 헤더: 예정 pill (좌) + 집결 시간 (우) — active와 동일 구조 */}
+        <div className="mb-2 flex items-center justify-between">
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+            예정
+          </span>
+          {timeBadge}
+        </div>
+
+        {/* 장소/일정명 + 활성화 버튼 (기존 우측 위치 유지) */}
         <div className="flex items-start justify-between gap-3">
-          <button
-            onClick={onTimeEdit}
-            className="flex-1 text-left rounded-lg focus-visible:ring-2 focus-visible:ring-main-action"
-            aria-label={`${schedule.title} 시간 수정`}
-          >
+          <div className="flex-1">
             <p className="font-medium">{scopeBadge}{primaryText}</p>
-            {metaLine}
-          </button>
+            {subtitle}
+          </div>
           <button
             onClick={onActivate}
             className="flex-shrink-0 min-h-11 rounded-xl border border-gray-300 px-3 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-ring"
@@ -165,15 +178,25 @@ export default function AdminScheduleCard({
       role="region"
       aria-label={`완료 일정: ${schedule.title}`}
     >
+      {/* 헤더: 완료 pill (좌) + 집결 시간 (우) — active/waiting과 동일 구조 */}
+      <div className="mb-2 flex items-center justify-between">
+        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-muted-foreground">
+          완료
+        </span>
+        {timeDisplay && (
+          <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-500">
+            집결 {timeDisplay}
+          </span>
+        )}
+      </div>
+
+      {/* 장소/일정명 + 조 통계 */}
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1">
           <p className="font-medium">{scopeBadge}{primaryText}</p>
-          {metaLine}
+          {subtitle}
         </div>
-        <div className="flex flex-col items-end gap-1">
-          <span className="flex-shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-muted-foreground">
-            완료
-          </span>
+        <div className="flex flex-col items-end gap-0.5">
           <p className="flex items-center gap-0.5 text-sm font-medium text-muted-foreground">
             <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
             {reportedCount}/{totalGroups}조
@@ -183,6 +206,7 @@ export default function AdminScheduleCard({
           </p>
         </div>
       </div>
+
       <button
         onClick={onSummaryTap}
         className="mt-2 w-full min-h-11 rounded-xl bg-gray-50 px-4 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action"
