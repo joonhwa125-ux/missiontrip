@@ -162,9 +162,9 @@ export default function AdminScheduleCard({
           <button
             onClick={onActivate}
             className="flex-shrink-0 min-h-11 rounded-xl border border-gray-300 px-3 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-ring"
-            aria-label={`${schedule.title} 활성화`}
+            aria-label={`${schedule.title} 체크인 시작`}
           >
-            활성화
+            시작
           </button>
         </div>
       </div>
