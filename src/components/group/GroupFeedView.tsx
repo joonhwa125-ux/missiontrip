@@ -150,57 +150,58 @@ function ScheduleCard({
   onStatusOpen: () => void;
 }) {
   const status = getScheduleStatus(schedule);
-  const timeDisplay = schedule.scheduled_time
-    ? formatTime(schedule.scheduled_time)
-    : null;
+  const timeDisplay = schedule.scheduled_time ? formatTime(schedule.scheduled_time) : null;
   const scopeMembers = filterMembersByScope(members, schedule.scope);
   const total = scopeMembers.length;
+
+  // location 우선, 없으면 title
+  const primaryText = schedule.location ?? schedule.title;
+
+  // 대기/완료 카드 서브텍스트: "일정명 · 집결 HH:MM"
+  const metaLine = (schedule.location || timeDisplay) ? (
+    <p className="mt-0.5 flex flex-wrap items-center gap-x-1 text-sm text-muted-foreground">
+      {schedule.location && <span>{schedule.title}</span>}
+      {schedule.location && timeDisplay && <span aria-hidden="true">·</span>}
+      {timeDisplay && <span>집결 {timeDisplay}</span>}
+    </p>
+  ) : null;
 
   if (status === "active") {
     const checked = checkIns.filter((c) => !c.is_absent).length;
     const absentCount = checkIns.filter((c) => c.is_absent).length;
     const effectiveTotal = total - absentCount;
     return (
-      <div
-        className={cn(
-          "rounded-2xl p-4",
-          "bg-main-action/20 ring-2 ring-main-action"
-        )}
-      >
+      <div className="rounded-2xl bg-white ring-2 ring-main-action p-4">
         <button
           onClick={onEnterCheckin}
           className="w-full text-left min-h-11 focus-visible:ring-2 focus-visible:ring-main-action rounded-lg"
           aria-label={`${schedule.title} 체크인 화면으로 이동`}
         >
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex-1">
-              <p className="font-medium">{schedule.location ?? schedule.title}</p>
-              {schedule.location && (
-                <p className="text-sm text-muted-foreground">{schedule.title}</p>
-              )}
-              {timeDisplay && (
-                <p className="mt-0.5 text-sm text-muted-foreground">{timeDisplay}</p>
-              )}
-            </div>
-            <div className="flex flex-col items-end gap-1">
-              <span className="flex-shrink-0 rounded-full bg-main-action px-2 py-0.5 text-xs font-medium text-gray-900">
-                진행중
+          {/* 헤더: 진행중 pill + 집결 시간 */}
+          <div className="mb-2 flex items-center justify-between">
+            <span className="rounded-full bg-main-action px-2 py-0.5 text-xs font-bold text-gray-900">
+              진행중
+            </span>
+            {timeDisplay && (
+              <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs text-gray-600">
+                집결 {timeDisplay}
               </span>
-              <span className="text-xs font-medium text-muted-foreground">
-                {checked}/{effectiveTotal}명
-              </span>
-            </div>
+            )}
           </div>
+          <p className="text-base font-semibold leading-snug">{primaryText}</p>
+          {schedule.location && (
+            <p className="mt-0.5 text-sm text-muted-foreground">{schedule.title}</p>
+          )}
+          <p className="mt-1.5 text-sm font-medium" aria-live="polite">
+            {checked}/{effectiveTotal}명 탑승 완료
+          </p>
         </button>
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onStatusOpen();
-          }}
-          className="mt-2 w-full min-h-11 rounded-xl bg-white/60 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
+          onClick={(e) => { e.stopPropagation(); onStatusOpen(); }}
+          className="mt-2 w-full min-h-11 rounded-xl bg-gray-50 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
           aria-label="전체 현황 보기"
         >
-          전체 현황 보기 &gt;
+          전체 현황 보기 →
         </button>
       </div>
     );
@@ -217,13 +218,8 @@ function ScheduleCard({
     >
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1">
-          <p className="font-medium">{schedule.location ?? schedule.title}</p>
-          {schedule.location && (
-            <p className="text-sm text-muted-foreground">{schedule.title}</p>
-          )}
-          {timeDisplay && (
-            <p className="mt-0.5 text-sm text-muted-foreground">{timeDisplay}</p>
-          )}
+          <p className="font-medium">{primaryText}</p>
+          {metaLine}
         </div>
         <div className="flex flex-col items-end gap-1">
           <span
