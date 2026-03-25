@@ -243,7 +243,7 @@ function ScheduleCard({
       <div className="rounded-2xl bg-white p-4">
         {/* 헤더: 예정 배지 + 집결시간 배지 + 후발 배지 */}
         <div className="mb-1.5 flex items-center gap-1">
-          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+          <span className="rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-800">
             예정
           </span>
           {timeDisplay && (
@@ -268,7 +268,7 @@ function ScheduleCard({
     <div className="rounded-2xl bg-white p-4 opacity-55">
       {/* 헤더: 완료 배지 + 집결시간 배지 + 후발 배지 */}
       <div className="mb-1.5 flex items-center gap-1">
-        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+        <span className="rounded-full bg-[#EAF3DE] px-2 py-0.5 text-xs font-medium text-[#27500A]">
           완료
         </span>
         {timeDisplay && (
