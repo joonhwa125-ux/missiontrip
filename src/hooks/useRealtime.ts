@@ -14,6 +14,7 @@ import {
   BROADCAST_SUBSCRIBE_TIMEOUT_MS,
 } from "@/lib/constants";
 import type { RealtimeChannel } from "@supabase/supabase-js";
+import type { ScheduleScope } from "@/lib/types";
 
 // 채널 레지스트리: useRealtime과 useBroadcast 간 동일 topic 채널 공유
 // Set 사용으로 동일 채널명 재등록 시 덮어쓰기 방지 (StrictMode 이중 마운트 안전)
@@ -33,7 +34,7 @@ function unregisterChannel(ch: RealtimeChannel): void {
 }
 
 interface RealtimeCallbacks {
-  onScheduleActivated?: (payload: { schedule_id: string; title: string }) => void;
+  onScheduleActivated?: (payload: { schedule_id: string; title: string; scope?: ScheduleScope }) => void;
   onScheduleUpdated?: (payload: { schedule_id: string; scheduled_time: string }) => void;
   onScheduleDeactivated?: (payload: { schedule_id: string; title: string }) => void;
   onCheckinUpdated?: (payload: { user_id: string; schedule_id: string; action: "insert" | "delete"; is_absent?: boolean }) => void;

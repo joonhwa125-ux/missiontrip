@@ -76,7 +76,7 @@ export default function GroupView({
 
   // Realtime 구독 — GroupView 레벨 (feed <-> checkin 전환 시에도 유지)
   useRealtime(currentUser.group_id, false, {
-    onScheduleActivated: ({ schedule_id, title }) => {
+    onScheduleActivated: ({ schedule_id, title, scope }) => {
       if (viewRef.current === "checkin") {
         showToast(`새로운 일정이 시작되었어요: ${title}`);
         setCurrentSchedule((prev) => ({
@@ -86,7 +86,7 @@ export default function GroupView({
           day_number: prev?.day_number ?? 1,
           sort_order: prev?.sort_order ?? 0,
           scheduled_time: prev?.scheduled_time ?? null,
-          scope: prev?.scope ?? "all",
+          scope: scope ?? "all",
           is_active: true,
           activated_at: new Date().toISOString(),
           created_at: prev?.created_at ?? new Date().toISOString(),

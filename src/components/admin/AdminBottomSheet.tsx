@@ -176,10 +176,18 @@ export default function AdminBottomSheet({
                     const b = GROUP_BADGE_STYLE[badge];
                     const progress = totalCount > 0 ? (checkedCount / totalCount) * 100 : 0;
                     return (
-                      <button
+                      <div
                         key={group.id}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => setDrillGroup(group)}
-                        className="rounded-2xl border border-gray-200 bg-white p-4 text-left transition-colors active:bg-gray-50 focus-visible:ring-2 focus-visible:ring-main-action"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setDrillGroup(group);
+                          }
+                        }}
+                        className="cursor-pointer rounded-2xl border border-gray-200 bg-white p-4 text-left transition-colors active:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
                         aria-label={`${group.name} 상세 보기`}
                       >
                         <div className="mb-1.5">
@@ -201,7 +209,8 @@ export default function AdminBottomSheet({
                               <a
                                 href={`tel:${leader.phone}`}
                                 onClick={(e) => e.stopPropagation()}
-                                className="flex min-h-11 min-w-11 items-center justify-center"
+                                onKeyDown={(e) => e.stopPropagation()}
+                                className="flex min-h-11 min-w-11 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-main-action"
                                 aria-label={`${leader.name} 조장에게 전화`}
                               >
                                 <PhoneIcon />
@@ -224,7 +233,7 @@ export default function AdminBottomSheet({
                         <p className="text-xs text-muted-foreground">
                           {checkedCount} / {rawTotal}명{absentCount > 0 ? ` (불참 ${absentCount})` : ""}
                         </p>
-                      </button>
+                      </div>
                     );
                   })}
                 </div>

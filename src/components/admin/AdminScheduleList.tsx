@@ -56,7 +56,7 @@ export default function AdminScheduleList({
         const res = await activateSchedule(s.id);
         if (res.ok) {
           await broadcast(CHANNEL_GLOBAL, EVENT_SCHEDULE_ACTIVATED, {
-            schedule_id: s.id, title: s.title,
+            schedule_id: s.id, title: s.title, scope: s.scope,
           });
           onRefresh();
         }

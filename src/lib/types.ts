@@ -45,7 +45,7 @@ export interface AdminMember {
   id: string;
   name: string;
   phone: string | null;
-  role: string;
+  role: UserRole;
   group_id: string;
   party: GroupParty | null;
 }

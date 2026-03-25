@@ -128,22 +128,28 @@ export default function AdminGroupDrillDown({
 
   return (
     <>
-      {/* 헤더: 뒤로 + 조 이름 + 카운트 */}
-      <div className="flex-shrink-0 px-6 pt-6">
-        <button
-          onClick={onBack}
-          className="mb-2 flex min-h-11 items-center gap-0.5 -ml-2 rounded-lg px-2 text-sm text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action"
-          aria-label="현황 목록으로 돌아가기"
+      {/* 헤더: 뒤로 + 조 이름 + 카운트 (단일 행 내비게이션 패턴) */}
+      <div className="flex-shrink-0 px-4 pt-4 pb-2">
+        {/* 뒤로가기 + 제목을 같은 행에 배치 */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onBack}
+            className="flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center rounded-lg text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action"
+            aria-label="현황 목록으로 돌아가기"
+          >
+            <ChevronLeftIcon className="h-5 w-5" />
+          </button>
+          <DialogTitle className="text-left text-base font-semibold">
+            {group.name}
+          </DialogTitle>
+        </div>
+        {/* 카운트는 제목 아래, 왼쪽 정렬 */}
+        <DialogDescription
+          aria-live="polite"
+          className="mt-0.5 pl-11 text-left text-sm text-muted-foreground"
         >
-          <ChevronLeftIcon className="h-4 w-4" />
-          현황
-        </button>
-        <DialogHeader>
-          <DialogTitle>{group.name}</DialogTitle>
-          <DialogDescription aria-live="polite">
-            {checkedCount}/{groupMembers.length}명 확인{absentCount > 0 && ` (불참 ${absentCount})`}
-          </DialogDescription>
-        </DialogHeader>
+          {checkedCount}/{groupMembers.length}명 확인{absentCount > 0 && ` (불참 ${absentCount})`}
+        </DialogDescription>
       </div>
 
       {/* 인원 목록 */}
@@ -193,16 +199,36 @@ function MemberRow({
   const isAbsent = checkin?.is_absent;
   const isLeader = isLeaderRole(member.role);
   const hasSchedule = !!activeSchedule;
+
+  // 상태 텍스트: 모든 상태에 명시적 레이블 (KWCAG 1.3.3 감각적 특성)
+  const statusText = isAbsent
+    ? COPY.absent
+    : isChecked
+    ? checkin?.checked_at
+      ? `${formatTime(checkin.checked_at)} 확인`
+      : "확인 완료"
+    : COPY.notChecked;
+
+  const statusTextClass = isChecked
+    ? "text-complete-check"
+    : "text-muted-foreground";
+
   return (
-    <li className="flex min-h-[3rem] items-center gap-2 rounded-xl bg-gray-50 px-3">
-      {/* 이름 + 조장 배지 */}
-      <div className="flex min-w-0 flex-1 items-center gap-1.5">
-        <span className="truncate font-medium">{member.name}</span>
-        {isLeader && (
-          <span className="flex-shrink-0 rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-500">
-            조장
-          </span>
-        )}
+    <li className="flex min-h-[3.5rem] items-center gap-2 rounded-xl bg-gray-50 px-3 py-2">
+      {/* 이름 + 상태 텍스트 (세로 2줄) */}
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <div className="flex items-center gap-1.5">
+          <span className="truncate font-medium">{member.name}</span>
+          {isLeader && (
+            <span className="flex-shrink-0 rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-500">
+              조장
+            </span>
+          )}
+        </div>
+        {/* 상태 텍스트: 색상 + 텍스트 이중 표현 (KWCAG 1.3.3) */}
+        <span className={`text-xs ${statusTextClass}`}>
+          {statusText}
+        </span>
       </div>
 
       {/* 체크인 액션 */}
@@ -210,7 +236,7 @@ function MemberRow({
         <>
           <button
             onClick={onAbsent}
-            className="min-h-11 flex-shrink-0 rounded-xl border border-red-200 px-3 text-xs font-medium text-red-600 focus-visible:ring-2 focus-visible:ring-red-300"
+            className="min-h-11 flex-shrink-0 rounded-xl border border-red-200 px-3 text-xs font-medium text-red-700 focus-visible:ring-2 focus-visible:ring-red-300"
             aria-label={`${member.name} 불참 처리`}
           >
             {COPY.absent}
@@ -224,39 +250,23 @@ function MemberRow({
           </button>
         </>
       )}
-      {isChecked && (
-        <>
-          {checkin?.checked_at && (
-            <span className="flex-shrink-0 text-xs font-medium text-complete-check">
-              {formatTime(checkin.checked_at)} 확인
-            </span>
-          )}
-          {hasSchedule && (
-            <button
-              onClick={onCancel}
-              className="min-h-11 flex-shrink-0 rounded-xl border border-gray-300 px-3 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label={`${member.name} 체크인 취소`}
-            >
-              {COPY.cancelButton}
-            </button>
-          )}
-        </>
+      {isChecked && hasSchedule && (
+        <button
+          onClick={onCancel}
+          className="min-h-11 flex-shrink-0 rounded-xl border border-gray-300 px-3 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={`${member.name} 체크인 취소`}
+        >
+          {COPY.cancelButton}
+        </button>
       )}
-      {isAbsent && (
-        <>
-          <span className="flex-shrink-0 text-xs font-medium text-muted-foreground">
-            {COPY.absent}
-          </span>
-          {hasSchedule && (
-            <button
-              onClick={onCancel}
-              className="min-h-11 flex-shrink-0 rounded-xl border border-gray-300 px-3 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label={`${member.name} 불참 취소`}
-            >
-              {COPY.cancelButton}
-            </button>
-          )}
-        </>
+      {isAbsent && hasSchedule && (
+        <button
+          onClick={onCancel}
+          className="min-h-11 flex-shrink-0 rounded-xl border border-gray-300 px-3 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label={`${member.name} 불참 취소`}
+        >
+          {COPY.cancelButton}
+        </button>
       )}
 
       {/* 전화 */}

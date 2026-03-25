@@ -46,6 +46,17 @@
 | Tier 1 (T1-1~4, R1, R2, R3) | ✅ 이미 구현됨 | 코드 확인 결과 모두 이전 세션에서 구현 완료 |
 | T3-7 `as` 타입 단언 제거 | ⬜ 스킵 | database.types.ts 미존재 (조건부 항목) |
 
+### 코드 리뷰 4차 수정 (24건 분석 → 3건 수정)
+
+> 에이전트 분석 91/100 → 4차 /bkit:code-review → 교차검증 후 88/100 확정
+
+| 항목 | 상태 | 비고 |
+|---|---|---|
+| M-3 GroupView scope 누락 | ✅ 완료 | broadcast에 scope 추가. useRealtime.ts 타입 + AdminScheduleList.tsx 페이로드 + GroupView.tsx 핸들러 |
+| m-15 AdminMember.role string→UserRole | ✅ 완료 | types.ts 48번 줄 |
+| m-17 AdminBottomSheet button>a 중첩 | ✅ 완료 | div[role=button] + onKeyDown으로 대체 |
+| 오버킬 8건 (C-1,C-2,M-4,M-7,M-9,M-10,m-11,m-13) | ✅ 확인 | 의도된 설계 / 기존 결정 재확인 |
+
 ### 보류 항목 (운영 후 개선)
 
 | 항목 | 출처 | 비고 |
