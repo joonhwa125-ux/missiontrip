@@ -13,9 +13,10 @@ import {
 } from "@/components/ui/dialog";
 import { updateSchedule, deleteSchedule, updateUser, deleteUser } from "@/actions/setup";
 import { formatTime, cn } from "@/lib/utils";
+import { SCOPE_LABEL, ROLE_LABEL, getPartyLabel } from "@/lib/constants";
 import ScheduleEditDialog from "./ScheduleEditDialog";
 import UserEditDialog from "./UserEditDialog";
-import type { Schedule, UserRole, GroupParty, ScheduleScope } from "@/lib/types";
+import type { Schedule, UserRole, GroupParty } from "@/lib/types";
 
 type SetupUser = {
   id: string;
@@ -57,9 +58,6 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
     });
   };
 
-  const SCOPE_LABEL: Record<ScheduleScope, string> = { all: "전체", advance: "선발", rear: "후발" };
-  const ROLE_LABEL: Record<UserRole, string> = { member: "조원", leader: "조장", admin: "관리자", admin_leader: "관리자(조장)" };
-  const PARTY_LABEL = (p: GroupParty | null) => (p === "advance" ? "선발" : p === "rear" ? "후발" : "-");
 
   return (
     <div className="px-4 py-4">
@@ -105,8 +103,8 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
               <tr className="text-center text-xs text-muted-foreground">
                 <th className="min-w-[48px] px-3 py-2">일정</th>
                 <th className="min-w-[36px] px-3 py-2">순서</th>
-                <th className="min-w-[120px] px-3 py-2">집결지</th>
-                <th className="min-w-[160px] px-3 py-2">집결지 상세</th>
+                <th className="min-w-[120px] px-3 py-2">장소</th>
+                <th className="min-w-[160px] px-3 py-2">집결지</th>
                 <th className="min-w-[56px] px-3 py-2">예정 시간</th>
                 <th className="min-w-[48px] px-3 py-2">구분</th>
                 <th className="min-w-[108px] px-3 py-2">데이터 관리</th>
@@ -161,7 +159,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
                   <td className="px-3 py-2 text-xs">{u.phone ?? "-"}</td>
                   <td className="px-3 py-2 text-center text-xs">{ROLE_LABEL[u.role]}</td>
                   <td className="px-3 py-2 text-center text-xs">{groupMap.get(u.group_id) ?? "-"}</td>
-                  <td className="px-3 py-2 text-center text-xs">{PARTY_LABEL(u.party)}</td>
+                  <td className="px-3 py-2 text-center text-xs">{getPartyLabel(u.party)}</td>
                   <td className="px-3 py-2">
                     <div className="flex justify-start gap-1">
                       <button onClick={() => setEditUser(u)} className="min-h-11 rounded-lg bg-gray-100 px-2 text-xs font-medium focus-visible:ring-2 focus-visible:ring-main-action" aria-label={`${u.name} 수정`}>수정</button>

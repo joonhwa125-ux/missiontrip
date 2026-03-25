@@ -1,5 +1,7 @@
 // 미션트립 시스템 상수 정의
 
+import type { UserRole, GroupParty, ScheduleScope } from "./types";
+
 // 인증
 export const ALLOWED_EMAIL_DOMAIN = process.env.ALLOWED_EMAIL_DOMAIN ?? "@linkagelab.co.kr";
 
@@ -29,7 +31,6 @@ export const MEMBER_CARD_MIN_HEIGHT = 72; // px — 조원 카드 최소 높이
 
 // 참가 규모
 export const EXPECTED_TOTAL_MEMBERS = 200;
-export const EXPECTED_GROUP_COUNT = 20;
 export const EXPECTED_LEADER_COUNT = 18;
 
 // 이메일 자동 생성 (setup 파싱용)
@@ -54,10 +55,26 @@ export const SCOPE_MAP: Record<string, "all" | "advance" | "rear"> = {
 };
 
 // 일정 대상 라벨 (DB → UI)
-export const SCOPE_LABEL: Record<string, string> = {
+export const SCOPE_LABEL: Record<ScheduleScope, string> = {
+  all: "전체",
   advance: "선발",
   rear: "후발",
 };
+
+// 역할 라벨 (DB → UI)
+export const ROLE_LABEL: Record<UserRole, string> = {
+  member: "조원",
+  leader: "조장",
+  admin: "관리자",
+  admin_leader: "관리자(조장)",
+};
+
+// 선후발 라벨 (null 허용)
+export function getPartyLabel(party: GroupParty | null): string {
+  if (party === "advance") return "선발";
+  if (party === "rear") return "후발";
+  return "-";
+}
 
 // 역할 라우팅
 export const ROLE_ROUTES: Record<string, string> = {
@@ -67,15 +84,23 @@ export const ROLE_ROUTES: Record<string, string> = {
   admin_leader: "/admin",
 };
 
+// 역할 권한 테이블 — 핫픽스 시 1곳만 수정하면 모든 함수에 반영됨
+const ROLE_PERMISSIONS = {
+  member:       { isAdmin: false, isLeader: false, canCheckin: false },
+  leader:       { isAdmin: false, isLeader: true,  canCheckin: true  },
+  admin:        { isAdmin: true,  isLeader: false, canCheckin: true  },
+  admin_leader: { isAdmin: true,  isLeader: true,  canCheckin: true  },
+} as const satisfies Record<string, { isAdmin: boolean; isLeader: boolean; canCheckin: boolean }>;
+
 // 역할 판별 헬퍼 — 복합 역할(admin_leader) 대응
 export function isAdminRole(role: string): boolean {
-  return role === "admin" || role === "admin_leader";
+  return ROLE_PERMISSIONS[role as keyof typeof ROLE_PERMISSIONS]?.isAdmin ?? false;
 }
 export function isLeaderRole(role: string): boolean {
-  return role === "leader" || role === "admin_leader";
+  return ROLE_PERMISSIONS[role as keyof typeof ROLE_PERMISSIONS]?.isLeader ?? false;
 }
 export function canCheckin(role: string): boolean {
-  return role === "leader" || role === "admin" || role === "admin_leader";
+  return ROLE_PERMISSIONS[role as keyof typeof ROLE_PERMISSIONS]?.canCheckin ?? false;
 }
 
 // 컬러 상수 (tailwind.config와 동기화)
@@ -106,7 +131,8 @@ export const COPY = {
   checkinButton: "왔수다!",
   cancelButton: "취소",
   totalCount: (checked: number, total: number) => `${checked} / ${total}명 탑승 완료`,
-  allComplete: (groupName: string) => `${groupName} 전원 탑승 완료!`,
+  allComplete: (groupName: string, hasAbsent: boolean) =>
+    hasAbsent ? `${groupName} 전원 확인 완료!` : `${groupName} 전원 탑승 완료!`,
   reportButtonComplete: "우리 조 다 왔수다! 보고하기",
   reportButtonDone: "보고 완료!",
   reportButtonPending: (n: number) => `${n}명 남았어요`,

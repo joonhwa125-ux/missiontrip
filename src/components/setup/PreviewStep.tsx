@@ -12,7 +12,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { SCOPE_LABEL } from "@/lib/constants";
+import { SCOPE_LABEL, ROLE_LABEL } from "@/lib/constants";
 import type { SetupPreviewData } from "@/lib/types";
 
 interface Props {
@@ -145,7 +145,7 @@ export default function PreviewStep({
                   <td className="px-3 py-2 text-center text-muted-foreground">{i + 1}</td>
                   <td className="sticky left-0 z-10 bg-white px-3 py-2 font-medium shadow-[1px_0_0_0_#e5e7eb]">{u.name}</td>
                   <td className="px-3 py-2">{u.phone ?? "-"}</td>
-                  <td className="px-3 py-2 text-center">{u.role}</td>
+                  <td className="px-3 py-2 text-center">{ROLE_LABEL[u.role]}</td>
                   <td className="px-3 py-2 text-center">{u.group_name}</td>
                   <td className="px-3 py-2 text-center">{u.party ? (SCOPE_LABEL[u.party] ?? "-") : "-"}</td>
                 </tr>
@@ -158,8 +158,8 @@ export default function PreviewStep({
               <tr className="text-center text-xs text-muted-foreground">
                 <th className="min-w-[48px] px-3 py-2">일정</th>
                 <th className="min-w-[36px] px-3 py-2">순서</th>
-                <th className="min-w-[120px] px-3 py-2">집결지</th>
-                <th className="min-w-[160px] px-3 py-2">집결지 상세</th>
+                <th className="min-w-[120px] px-3 py-2">장소</th>
+                <th className="min-w-[160px] px-3 py-2">집결지</th>
                 <th className="min-w-[56px] px-3 py-2">예정 시간</th>
                 <th className="min-w-[48px] px-3 py-2">구분</th>
               </tr>
@@ -173,7 +173,7 @@ export default function PreviewStep({
                   <td className="px-3 py-2 font-medium">{s.title}</td>
                   <td className="px-3 py-2 text-center">{s.scheduled_time ?? "-"}</td>
                   <td className="px-3 py-2 text-center">
-                    {s.scope === "all" ? "전체" : (SCOPE_LABEL[s.scope] ?? s.scope)}
+                    {SCOPE_LABEL[s.scope]}
                   </td>
                 </tr>
               ))}

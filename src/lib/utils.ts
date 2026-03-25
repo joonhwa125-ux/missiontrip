@@ -17,26 +17,33 @@ export function formatTime(iso: string): string {
   });
 }
 
+// 시각 파싱 패턴 (DRY — setup.ts의 인라인 정규식과 공유)
+export const TIME_PATTERNS = {
+  fullDate: /^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})$/,
+  monthDay: /^(\d{2})-(\d{2})\s+(\d{2}):(\d{2})$/,
+  hourMin:  /^(\d{2}):(\d{2})$/,
+} as const;
+
 // 시간 문자열을 KST 기준 ISO 문자열로 변환
 // 지원 형식:
 //   "HH:MM"              → referenceDate 날짜 사용 (없으면 오늘 KST)
 //   "MM-DD HH:MM"        → 현재 연도 + 지정 날짜
 //   "YYYY-MM-DD HH:MM"   → 지정 날짜
 export function parseKSTTime(input: string, referenceDate?: string | null): string {
-  const fullMatch = input.match(/^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})$/);
+  const fullMatch = input.match(TIME_PATTERNS.fullDate);
   if (fullMatch) {
     const [, yyyy, mo, dd, hh, mi] = fullMatch;
     return new Date(`${yyyy}-${mo}-${dd}T${hh}:${mi}:00+09:00`).toISOString();
   }
 
-  const mmddMatch = input.match(/^(\d{2})-(\d{2})\s+(\d{2}):(\d{2})$/);
+  const mmddMatch = input.match(TIME_PATTERNS.monthDay);
   if (mmddMatch) {
     const [, mo, dd, hh, mi] = mmddMatch;
     const year = new Date().toLocaleDateString("sv", { timeZone: "Asia/Seoul" }).slice(0, 4);
     return new Date(`${year}-${mo}-${dd}T${hh}:${mi}:00+09:00`).toISOString();
   }
 
-  const hhmmMatch = input.match(/^(\d{2}):(\d{2})$/);
+  const hhmmMatch = input.match(TIME_PATTERNS.hourMin);
   if (hhmmMatch) {
     const [, hh, mi] = hhmmMatch;
     const base = referenceDate
@@ -91,9 +98,13 @@ export function getDefaultDay(schedules: Schedule[]): number {
 }
 
 // 조 배지 상태 판별
-export function getGroupBadgeStatus(total: number, checked: number, hasReport: boolean): GroupBadgeStatus {
-  if (total === 0 || checked === 0) return "not_started";
-  if (checked < total) return "in_progress";
+// rawTotal: 해당 scope 전체 멤버 수, checked: 탑승 확인 수(불참 제외), absentCount: 불참 수
+export function getGroupBadgeStatus(rawTotal: number, checked: number, hasReport: boolean, absentCount = 0): GroupBadgeStatus {
+  if (rawTotal === 0) return "not_started"; // 해당 scope에 멤버 없음
+  const effective = rawTotal - absentCount; // 탑승 대상 인원
+  if (effective <= 0) return hasReport ? "reported" : "all_checked"; // 전원 불참 → 확인 완료
+  if (checked === 0) return "not_started";
+  if (checked < effective) return "in_progress";
   if (hasReport) return "reported";
   return "all_checked";
 }

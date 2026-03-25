@@ -6,6 +6,12 @@ import { getCurrentUser } from "@/lib/auth";
 import { canCheckin, isAdminRole } from "@/lib/constants";
 import type { ActionResult } from "@/lib/types";
 
+// /admin + /group 캐시 무효화 헬퍼
+function revalidateMainPaths() {
+  revalidatePath("/admin");
+  revalidatePath("/group");
+}
+
 // 조장 보고 (UPSERT — 재보고 허용)
 export async function submitReport(
   groupId: string,
@@ -37,7 +43,6 @@ export async function submitReport(
     return { ok: false, error: "보고 처리 중 오류가 발생했어요" };
   }
 
-  revalidatePath("/admin");
-  revalidatePath("/group");
+  revalidateMainPaths();
   return { ok: true };
 }

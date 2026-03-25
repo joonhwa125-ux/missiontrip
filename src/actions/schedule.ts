@@ -6,6 +6,12 @@ import { requireAdmin, getCurrentUser } from "@/lib/auth";
 import { canCheckin } from "@/lib/constants";
 import type { ActionResult, ScheduleScope } from "@/lib/types";
 
+// /admin + /group 캐시 무효화 헬퍼
+function revalidateMainPaths() {
+  revalidatePath("/admin");
+  revalidatePath("/group");
+}
+
 // 일정 활성화 (RPC — 트랜잭션으로 동시 활성화 방지)
 export async function activateSchedule(
   scheduleId: string
@@ -22,8 +28,7 @@ export async function activateSchedule(
     return { ok: false, error: "일정 활성화 중 오류가 발생했어요" };
   }
 
-  revalidatePath("/admin");
-  revalidatePath("/group");
+  revalidateMainPaths();
   return { ok: true };
 }
 
@@ -49,8 +54,7 @@ export async function deactivateSchedule(
     return { ok: false, error: "이미 종료된 일정이에요" };
   }
 
-  revalidatePath("/admin");
-  revalidatePath("/group");
+  revalidateMainPaths();
   return { ok: true };
 }
 
@@ -95,8 +99,7 @@ export async function createSchedule(
     return { ok: false, error: "일정 추가 중 오류가 발생했어요" };
   }
 
-  revalidatePath("/admin");
-  revalidatePath("/group");
+  revalidateMainPaths();
   return { ok: true, data: data.id };
 }
 
@@ -147,7 +150,6 @@ export async function updateScheduleTime(
     return { ok: false, error: "시간 변경 중 오류가 발생했어요" };
   }
 
-  revalidatePath("/admin");
-  revalidatePath("/group");
+  revalidateMainPaths();
   return { ok: true };
 }

@@ -1,6 +1,26 @@
 import { OFFLINE_PENDING_KEY, OFFLINE_PENDING_REPORTS_KEY, ACTIVE_SCHEDULE_KEY } from "@/lib/constants";
 import type { OfflinePendingCheckin, OfflinePendingReport, Schedule } from "@/lib/types";
 
+// localStorage JSON 배열 읽기 헬퍼 (파싱 실패 시 빈 배열 반환)
+function getFromStorage<T>(key: string): T[] {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+// localStorage JSON 단일 객체 읽기 헬퍼 (파싱 실패 시 null 반환)
+function getObjectFromStorage<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
 // 오프라인 대기 체크인 저장 — 성공 시 true, localStorage 용량 초과 등 실패 시 false
 export function savePendingCheckin(item: OfflinePendingCheckin): boolean {
   try {
@@ -24,12 +44,7 @@ export function savePendingCheckin(item: OfflinePendingCheckin): boolean {
 
 // 오프라인 대기 체크인 전체 조회
 export function getPendingCheckins(): OfflinePendingCheckin[] {
-  try {
-    const raw = localStorage.getItem(OFFLINE_PENDING_KEY);
-    return raw ? (JSON.parse(raw) as OfflinePendingCheckin[]) : [];
-  } catch {
-    return [];
-  }
+  return getFromStorage<OfflinePendingCheckin>(OFFLINE_PENDING_KEY);
 }
 
 // 동기화 완료 후 대기 목록 비우기
@@ -57,12 +72,7 @@ export function savePendingReport(item: OfflinePendingReport): boolean {
 
 // 오프라인 대기 보고 전체 조회
 export function getPendingReports(): OfflinePendingReport[] {
-  try {
-    const raw = localStorage.getItem(OFFLINE_PENDING_REPORTS_KEY);
-    return raw ? (JSON.parse(raw) as OfflinePendingReport[]) : [];
-  } catch {
-    return [];
-  }
+  return getFromStorage<OfflinePendingReport>(OFFLINE_PENDING_REPORTS_KEY);
 }
 
 // 동기화 완료 후 대기 보고 비우기
@@ -76,10 +86,5 @@ export function cacheActiveSchedule(schedule: Schedule): void {
 }
 
 export function getCachedActiveSchedule(): Schedule | null {
-  try {
-    const raw = localStorage.getItem(ACTIVE_SCHEDULE_KEY);
-    return raw ? (JSON.parse(raw) as Schedule) : null;
-  } catch {
-    return null;
-  }
+  return getObjectFromStorage<Schedule>(ACTIVE_SCHEDULE_KEY);
 }

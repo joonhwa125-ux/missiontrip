@@ -80,25 +80,25 @@ export default function ScheduleEditDialog({ schedule, onSave, onClose }: Props)
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3 py-1">
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">집결지</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">장소</label>
             <input
               value={form.location}
               onChange={(e) => set("location", e.target.value)}
               placeholder="선택 사항"
               className={INPUT_CLASS}
-              aria-label="집결지"
+              aria-label="장소"
             />
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              집결지 상세 <span aria-hidden="true">*</span>
+              집결지 <span aria-hidden="true">*</span>
             </label>
             <input
               required
               value={form.title}
               onChange={(e) => set("title", e.target.value)}
               className={INPUT_CLASS}
-              aria-label="집결지 상세"
+              aria-label="집결지"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">

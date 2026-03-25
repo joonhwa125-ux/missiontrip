@@ -67,7 +67,7 @@ export default function AdminBottomSheet({
             (m) => checkedIds.has(m.id) && !absentIds.has(m.id)
           ).length;
           const totalCount = gMembers.length - absentCount;
-          const badge = getGroupBadgeStatus(totalCount, checkedCount, reportMap.has(g.id));
+          const badge = getGroupBadgeStatus(gMembers.length, checkedCount, reportMap.has(g.id), absentCount);
           const leader = gMembers.find((m) => isLeaderRole(m.role));
           return { group: g, totalCount, checkedCount, absentCount, badge, leader, rawTotal: gMembers.length };
         })

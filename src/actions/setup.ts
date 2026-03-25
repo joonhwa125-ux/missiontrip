@@ -21,6 +21,19 @@ import {
   parseSchedulesSheet,
 } from "@/utils/sheets-parser";
 
+// /admin + /group 캐시 무효화 헬퍼
+function revalidateMainPaths() {
+  revalidatePath("/admin");
+  revalidatePath("/group");
+}
+
+// /admin + /group + /setup 캐시 무효화 헬퍼 (setup 액션 공통)
+function revalidateAllPaths() {
+  revalidatePath("/admin");
+  revalidatePath("/group");
+  revalidatePath("/setup");
+}
+
 // Google Sheets CSV export URL 생성
 function buildCsvUrl(sheetId: string, gid: string): string {
   return `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv&gid=${gid}`;
@@ -165,18 +178,15 @@ export async function importToDatabase(
   }
 
   // 3. Schedules INSERT
-  // "HH:MM" / "MM-DD HH:MM" / "YYYY-MM-DD HH:MM" → parseKSTTime으로 ISO 변환
-  const TIME_PATTERN = /^\d{2}:\d{2}$|^\d{2}-\d{2}\s+\d{2}:\d{2}$|^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}$/;
+  // parseKSTTime이 "HH:MM" / "MM-DD HH:MM" / "YYYY-MM-DD HH:MM" → ISO 변환 담당
+  // 미지원 형식(이미 ISO 등)은 원본 그대로 반환하므로 별도 regex 불필요
   const schedulesPayload = data.schedules.map((s) => ({
     title: s.title,
     location: s.location,
     day_number: s.day_number,
     sort_order: s.sort_order,
     scope: s.scope,
-    scheduled_time:
-      s.scheduled_time && TIME_PATTERN.test(s.scheduled_time)
-        ? parseKSTTime(s.scheduled_time)
-        : s.scheduled_time || null,
+    scheduled_time: s.scheduled_time ? parseKSTTime(s.scheduled_time) : null,
   }));
 
   const { error: scheduleError } = await supabase
@@ -187,9 +197,7 @@ export async function importToDatabase(
     return { ok: false, error: `일정 등록 실패: ${scheduleError.message}` };
   }
 
-  revalidatePath("/admin");
-  revalidatePath("/group");
-  revalidatePath("/setup");
+  revalidateAllPaths();
   return {
     ok: true,
     data: {
@@ -216,6 +224,7 @@ export async function resetAllData(): Promise<ActionResult> {
   ];
 
   for (const table of tables) {
+    // PostgREST는 필터 없는 DELETE를 거부 → 불가능한 UUID로 neq 필터 적용 (전 행 삭제 우회)
     let query = supabase
       .from(table)
       .delete()
@@ -235,9 +244,7 @@ export async function resetAllData(): Promise<ActionResult> {
     }
   }
 
-  revalidatePath("/admin");
-  revalidatePath("/group");
-  revalidatePath("/setup");
+  revalidateAllPaths();
   return { ok: true };
 }
 
@@ -264,9 +271,7 @@ export async function updateSchedule(
 
   if (error) return { ok: false, error: "일정 수정 중 오류가 발생했어요" };
 
-  revalidatePath("/admin");
-  revalidatePath("/group");
-  revalidatePath("/setup");
+  revalidateAllPaths();
   return { ok: true };
 }
 
@@ -294,9 +299,7 @@ export async function deleteSchedule(scheduleId: string): Promise<ActionResult> 
 
   if (error) return { ok: false, error: "일정 삭제 중 오류가 발생했어요" };
 
-  revalidatePath("/admin");
-  revalidatePath("/group");
-  revalidatePath("/setup");
+  revalidateAllPaths();
   return { ok: true };
 }
 
@@ -319,9 +322,7 @@ export async function updateUser(
 
   if (error) return { ok: false, error: "참가자 수정 중 오류가 발생했어요" };
 
-  revalidatePath("/admin");
-  revalidatePath("/group");
-  revalidatePath("/setup");
+  revalidateAllPaths();
   return { ok: true };
 }
 
@@ -339,9 +340,7 @@ export async function deleteUser(userId: string): Promise<ActionResult> {
 
   if (error) return { ok: false, error: "참가자 삭제 중 오류가 발생했어요" };
 
-  revalidatePath("/admin");
-  revalidatePath("/group");
-  revalidatePath("/setup");
+  revalidateAllPaths();
   return { ok: true };
 }
 
@@ -393,7 +392,6 @@ export async function updateUserRole(
     return { ok: false, error: "역할 변경 중 오류가 발생했어요" };
   }
 
-  revalidatePath("/admin");
-  revalidatePath("/group");
+  revalidateMainPaths();
   return { ok: true };
 }

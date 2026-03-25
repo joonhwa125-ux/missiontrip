@@ -6,6 +6,12 @@ import { getCurrentUser } from "@/lib/auth";
 import { canCheckin, isAdminRole } from "@/lib/constants";
 import type { ActionResult, OfflinePendingCheckin } from "@/lib/types";
 
+// /admin + /group 캐시 무효화 헬퍼 (체크인 관련 액션 공통)
+function revalidateMainPaths() {
+  revalidatePath("/admin");
+  revalidatePath("/group");
+}
+
 /** 조장의 자기 조원 접근 권한 검증. 실패 시 ActionResult 반환, 통과 시 null */
 async function validateGroupAccess(
   actor: { role: string; group_id: string },
@@ -54,8 +60,7 @@ export async function createCheckin(
     return { ok: false, error: "체크인 처리 중 오류가 발생했어요" };
   }
 
-  revalidatePath("/admin");
-  revalidatePath("/group");
+  revalidateMainPaths();
   return { ok: true };
 }
 
@@ -84,8 +89,7 @@ export async function deleteCheckin(
     return { ok: false, error: "취소 처리 중 오류가 발생했어요" };
   }
 
-  revalidatePath("/admin");
-  revalidatePath("/group");
+  revalidateMainPaths();
   return { ok: true };
 }
 
@@ -120,8 +124,7 @@ export async function markAbsent(
     return { ok: false, error: "불참 처리 중 오류가 발생했어요" };
   }
 
-  revalidatePath("/admin");
-  revalidatePath("/group");
+  revalidateMainPaths();
   return { ok: true };
 }
 
@@ -144,7 +147,6 @@ export async function syncOfflineCheckins(
     return { ok: false, error: "동기화 중 오류가 발생했어요" };
   }
 
-  revalidatePath("/admin");
-  revalidatePath("/group");
+  revalidateMainPaths();
   return { ok: true, data: data as number };
 }
