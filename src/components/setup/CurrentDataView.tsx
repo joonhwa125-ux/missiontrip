@@ -100,16 +100,16 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
       {/* 일정 테이블 */}
       {tab === "schedules" && (
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          <table className="text-sm">
+          <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr className="text-center text-xs text-muted-foreground">
-                <th className="min-w-[48px] px-3 py-2">일차</th>
-                <th className="min-w-[36px] px-3 py-2">순</th>
-                <th className="min-w-[120px] px-3 py-2">장소</th>
-                <th className="min-w-[160px] px-3 py-2">일정명</th>
-                <th className="min-w-[56px] px-3 py-2">시각</th>
-                <th className="min-w-[48px] px-3 py-2">대상</th>
-                <th className="min-w-[108px] px-3 py-2">작업</th>
+                <th className="min-w-[48px] px-3 py-2">일정</th>
+                <th className="min-w-[36px] px-3 py-2">순서</th>
+                <th className="min-w-[120px] px-3 py-2">집결지</th>
+                <th className="min-w-[160px] px-3 py-2">집결지 상세</th>
+                <th className="min-w-[56px] px-3 py-2">예정 시간</th>
+                <th className="min-w-[48px] px-3 py-2">구분</th>
+                <th className="min-w-[108px] px-3 py-2">데이터 관리</th>
               </tr>
             </thead>
             <tbody>
@@ -140,15 +140,15 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
       {/* 참가자 테이블 */}
       {tab === "users" && (
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          <table className="text-sm">
+          <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr className="text-center text-xs text-muted-foreground">
                 <th className="sticky left-0 z-10 min-w-[96px] bg-gray-50 px-3 py-2">이름</th>
-                <th className="min-w-[110px] px-3 py-2">전화</th>
+                <th className="min-w-[110px] px-3 py-2">전화번호</th>
                 <th className="min-w-[80px] px-3 py-2">역할</th>
-                <th className="min-w-[96px] px-3 py-2">소속조</th>
-                <th className="min-w-[64px] px-3 py-2">선후발</th>
-                <th className="min-w-[108px] px-3 py-2">작업</th>
+                <th className="min-w-[96px] px-3 py-2">조편성</th>
+                <th className="min-w-[64px] px-3 py-2">구분</th>
+                <th className="min-w-[108px] px-3 py-2">데이터 관리</th>
               </tr>
             </thead>
             <tbody>

@@ -122,15 +122,15 @@ export default function PreviewStep({
         className="max-h-96 overflow-auto rounded-xl bg-white"
       >
         {tab === "users" ? (
-          <table className="text-sm">
+          <table className="w-full text-sm">
             <thead className="sticky top-0 bg-gray-50">
               <tr className="text-center text-xs text-muted-foreground">
                 <th className="min-w-[36px] px-3 py-2">#</th>
                 <th className="sticky left-0 z-10 min-w-[96px] bg-gray-50 px-3 py-2">이름</th>
                 <th className="min-w-[110px] px-3 py-2">전화번호</th>
                 <th className="min-w-[80px] px-3 py-2">역할</th>
-                <th className="min-w-[96px] px-3 py-2">소속조</th>
-                <th className="min-w-[64px] px-3 py-2">선후발</th>
+                <th className="min-w-[96px] px-3 py-2">조편성</th>
+                <th className="min-w-[64px] px-3 py-2">구분</th>
               </tr>
             </thead>
             <tbody>
@@ -153,15 +153,15 @@ export default function PreviewStep({
             </tbody>
           </table>
         ) : (
-          <table className="text-sm">
+          <table className="w-full text-sm">
             <thead className="sticky top-0 bg-gray-50">
               <tr className="text-center text-xs text-muted-foreground">
-                <th className="min-w-[48px] px-3 py-2">일차</th>
+                <th className="min-w-[48px] px-3 py-2">일정</th>
                 <th className="min-w-[36px] px-3 py-2">순서</th>
-                <th className="min-w-[160px] px-3 py-2">일정명</th>
-                <th className="min-w-[120px] px-3 py-2">장소</th>
-                <th className="min-w-[56px] px-3 py-2">시각</th>
-                <th className="min-w-[48px] px-3 py-2">대상</th>
+                <th className="min-w-[120px] px-3 py-2">집결지</th>
+                <th className="min-w-[160px] px-3 py-2">집결지 상세</th>
+                <th className="min-w-[56px] px-3 py-2">예정 시간</th>
+                <th className="min-w-[48px] px-3 py-2">구분</th>
               </tr>
             </thead>
             <tbody>
@@ -169,8 +169,8 @@ export default function PreviewStep({
                 <tr key={i} className="border-t">
                   <td className="px-3 py-2 text-center">{s.day_number}</td>
                   <td className="px-3 py-2 text-center">{s.sort_order}</td>
-                  <td className="px-3 py-2 font-medium">{s.title}</td>
                   <td className="px-3 py-2">{s.location ?? "-"}</td>
+                  <td className="px-3 py-2 font-medium">{s.title}</td>
                   <td className="px-3 py-2 text-center">{s.scheduled_time ?? "-"}</td>
                   <td className="px-3 py-2 text-center">
                     {s.scope === "all" ? "전체" : (SCOPE_LABEL[s.scope] ?? s.scope)}
