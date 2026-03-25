@@ -206,11 +206,20 @@ export default function AdminScheduleCard({
       {/* 장소/일정명 + 통계 */}
       <div>
         <p className="font-medium">{primaryText}</p>
-        {subtitle}
-        <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground" aria-live="polite">
-          <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
-          {reportedCount}/{totalGroups}조 ({checkedCount}/{totalMembers}명{absentCount > 0 ? `, 불참 ${absentCount}` : ""})
-        </p>
+        {schedule.location ? (
+          <div className="mt-0.5 flex items-baseline justify-between gap-2">
+            <p className="text-sm text-muted-foreground">{schedule.title}</p>
+            <p className="flex-shrink-0 flex items-center gap-1 text-xs text-muted-foreground" aria-live="polite">
+              <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
+              {reportedCount}/{totalGroups}조 ({checkedCount}/{totalMembers}명{absentCount > 0 ? `, 불참 ${absentCount}` : ""})
+            </p>
+          </div>
+        ) : (
+          <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground" aria-live="polite">
+            <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
+            {reportedCount}/{totalGroups}조 ({checkedCount}/{totalMembers}명{absentCount > 0 ? `, 불참 ${absentCount}` : ""})
+          </p>
+        )}
       </div>
 
       <button
