@@ -39,6 +39,7 @@ const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
   { value: "member", label: "조원" },
   { value: "leader", label: "조장" },
   { value: "admin", label: "관리자" },
+  { value: "admin_leader", label: "관리자(조장)" },
 ];
 
 const PARTY_OPTIONS: { value: GroupParty | ""; label: string }[] = [
