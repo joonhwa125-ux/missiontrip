@@ -115,7 +115,8 @@ export default function AdminView({
       })
       .catch(() => {}); // 실패 시 SSR/Realtime 데이터로 fallback — 별도 알림 불필요
     return () => { cancelled = true; };
-  }, [activeSchedule?.id]); // eslint-disable-line react-hooks/exhaustive-deps — id만 의존 (객체 참조 변경 시 불필요한 재실행 방지)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSchedule?.id]);
 
   // 백그라운드 복귀 시 서버 데이터 갱신 (탭 전환 / 페이지 이동 후 stale 방지)
   const fetchOnVisible = useCallback(() => {
@@ -152,10 +153,8 @@ export default function AdminView({
     bottomSheetIdRef.current = targetId;
     setBottomSheetSchedule(schedule);
 
-    const cacheKeys = Object.keys(checkInsMapRef.current);
     const hasCache = targetId in checkInsMapRef.current;
     setBottomSheetLoading(!hasCache);
-    showToast(`캐시: ${hasCache ? "HIT" : "MISS"} | keys: ${cacheKeys.length} | target: ${targetId.slice(0, 8)}`);
 
     fetchCheckInsClient(targetId)
       .then(({ checkIns: freshCi, reports: freshRp }) => {
