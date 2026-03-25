@@ -37,7 +37,7 @@ export default function AdminScheduleCard({
     const gAbsent = gMembers.filter((m) => absentIds.has(m.id)).length;
     const gChecked = gMembers.filter((m) => checkedIds.has(m.id)).length;
     const gTotal = gMembers.length - gAbsent;
-    return gTotal > 0 && gChecked >= gTotal;
+    return gTotal === 0 || gChecked >= gTotal;
   }).length;
 
   const progressPct = totalGroups > 0 ? Math.round((reportedCount / totalGroups) * 100) : 0;
@@ -145,9 +145,9 @@ export default function AdminScheduleCard({
         <button
           onClick={onSummaryTap}
           className="mt-2 w-full min-h-11 rounded-xl bg-gray-50 px-4 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
-          aria-label="전체 현황 보기"
+          aria-label="현황 보기"
         >
-          전체 현황 보기 &gt;
+          현황 보기 &gt;
         </button>
       </div>
     );

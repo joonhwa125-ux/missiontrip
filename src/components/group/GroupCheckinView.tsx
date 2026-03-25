@@ -7,16 +7,8 @@ import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { createCheckin, deleteCheckin, markAbsent } from "@/actions/checkin";
 import { submitReport } from "@/actions/report";
 import MemberCard from "./MemberCard";
+import { CancelCheckinDialog, MarkAbsentDialog, SubmitReportDialog } from "./CheckinDialogs";
 import { CheckIcon, ChevronLeftIcon } from "@/components/ui/icons";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
 import {
   COPY,
   CHANNEL_GLOBAL,
@@ -303,9 +295,13 @@ export default function GroupCheckinView({
           <div className="mb-4 text-6xl" aria-hidden="true">
             🎉
           </div>
-          <h2 className="mb-2 text-2xl font-bold">{COPY.allComplete(groupName)}</h2>
+          <h2 className="mb-2 text-2xl font-bold">{COPY.allComplete(groupName, absentIds.size > 0)}</h2>
           <p className="text-muted-foreground">
-            {reported ? "보고 완료! 수고하셨어요." : "모두 탑승했어요! 보고해주세요."}
+            {reported
+              ? "보고 완료! 수고하셨어요."
+              : absentIds.size > 0
+                ? "전원 확인했어요! 보고해주세요."
+                : "모두 탑승했어요! 보고해주세요."}
           </p>
         </div>
       )}
@@ -359,81 +355,24 @@ export default function GroupCheckinView({
         )}
       </div>
 
-      {/* 취소 확인 모달 */}
-      <Dialog
+      <CancelCheckinDialog
         open={!!cancelTarget}
-        onOpenChange={(o) => !o && setCancelTarget(null)}
-      >
-        <DialogContent hideClose>
-          <DialogHeader>
-            <DialogTitle>
-              {cancelTarget?.isAbsent ? COPY.absentCancel : "체크인을 취소할까요?"}
-            </DialogTitle>
-            <DialogDescription>
-              {cancelTarget?.member.name}님의 {cancelTarget?.isAbsent ? "불참" : "탑승 확인"}을 취소해요.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose className="min-h-11 flex-1 rounded-xl bg-gray-100 text-sm font-medium">
-              아니요
-            </DialogClose>
-            <button
-              onClick={handleCancelConfirm}
-              className="min-h-11 flex-1 rounded-xl bg-red-500 text-sm font-medium text-white focus-visible:ring-2 focus-visible:ring-red-500"
-            >
-              취소할게요
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* 불참 확인 모달 */}
-      <Dialog
+        target={cancelTarget}
+        onClose={() => setCancelTarget(null)}
+        onConfirm={handleCancelConfirm}
+      />
+      <MarkAbsentDialog
         open={!!absentTarget}
-        onOpenChange={(o) => !o && setAbsentTarget(null)}
-      >
-        <DialogContent hideClose>
-          <DialogHeader>
-            <DialogTitle>{absentTarget?.name} 불참 처리할까요?</DialogTitle>
-            <DialogDescription>
-              탑승 인원에서 제외돼요.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose className="min-h-11 flex-1 rounded-xl bg-gray-100 text-sm font-medium">
-              아니요
-            </DialogClose>
-            <button
-              onClick={handleAbsentConfirm}
-              className="min-h-11 flex-1 rounded-xl bg-gray-700 text-sm font-medium text-white focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              불참 처리
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* 미완료 보고 확인 모달 */}
-      <Dialog open={reportOpen} onOpenChange={setReportOpen}>
-        <DialogContent hideClose>
-          <DialogHeader>
-            <DialogTitle>
-              {uncheckedCount}명이 아직이에요. 그래도 보고할까요?
-            </DialogTitle>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose className="min-h-11 flex-1 rounded-xl bg-gray-100 text-sm font-medium">
-              취소
-            </DialogClose>
-            <button
-              onClick={() => { setReportOpen(false); handleReport(); }}
-              className="min-h-11 flex-1 rounded-xl bg-main-action text-sm font-bold focus-visible:ring-2 focus-visible:ring-main-action"
-            >
-              보고하기
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        target={absentTarget}
+        onClose={() => setAbsentTarget(null)}
+        onConfirm={handleAbsentConfirm}
+      />
+      <SubmitReportDialog
+        open={reportOpen}
+        uncheckedCount={uncheckedCount}
+        onClose={() => setReportOpen(false)}
+        onConfirm={() => { setReportOpen(false); handleReport(); }}
+      />
     </div>
   );
 }
