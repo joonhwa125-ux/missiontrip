@@ -213,6 +213,7 @@ export default function AdminView({
   // Realtime 구독
   useRealtime(null, true, {
     onScheduleActivated: () => router.refresh(),
+    onScheduleDeactivated: () => router.refresh(),
     onScheduleUpdated: ({ schedule_id, scheduled_time }) => {
       setSchedules((prev) =>
         prev.map((s) => (s.id === schedule_id ? { ...s, scheduled_time } : s))

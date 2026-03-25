@@ -19,6 +19,7 @@ export const CHANNEL_GROUP_PREFIX = "group:";
 // Realtime 이벤트 타입
 export const EVENT_SCHEDULE_ACTIVATED = "schedule_activated";
 export const EVENT_SCHEDULE_UPDATED = "schedule_updated";
+export const EVENT_SCHEDULE_DEACTIVATED = "schedule_deactivated";
 export const EVENT_CHECKIN_UPDATED = "checkin_updated";
 export const EVENT_GROUP_REPORTED = "group_reported";
 
@@ -117,4 +118,7 @@ export const COPY = {
   emptySchedule: "현재 진행 중인 일정이 없어요",
   totalSummary: (checked: number, total: number) => `전체 ${checked}/${total}명 확인`,
   absentCancel: "불참을 취소할까요?",
+  scheduleDeactivated: "일정이 종료되었어요",
+  deactivateConfirm: "정말 종료할까요?",
+  allReported: "모든 조가 보고했어요",
 } as const;

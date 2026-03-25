@@ -1,10 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback, useTransition, useMemo } from "react";
-import { activateSchedule } from "@/actions/schedule";
+import { activateSchedule, deactivateSchedule } from "@/actions/schedule";
 import { useBroadcast } from "@/hooks/useRealtime";
 import { filterMembersByScope } from "@/lib/utils";
-import { CHANNEL_GLOBAL, COPY, EVENT_SCHEDULE_ACTIVATED } from "@/lib/constants";
+import {
+  CHANNEL_GLOBAL, COPY,
+  EVENT_SCHEDULE_ACTIVATED, EVENT_SCHEDULE_DEACTIVATED,
+} from "@/lib/constants";
 import type { Schedule, AdminCheckIn, AdminMember, AdminReport } from "@/lib/types";
 import AdminScheduleCard from "@/components/admin/AdminScheduleCard";
 import {
@@ -42,7 +45,9 @@ export default function AdminScheduleList({
   const [, startTransition] = useTransition();
   const { broadcast } = useBroadcast();
   const [warningTarget, setWarningTarget] = useState<Schedule | null>(null);
+  const [deactivateTarget, setDeactivateTarget] = useState<Schedule | null>(null);
   const autoAlertedRef = useRef<Set<string>>(new Set());
+  const allReportedNotifiedRef = useRef<string | null>(null); // 토스트 발송된 schedule_id 추적
 
   const activeCheckIns = useMemo(
     () => (activeSchedule ? checkInsMap[activeSchedule.id] ?? [] : []),
@@ -69,6 +74,51 @@ export default function AdminScheduleList({
     },
     [broadcast, startTransition, onRefresh]
   );
+
+  // -- 일정 종료 Server Action --
+  const handleDeactivate = useCallback(
+    (s: Schedule) => {
+      startTransition(async () => {
+        const res = await deactivateSchedule(s.id);
+        if (res.ok) {
+          await broadcast(CHANNEL_GLOBAL, EVENT_SCHEDULE_DEACTIVATED, {
+            schedule_id: s.id, title: s.title,
+          });
+          onRefresh();
+        }
+      });
+    },
+    [broadcast, startTransition, onRefresh]
+  );
+
+  // -- 수동 종료 (미확인 경고 래핑) --
+  const handleDeactivateClick = (s: Schedule) => {
+    const unchecked = calcUncheckedCount(activeCheckIns, totalMemberCount);
+    if (unchecked > 0) { setDeactivateTarget(s); } else { handleDeactivate(s); }
+  };
+
+  // -- 전 조 보고완료 토스트 감지 --
+  useEffect(() => {
+    if (!activeSchedule) {
+      allReportedNotifiedRef.current = null;
+      return;
+    }
+    // 일정이 변경되면 ref 리셋 — 새 일정에서도 토스트 발송 가능
+    if (allReportedNotifiedRef.current !== activeSchedule.id) {
+      allReportedNotifiedRef.current = null;
+    }
+    const scopeMembers = filterMembersByScope(members, activeSchedule.scope);
+    const scopeGroupIds = new Set(scopeMembers.map((m) => m.group_id));
+    const totalGroups = scopeGroupIds.size;
+    const reports = reportsMap[activeSchedule.id] ?? [];
+    const reportedGroupIds = new Set(reports.map((r) => r.group_id));
+    const reportedCount = Array.from(scopeGroupIds).filter((gid) => reportedGroupIds.has(gid)).length;
+    const allReported = totalGroups > 0 && reportedCount >= totalGroups;
+    if (allReported && allReportedNotifiedRef.current !== activeSchedule.id) {
+      allReportedNotifiedRef.current = activeSchedule.id;
+      onToast(COPY.allReported);
+    }
+  }, [reportsMap, activeSchedule, members, onToast]);
 
   // -- 자동 활성화 타이머 (60초 + visibilitychange) --
   useEffect(() => {
@@ -118,6 +168,7 @@ export default function AdminScheduleList({
             members={members}
             onSummaryTap={() => onBottomSheet(s)}
             onActivate={() => handleActivateClick(s)}
+            onDeactivate={() => handleDeactivateClick(s)}
             onTimeEdit={() => onTimeEdit(s)}
           />
         ))}
@@ -125,7 +176,7 @@ export default function AdminScheduleList({
 
       {/* 미확인 경고 모달 (수동 활성화 시) */}
       <Dialog open={!!warningTarget} onOpenChange={(o) => !o && setWarningTarget(null)}>
-        <DialogContent hideClose>
+        <DialogContent hideClose role="alertdialog">
           <DialogHeader>
             <DialogTitle>
               {COPY.uncheckedWarning(calcUncheckedCount(activeCheckIns, totalMemberCount))}
@@ -148,6 +199,36 @@ export default function AdminScheduleList({
               aria-label="일정 전환 확인"
             >
               전환할게요
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 종료 확인 모달 (미확인 인원 경고 포함) */}
+      <Dialog open={!!deactivateTarget} onOpenChange={(o) => !o && setDeactivateTarget(null)}>
+        <DialogContent hideClose role="alertdialog">
+          <DialogHeader>
+            <DialogTitle>
+              {COPY.uncheckedWarning(calcUncheckedCount(activeCheckIns, totalMemberCount))}
+            </DialogTitle>
+            <DialogDescription>
+              {COPY.deactivateConfirm}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose className="min-h-11 flex-1 rounded-xl bg-gray-100 text-sm font-medium">
+              취소
+            </DialogClose>
+            <button
+              onClick={() => {
+                const target = deactivateTarget;
+                setDeactivateTarget(null);
+                if (target) handleDeactivate(target);
+              }}
+              className="min-h-11 flex-1 rounded-xl bg-red-500 text-sm font-medium text-white focus-visible:ring-2 focus-visible:ring-red-500"
+              aria-label="일정 종료 확인"
+            >
+              종료
             </button>
           </DialogFooter>
         </DialogContent>

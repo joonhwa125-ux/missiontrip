@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRealtime } from "@/hooks/useRealtime";
 import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
 import { useToast } from "@/hooks/useToast";
+import { COPY } from "@/lib/constants";
 import { filterMembersByScope } from "@/lib/utils";
 import GroupFeedView from "./GroupFeedView";
 import GroupCheckinView from "./GroupCheckinView";
@@ -93,6 +94,15 @@ export default function GroupView({
       } else {
         router.refresh();
       }
+    },
+    onScheduleDeactivated: () => {
+      if (viewRef.current === "checkin") {
+        showToast(COPY.scheduleDeactivated);
+        setView("feed");
+        // history.pushState로 추가된 엔트리 정리 — stale 히스토리 방지
+        history.replaceState(null, "");
+      }
+      router.refresh();
     },
     onScheduleUpdated: ({ schedule_id, scheduled_time }) => {
       setSchedules((prev) =>

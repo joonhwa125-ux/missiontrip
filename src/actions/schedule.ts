@@ -27,6 +27,33 @@ export async function activateSchedule(
   return { ok: true };
 }
 
+// 일정 종료 (단일 UPDATE — activate와 달리 two-step 트랜잭션 불필요)
+export async function deactivateSchedule(
+  scheduleId: string
+): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  if (!admin) return { ok: false, error: "관리자 권한이 필요해요" };
+
+  const supabase = createServiceClient();
+  const { data, error } = await supabase
+    .from("schedules")
+    .update({ is_active: false, activated_at: new Date().toISOString() })
+    .eq("id", scheduleId)
+    .eq("is_active", true)
+    .select("id");
+
+  if (error) {
+    return { ok: false, error: "일정 종료 중 오류가 발생했어요" };
+  }
+  if (!data || data.length === 0) {
+    return { ok: false, error: "이미 종료된 일정이에요" };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/group");
+  return { ok: true };
+}
+
 // 즉흥 일정 추가
 export async function createSchedule(
   title: string,

@@ -8,6 +8,7 @@ import {
   CHANNEL_GROUP_PREFIX,
   EVENT_SCHEDULE_ACTIVATED,
   EVENT_SCHEDULE_UPDATED,
+  EVENT_SCHEDULE_DEACTIVATED,
   EVENT_CHECKIN_UPDATED,
   EVENT_GROUP_REPORTED,
   BROADCAST_SUBSCRIBE_TIMEOUT_MS,
@@ -34,6 +35,7 @@ function unregisterChannel(ch: RealtimeChannel): void {
 interface RealtimeCallbacks {
   onScheduleActivated?: (payload: { schedule_id: string; title: string }) => void;
   onScheduleUpdated?: (payload: { schedule_id: string; scheduled_time: string }) => void;
+  onScheduleDeactivated?: (payload: { schedule_id: string; title: string }) => void;
   onCheckinUpdated?: (payload: { user_id: string; schedule_id: string; action: "insert" | "delete"; is_absent?: boolean }) => void;
   onGroupReported?: (payload: { group_id: string; schedule_id: string; pending_count: number }) => void;
   onReconnected?: () => void;  // 네트워크 재연결 시 호출 (WiFi↔LTE 전환 등)
@@ -93,6 +95,9 @@ export function useRealtime(
       })
       .on("broadcast", { event: EVENT_SCHEDULE_UPDATED }, ({ payload }) => {
         callbacksRef.current.onScheduleUpdated?.(payload);
+      })
+      .on("broadcast", { event: EVENT_SCHEDULE_DEACTIVATED }, ({ payload }) => {
+        callbacksRef.current.onScheduleDeactivated?.(payload);
       })
       .on("broadcast", { event: EVENT_CHECKIN_UPDATED }, ({ payload }) => {
         callbacksRef.current.onCheckinUpdated?.(payload);
