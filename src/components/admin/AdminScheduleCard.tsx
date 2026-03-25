@@ -84,27 +84,29 @@ export default function AdminScheduleCard({
         role="region"
         aria-label={`진행중 일정: ${schedule.title}`}
       >
-        {/* 헤더: 진행중 pill + 배지 (좌) + [종료] (우) */}
+        {/* 헤더: 진행중 pill + 배지 */}
         <div className="mb-2 flex items-center gap-1">
           <span className="rounded-full bg-progress-badge px-2 py-0.5 text-xs font-bold text-[#633806]">
             진행중
           </span>
           {timeBadge}
           {scopeBadge}
-          <div className="ml-auto">
-            <button
-              onClick={onDeactivate}
-              className="min-h-11 min-w-11 rounded-xl border border-gray-300 px-3 text-xs font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-ring"
-              aria-label={`${schedule.title} 일정 종료`}
-            >
-              종료
-            </button>
-          </div>
         </div>
 
-        {/* 장소 (primary) + 일정명 (secondary) */}
-        <p className="text-base font-semibold leading-snug">{primaryText}</p>
-        {subtitle}
+        {/* 장소/일정명 + 종료 버튼 (시작 버튼과 동일 위치) */}
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <p className="text-base font-semibold leading-snug">{primaryText}</p>
+            {subtitle}
+          </div>
+          <button
+            onClick={onDeactivate}
+            className="flex-shrink-0 min-h-11 min-w-11 rounded-xl border border-gray-300 px-3 text-xs font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={`${schedule.title} 일정 종료`}
+          >
+            종료
+          </button>
+        </div>
 
         {/* 진행률 + 조 수 */}
         <div className="mt-3 flex items-baseline justify-between">
