@@ -135,7 +135,7 @@ export default function AdminBottomSheet({
         {!drillGroup && (
           <button
             onClick={handleClose}
-            className="absolute right-4 top-3 z-10 flex h-11 w-11 items-center justify-center rounded-full opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2"
+            className="absolute right-4 top-2 z-10 flex h-11 w-11 items-center justify-center rounded-full opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2"
             aria-label="닫기"
           >
             <X className="h-5 w-5" aria-hidden="true" />
@@ -153,7 +153,7 @@ export default function AdminBottomSheet({
           />
         ) : (
           <>
-            <div className="flex-shrink-0 px-6 pt-6">
+            <div className="flex-shrink-0 px-6 pt-4">
               <DialogHeader>
                 <DialogTitle>{schedule?.location ?? schedule?.title} 현황</DialogTitle>
                 <DialogDescription aria-live="polite">

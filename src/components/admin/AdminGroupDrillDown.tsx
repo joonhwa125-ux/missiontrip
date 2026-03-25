@@ -128,28 +128,28 @@ export default function AdminGroupDrillDown({
 
   return (
     <>
-      {/* 헤더: 뒤로 + 조 이름 + 카운트 (단일 행 내비게이션 패턴) */}
-      <div className="flex-shrink-0 px-4 pt-4 pb-2">
-        {/* 뒤로가기 + 제목을 같은 행에 배치 */}
+      {/* 헤더: 뒤로 + 조 이름 + 카운트 */}
+      <div className="flex-shrink-0 px-4 pt-2 pb-1">
         <div className="flex items-center gap-1">
           <button
             onClick={onBack}
-            className="flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center rounded-lg text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action"
+            className="-ml-2 flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center rounded-lg text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action"
             aria-label="현황 목록으로 돌아가기"
           >
             <ChevronLeftIcon className="h-5 w-5" />
           </button>
-          <DialogTitle className="text-left text-base font-semibold">
-            {group.name}
-          </DialogTitle>
+          <div>
+            <DialogTitle className="text-left text-base font-semibold">
+              {group.name}
+            </DialogTitle>
+            <DialogDescription
+              aria-live="polite"
+              className="mt-0.5 text-left text-sm text-muted-foreground"
+            >
+              {checkedCount}/{groupMembers.length}명 확인{absentCount > 0 && ` (불참 ${absentCount})`}
+            </DialogDescription>
+          </div>
         </div>
-        {/* 카운트는 제목 아래, 왼쪽 정렬 */}
-        <DialogDescription
-          aria-live="polite"
-          className="mt-0.5 pl-11 text-left text-sm text-muted-foreground"
-        >
-          {checkedCount}/{groupMembers.length}명 확인{absentCount > 0 && ` (불참 ${absentCount})`}
-        </DialogDescription>
       </div>
 
       {/* 인원 목록 */}

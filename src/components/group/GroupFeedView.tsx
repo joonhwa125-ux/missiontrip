@@ -112,7 +112,7 @@ export default function GroupFeedView({
       {/* 전체 조 현황 바텀시트 */}
       <Dialog open={statusOpen} onOpenChange={setStatusOpen}>
         <DialogContent className="flex max-h-[80vh] flex-col overflow-hidden p-0">
-          <div className="flex-shrink-0 px-6 pt-6">
+          <div className="flex-shrink-0 px-6 pt-4">
             <DialogHeader>
               <DialogTitle>전체 현황</DialogTitle>
               <DialogDescription>
