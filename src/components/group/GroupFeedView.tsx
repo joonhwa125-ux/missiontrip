@@ -279,19 +279,17 @@ function ScheduleCard({
         )}
         {scopeBadge}
       </div>
-      {/* 장소/일정명 (좌) + 카운트 (우하단) */}
-      <div className="flex items-baseline justify-between gap-2">
-        <div>
-          <p className="font-medium">{primaryText}</p>
-          {schedule.location && (
-            <p className="mt-0.5 text-sm text-muted-foreground">{schedule.title}</p>
-          )}
-        </div>
+      {/* 장소/일정명 + 카운트 */}
+      <div>
+        <p className="font-medium">{primaryText}</p>
+        {schedule.location && (
+          <p className="mt-0.5 text-sm text-muted-foreground">{schedule.title}</p>
+        )}
         {total > 0 && (
-          <span className="flex-shrink-0 flex items-center gap-0.5 text-xs text-muted-foreground">
+          <p className="mt-1 flex items-center gap-0.5 text-xs text-muted-foreground">
             <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
-            {completedCount}/{total}명{completedAbsent > 0 && ` (불참 ${completedAbsent})`}
-          </span>
+            {completedCount}/{total}명{completedAbsent > 0 && `, 불참 ${completedAbsent}`}
+          </p>
         )}
       </div>
     </div>
