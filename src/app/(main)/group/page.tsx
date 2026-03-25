@@ -90,14 +90,19 @@ export default async function GroupPage() {
     .map((s: Schedule) => s.id);
 
   const scheduleCounts: Record<string, number> = {};
+  const scheduleAbsentCounts: Record<string, number> = {};
   if (completedScheduleIds.length > 0 && members?.length) {
     const { data: counts } = await supabase
       .from("check_ins")
-      .select("schedule_id")
+      .select("schedule_id, is_absent")
       .in("schedule_id", completedScheduleIds)
       .in("user_id", members.map((m) => m.id));
     for (const c of counts ?? []) {
-      scheduleCounts[c.schedule_id] = (scheduleCounts[c.schedule_id] ?? 0) + 1;
+      if (c.is_absent) {
+        scheduleAbsentCounts[c.schedule_id] = (scheduleAbsentCounts[c.schedule_id] ?? 0) + 1;
+      } else {
+        scheduleCounts[c.schedule_id] = (scheduleCounts[c.schedule_id] ?? 0) + 1;
+      }
     }
   }
 
@@ -116,6 +121,7 @@ export default async function GroupPage() {
       allMembers={(allMembers ?? []).map((m) => ({ id: m.id, group_id: m.group_id, party: (m.party as "advance" | "rear") ?? null, name: m.name, role: m.role }))}
       allReports={allReports}
       scheduleCounts={scheduleCounts}
+      scheduleAbsentCounts={scheduleAbsentCounts}
       initialReported={initialReported}
     />
   );

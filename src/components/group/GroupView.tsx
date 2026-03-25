@@ -24,6 +24,7 @@ interface Props {
   allMembers: GroupMemberBrief[];
   allReports: { group_id: string }[];
   scheduleCounts: Record<string, number>;
+  scheduleAbsentCounts: Record<string, number>;
   initialReported: boolean;
 }
 
@@ -41,6 +42,7 @@ export default function GroupView({
   allMembers,
   allReports: initialReports,
   scheduleCounts,
+  scheduleAbsentCounts,
   initialReported,
 }: Props) {
   const router = useRouter();
@@ -189,6 +191,7 @@ export default function GroupView({
           members={members}
           checkIns={checkIns}
           scheduleCounts={scheduleCounts}
+          scheduleAbsentCounts={scheduleAbsentCounts}
           allGroups={allGroups}
           allCheckIns={allCheckInsState}
           allMembers={allMembers}

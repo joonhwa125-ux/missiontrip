@@ -100,10 +100,10 @@ export default function AdminScheduleCard({
         {subtitle}
 
         {/* 진행률 + 조·명 수 */}
-        <div className="mt-3 flex items-center justify-between">
+        <div className="mt-3 flex items-baseline justify-between">
           <p className="text-xs text-muted-foreground">전체 진행률 {progressPct}%</p>
-          <p className="text-sm font-medium text-gray-700" aria-live="polite">
-            {reportedCount}/{totalGroups}조 ({checkedCount}/{totalMembers}명)
+          <p className="text-xs font-medium text-gray-700" aria-live="polite">
+            {reportedCount}/{totalGroups}조 ({checkedCount}/{totalMembers}명){absentCount > 0 && ` (불참 ${absentCount})`}
           </p>
         </div>
 
@@ -121,11 +121,6 @@ export default function AdminScheduleCard({
             style={{ width: `${progressPct}%` }}
           />
         </div>
-
-        {/* 불참 (있을 때만) */}
-        {absentCount > 0 && (
-          <p className="mt-1 text-xs text-muted-foreground">불참 {absentCount}명</p>
-        )}
 
         <button
           onClick={onSummaryTap}
@@ -209,14 +204,14 @@ export default function AdminScheduleCard({
       </div>
 
       {/* 장소/일정명 (좌) + 통계 (우하단) */}
-      <div className="flex items-end justify-between gap-2">
+      <div className="flex items-baseline justify-between gap-2">
         <div>
           <p className="font-medium">{primaryText}</p>
           {subtitle}
         </div>
-        <p className="flex-shrink-0 flex items-center gap-1 text-sm text-muted-foreground" aria-live="polite">
+        <p className="flex-shrink-0 flex items-center gap-1 text-xs text-muted-foreground" aria-live="polite">
           <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
-          {reportedCount}/{totalGroups}조 ({checkedCount}/{totalMembers}명)
+          {reportedCount}/{totalGroups}조 ({checkedCount}/{totalMembers}명){absentCount > 0 && ` (불참 ${absentCount})`}
         </p>
       </div>
 

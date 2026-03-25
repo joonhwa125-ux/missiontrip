@@ -25,6 +25,7 @@ interface Props {
   members: Member[];
   checkIns: CheckIn[];
   scheduleCounts: Record<string, number>;
+  scheduleAbsentCounts: Record<string, number>;
   allGroups: Group[];
   allCheckIns: { user_id: string; is_absent: boolean }[];
   allMembers: GroupMemberBrief[];
@@ -41,6 +42,7 @@ export default function GroupFeedView({
   members,
   checkIns,
   scheduleCounts,
+  scheduleAbsentCounts,
   allGroups,
   allCheckIns,
   allMembers,
@@ -95,6 +97,7 @@ export default function GroupFeedView({
               members={members}
               checkIns={checkIns}
               scheduleCounts={scheduleCounts}
+              scheduleAbsentCounts={scheduleAbsentCounts}
               onEnterCheckin={onEnterCheckin}
               onStatusOpen={() => setStatusOpen(true)}
             />
@@ -150,6 +153,7 @@ function ScheduleCard({
   members,
   checkIns,
   scheduleCounts,
+  scheduleAbsentCounts,
   onEnterCheckin,
   onStatusOpen,
 }: {
@@ -157,6 +161,7 @@ function ScheduleCard({
   members: Member[];
   checkIns: CheckIn[];
   scheduleCounts: Record<string, number>;
+  scheduleAbsentCounts: Record<string, number>;
   onEnterCheckin: () => void;
   onStatusOpen: () => void;
 }) {
@@ -203,11 +208,14 @@ function ScheduleCard({
           {schedule.location && (
             <p className="mt-0.5 text-sm text-muted-foreground">{schedule.title}</p>
           )}
-          <p className="mt-1.5 text-sm font-medium" aria-live="polite">
-            {checked}/{effectiveTotal}명 탑승 완료
-          </p>
+          <div className="mt-3 flex items-baseline justify-between">
+            <p className="text-xs text-muted-foreground">탑승 {effectiveTotal > 0 ? Math.round((checked / effectiveTotal) * 100) : 0}%</p>
+            <p className="text-xs font-medium text-gray-700" aria-live="polite">
+              {checked}/{effectiveTotal}명{absentCount > 0 && ` (불참 ${absentCount})`}
+            </p>
+          </div>
           <div
-            className="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100"
+            className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-gray-100"
             role="progressbar"
             aria-valuenow={checked}
             aria-valuemax={effectiveTotal}
@@ -254,6 +262,7 @@ function ScheduleCard({
   }
 
   const completedCount = scheduleCounts[schedule.id] ?? 0;
+  const completedAbsent = scheduleAbsentCounts[schedule.id] ?? 0;
 
   return (
     <div className="rounded-2xl bg-white p-4 opacity-55">
@@ -270,7 +279,7 @@ function ScheduleCard({
         {scopeBadge}
       </div>
       {/* 장소/일정명 (좌) + 카운트 (우하단) */}
-      <div className="flex items-end justify-between gap-2">
+      <div className="flex items-baseline justify-between gap-2">
         <div>
           <p className="font-medium">{primaryText}</p>
           {schedule.location && (
@@ -280,7 +289,7 @@ function ScheduleCard({
         {total > 0 && (
           <span className="flex-shrink-0 flex items-center gap-0.5 text-xs text-muted-foreground">
             <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
-            {completedCount}/{total}명
+            {completedCount}/{total}명{completedAbsent > 0 && ` (불참 ${completedAbsent})`}
           </span>
         )}
       </div>
