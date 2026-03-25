@@ -104,10 +104,11 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
       {/* Google Sheets 패널 */}
       {tab === "sheets" && (
         <section id="panel-sheets" role="tabpanel" className="rounded-2xl bg-white p-5">
-          <label className="mb-1 block text-sm text-muted-foreground">
+          <label htmlFor="ds-sheet-url" className="mb-1 block text-sm text-muted-foreground">
             Sheet URL
           </label>
           <input
+            id="ds-sheet-url"
             type="url"
             value={sheetUrl}
             onChange={(e) => setSheetUrl(e.target.value)}
@@ -116,10 +117,11 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
           />
           <div className="mb-3 grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs text-muted-foreground">
+              <label htmlFor="ds-gid-users" className="mb-1 block text-xs text-muted-foreground">
                 참가자 탭 GID
               </label>
               <input
+                id="ds-gid-users"
                 type="text"
                 value={gidUsers}
                 onChange={(e) => setGidUsers(e.target.value)}
@@ -127,10 +129,11 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs text-muted-foreground">
+              <label htmlFor="ds-gid-schedules" className="mb-1 block text-xs text-muted-foreground">
                 일정 탭 GID
               </label>
               <input
+                id="ds-gid-schedules"
                 type="text"
                 value={gidSchedules}
                 onChange={(e) => setGidSchedules(e.target.value)}

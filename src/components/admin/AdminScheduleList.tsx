@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useTransition, useMemo } from "react";
+import { useState, useCallback, useTransition, useMemo } from "react";
 import { activateSchedule, deactivateSchedule } from "@/actions/schedule";
 import { useBroadcast } from "@/hooks/useRealtime";
+import {
+  useAllReportedNotification, useAutoActivateTimer, calcUncheckedCount,
+} from "@/hooks/useAdminScheduleEffects";
 import { filterMembersByScope } from "@/lib/utils";
 import {
   CHANNEL_GLOBAL, COPY,
@@ -28,16 +31,6 @@ interface Props {
   onRefresh: () => void;
 }
 
-/** 현재 활성 일정 기준 미확인 인원 수 계산 */
-function calcUncheckedCount(
-  checkIns: { user_id: string; is_absent: boolean }[],
-  totalMemberCount: number
-): number {
-  const absentCount = checkIns.filter((c) => c.is_absent).length;
-  const checkedCount = checkIns.filter((c) => !c.is_absent).length;
-  return totalMemberCount - absentCount - checkedCount;
-}
-
 export default function AdminScheduleList({
   schedules, allSchedules, checkInsMap, reportsMap, members,
   activeSchedule, onBottomSheet, onTimeEdit, onToast, onRefresh,
@@ -46,9 +39,6 @@ export default function AdminScheduleList({
   const { broadcast } = useBroadcast();
   const [warningTarget, setWarningTarget] = useState<Schedule | null>(null);
   const [deactivateTarget, setDeactivateTarget] = useState<Schedule | null>(null);
-  const autoAlertedRef = useRef<Set<string>>(new Set());
-  const allReportedNotifiedRef = useRef<string | null>(null); // 토스트 발송된 schedule_id 추적
-
   const activeCheckIns = useMemo(
     () => (activeSchedule ? checkInsMap[activeSchedule.id] ?? [] : []),
     [activeSchedule, checkInsMap]
@@ -97,57 +87,8 @@ export default function AdminScheduleList({
     if (unchecked > 0) { setDeactivateTarget(s); } else { handleDeactivate(s); }
   };
 
-  // -- 전 조 보고완료 토스트 감지 --
-  useEffect(() => {
-    if (!activeSchedule) {
-      allReportedNotifiedRef.current = null;
-      return;
-    }
-    // 일정이 변경되면 ref 리셋 — 새 일정에서도 토스트 발송 가능
-    if (allReportedNotifiedRef.current !== activeSchedule.id) {
-      allReportedNotifiedRef.current = null;
-    }
-    const scopeMembers = filterMembersByScope(members, activeSchedule.scope);
-    const scopeGroupIds = new Set(scopeMembers.map((m) => m.group_id));
-    const totalGroups = scopeGroupIds.size;
-    const reports = reportsMap[activeSchedule.id] ?? [];
-    const reportedGroupIds = new Set(reports.map((r) => r.group_id));
-    const reportedCount = Array.from(scopeGroupIds).filter((gid) => reportedGroupIds.has(gid)).length;
-    const allReported = totalGroups > 0 && reportedCount >= totalGroups;
-    if (allReported && allReportedNotifiedRef.current !== activeSchedule.id) {
-      allReportedNotifiedRef.current = activeSchedule.id;
-      onToast(COPY.allReported);
-    }
-  }, [reportsMap, activeSchedule, members, onToast]);
-
-  // -- 자동 활성화 타이머 (60초 + visibilitychange) --
-  useEffect(() => {
-    const check = () => {
-      const now = new Date();
-      const waiting = allSchedules.filter(
-        (s) => !s.is_active && !s.activated_at && s.scheduled_time
-      );
-      const due = waiting.find((s) => new Date(s.scheduled_time!) <= now);
-      if (!due || autoAlertedRef.current.has(due.id)) return;
-      const unchecked = calcUncheckedCount(activeCheckIns, totalMemberCount);
-      if (activeSchedule && unchecked > 0) {
-        autoAlertedRef.current.add(due.id);
-        onToast(`${due.title} 시간이 됐지만 ${unchecked}명이 미확인이에요`);
-        return;
-      }
-      handleActivate(due);
-    };
-    check();
-    const timer = setInterval(check, 60_000);
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") check();
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      clearInterval(timer);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, [allSchedules, activeCheckIns, totalMemberCount, activeSchedule, handleActivate, onToast]);
+  useAllReportedNotification(activeSchedule, members, reportsMap, onToast);
+  useAutoActivateTimer(allSchedules, activeCheckIns, totalMemberCount, activeSchedule, handleActivate, onToast);
 
   // -- 수동 활성화 (미확인 경고 래핑) --
   const handleActivateClick = (s: Schedule) => {

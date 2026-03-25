@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { importToDatabase } from "@/actions/setup";
 import ValidationErrorList from "./ValidationErrorList";
 import {
@@ -32,9 +32,15 @@ export default function PreviewStep({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  const leaderCount = data.users.filter((u) => u.role === "leader" || u.role === "admin_leader").length;
-  const memberCount = data.users.filter((u) => u.role === "member").length;
-  const adminCount = data.users.filter((u) => u.role === "admin" || u.role === "admin_leader").length;
+  const { leaderCount, memberCount, adminCount } = useMemo(() => {
+    let leaders = 0, members = 0, admins = 0;
+    for (const u of data.users) {
+      if (u.role === "leader" || u.role === "admin_leader") leaders++;
+      if (u.role === "member") members++;
+      if (u.role === "admin" || u.role === "admin_leader") admins++;
+    }
+    return { leaderCount: leaders, memberCount: members, adminCount: admins };
+  }, [data.users]);
   const hasErrors = data.errors.length > 0;
   const errorRows = new Set(data.errors.map((e) => e.row));
 

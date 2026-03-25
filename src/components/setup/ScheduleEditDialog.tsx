@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -56,8 +56,11 @@ export default function ScheduleEditDialog({ schedule, onSave, onClose }: Props)
     scope: schedule.scope,
   });
 
-  const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
-    setForm((prev) => ({ ...prev, [k]: v }));
+  const set = useCallback(
+    <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
+      setForm((prev) => ({ ...prev, [k]: v })),
+    []
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

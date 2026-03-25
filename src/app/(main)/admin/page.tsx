@@ -62,7 +62,7 @@ export default async function AdminPage() {
     const [{ data: allCi }, { data: allRp }] = await Promise.all([
       supabase
         .from("check_ins")
-        .select("*")
+        .select("schedule_id, user_id, is_absent, checked_at")
         .in("schedule_id", activatedIds),
       supabase
         .from("group_reports")

@@ -10,6 +10,7 @@ import type {
   SetupPreviewData,
   ParsedGroup,
   ParsedUser,
+  ParsedSchedule,
   ValidationError,
   ScheduleScope,
   UserRole,
@@ -113,6 +114,75 @@ export async function previewFromCsv(
   };
 }
 
+// importToDatabase 내부 헬퍼 — Groups UPSERT + 조이름→UUID 매핑 반환
+async function upsertGroups(
+  supabase: ReturnType<typeof createServiceClient>,
+  groups: ParsedGroup[]
+): Promise<{ groupMap?: Map<string, string>; error?: string }> {
+  const { data: inserted, error } = await supabase
+    .from("groups")
+    .upsert(
+      groups.map((g) => ({ name: g.name, bus_name: g.bus_name })),
+      { onConflict: "name" }
+    )
+    .select("id, name");
+
+  if (error || !inserted) {
+    return { error: `조 등록 실패: ${error?.message}` };
+  }
+  return { groupMap: new Map(inserted.map((g) => [g.name, g.id])) };
+}
+
+// importToDatabase 내부 헬퍼 — Users UPSERT (조이름→UUID 매핑 필요)
+async function upsertUsers(
+  supabase: ReturnType<typeof createServiceClient>,
+  users: ParsedUser[],
+  groupMap: Map<string, string>
+): Promise<{ error?: string }> {
+  const payload: {
+    name: string; email: string; phone: string | null;
+    role: string; group_id: string; party: string | null;
+  }[] = [];
+
+  for (const u of users) {
+    const groupId = groupMap.get(u.group_name);
+    if (!groupId) {
+      return { error: `조 "${u.group_name}"를 찾을 수 없어요. 데이터를 다시 확인해주세요` };
+    }
+    payload.push({
+      name: u.name, email: u.email, phone: u.phone,
+      role: u.role, group_id: groupId, party: u.party,
+    });
+  }
+
+  const { error } = await supabase
+    .from("users")
+    .upsert(payload, { onConflict: "email" });
+
+  return error ? { error: `참가자 등록 실패: ${error.message}` } : {};
+}
+
+// importToDatabase 내부 헬퍼 — Schedules UPSERT (parseKSTTime으로 시간 변환)
+async function upsertSchedules(
+  supabase: ReturnType<typeof createServiceClient>,
+  schedules: ParsedSchedule[]
+): Promise<{ error?: string }> {
+  const payload = schedules.map((s) => ({
+    title: s.title,
+    location: s.location,
+    day_number: s.day_number,
+    sort_order: s.sort_order,
+    scope: s.scope,
+    scheduled_time: s.scheduled_time ? parseKSTTime(s.scheduled_time) : null,
+  }));
+
+  const { error } = await supabase
+    .from("schedules")
+    .upsert(payload, { onConflict: "day_number,sort_order" });
+
+  return error ? { error: `일정 등록 실패: ${error.message}` } : {};
+}
+
 // DB에 데이터 반영 (Groups → Users → Schedules 순서)
 export async function importToDatabase(
   data: SetupPreviewData
@@ -126,76 +196,14 @@ export async function importToDatabase(
 
   const supabase = createServiceClient();
 
-  // 1. Groups INSERT
-  const { data: insertedGroups, error: groupError } = await supabase
-    .from("groups")
-    .upsert(
-      data.groups.map((g) => ({ name: g.name, bus_name: g.bus_name })),
-      { onConflict: "name" }
-    )
-    .select("id, name");
+  const { groupMap, error: ge } = await upsertGroups(supabase, data.groups);
+  if (ge || !groupMap) return { ok: false, error: ge ?? "조 등록 실패" };
 
-  if (groupError || !insertedGroups) {
-    return { ok: false, error: `조 등록 실패: ${groupError?.message}` };
-  }
+  const { error: ue } = await upsertUsers(supabase, data.users, groupMap);
+  if (ue) return { ok: false, error: ue };
 
-  // 조이름 → UUID 매핑
-  const groupMap = new Map(insertedGroups.map((g) => [g.name, g.id]));
-
-  // 2. Users INSERT
-  const usersPayload: {
-    name: string;
-    email: string;
-    phone: string | null;
-    role: string;
-    group_id: string;
-    party: string | null;
-  }[] = [];
-  for (const u of data.users) {
-    const groupId = groupMap.get(u.group_name);
-    if (!groupId) {
-      return {
-        ok: false,
-        error: `조 "${u.group_name}"를 찾을 수 없어요. 데이터를 다시 확인해주세요`,
-      };
-    }
-    usersPayload.push({
-      name: u.name,
-      email: u.email,
-      phone: u.phone,
-      role: u.role,
-      group_id: groupId,
-      party: u.party,
-    });
-  }
-
-  const { error: userError } = await supabase
-    .from("users")
-    .upsert(usersPayload, { onConflict: "email" });
-
-  if (userError) {
-    return { ok: false, error: `참가자 등록 실패: ${userError.message}` };
-  }
-
-  // 3. Schedules INSERT
-  // parseKSTTime이 "HH:MM" / "MM-DD HH:MM" / "YYYY-MM-DD HH:MM" → ISO 변환 담당
-  // 미지원 형식(이미 ISO 등)은 원본 그대로 반환하므로 별도 regex 불필요
-  const schedulesPayload = data.schedules.map((s) => ({
-    title: s.title,
-    location: s.location,
-    day_number: s.day_number,
-    sort_order: s.sort_order,
-    scope: s.scope,
-    scheduled_time: s.scheduled_time ? parseKSTTime(s.scheduled_time) : null,
-  }));
-
-  const { error: scheduleError } = await supabase
-    .from("schedules")
-    .upsert(schedulesPayload, { onConflict: "day_number,sort_order" });
-
-  if (scheduleError) {
-    return { ok: false, error: `일정 등록 실패: ${scheduleError.message}` };
-  }
+  const { error: se } = await upsertSchedules(supabase, data.schedules);
+  if (se) return { ok: false, error: se };
 
   revalidateAllPaths();
   return {

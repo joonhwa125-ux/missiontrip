@@ -16,16 +16,35 @@
 | Realtime 실시간 동기화 검증 | ⬜ 미시작 | 2개 브라우저로 broadcast 테스트 |
 | Vercel 배포 후 프로덕션 검증 | ⬜ 미시작 | 최신 코드 배포 + 동작 확인 |
 
-### PRD→코드 정합성 수정 (별도 세션 필요)
+### PRD→코드 정합성 수정
 
 | 항목 | 상태 | 비고 |
 |---|---|---|
 | `sheets-parser.ts` 5컬럼→4컬럼 | ✅ 완료 | 이메일 컬럼 제거 (사용자 직접 수정) |
-| `constants.ts` EXPECTED_GROUP_COUNT | ⬜ 미시작 | 미사용 상수 — 삭제 또는 무시 |
-| DB `checked_by` CHECK에서 'self' 제거 | ⬜ 미시작 | Supabase SQL 실행 필요 |
-| DB RLS `checkins_insert` 셀프 허용 제거 | ⬜ 미시작 | Supabase SQL 실행 필요 |
-| 토스트 시간 3.5초→5초 | ⬜ 미시작 | WCAG 접근성 기준 |
-| `types.ts` CheckedBy 타입에서 'self' 제거 | ⬜ 미시작 | |
+| `constants.ts` EXPECTED_GROUP_COUNT | ✅ 완료 | 미사용 상수 삭제 |
+| DB `checked_by` CHECK에서 'self' 제거 | ⬜ 미시작 | Supabase SQL 실행 필요 (코드 레벨 아님) |
+| DB RLS `checkins_insert` 셀프 허용 제거 | ⬜ 미시작 | Supabase SQL 실행 필요 (코드 레벨 아님) |
+| 토스트 시간 3.5초→5초 | ✅ 완료 | `useToast` 기본값 이미 5000ms |
+| `types.ts` CheckedBy 타입에서 'self' 제거 | ✅ 완료 | 이미 `"leader" \| "admin"` 만 있음 |
+
+### 리팩토링 — Tier 2/3/4 (`docs/refactoring-plan.md`)
+
+| 항목 | 상태 | 비고 |
+|---|---|---|
+| T2-1 ROLE_PERMISSIONS 테이블 | ✅ 완료 | `constants.ts` 역할 함수 일원화 |
+| T2-2 revalidatePaths 헬퍼 (4개 파일) | ✅ 완료 | `checkin/schedule/report/setup.ts` |
+| T2-3 `importToDatabase` 헬퍼 분리 | ✅ 완료 | 97줄 → 3개 헬퍼(upsertGroups/Users/Schedules) + 오케스트레이터 |
+| T2-4 `sheets-parser.ts` 검증/매핑 분리 | ✅ 완료 | validateUserRow/validateScheduleRow 추출 |
+| T2-5 offline.ts getFromStorage 헬퍼 | ✅ 완료 | 3개 함수 리팩토링 |
+| T2-6 TIME_PATTERNS 상수화 | ✅ 완료 | `utils.ts` + `setup.ts` 인라인 제거 |
+| T2-minor resetAllData 주석 | ✅ 완료 | `.neq` 패턴 주석 추가 |
+| T3-5 ROLE_LABEL/SCOPE_LABEL 통합 | ✅ 완료 | `CurrentDataView` + `PreviewStep` |
+| T3-3/T3-4/T3-6 useMemo/useCallback | ✅ 완료 | CurrentDataView, ScheduleEditDialog, UserEditDialog, PreviewStep |
+| SIZE-001 AdminScheduleList 훅 추출 | ✅ 완료 | 238줄→180줄. useAdminScheduleEffects.ts 추출 |
+| FIX-001 로그인 에러 처리 | ✅ 완료 | try-catch + redirect 패턴 |
+| A11Y-001 DataSourceStep htmlFor | ✅ 완료 | 3개 input label-id 연결 |
+| Tier 1 (T1-1~4, R1, R2, R3) | ✅ 이미 구현됨 | 코드 확인 결과 모두 이전 세션에서 구현 완료 |
+| T3-7 `as` 타입 단언 제거 | ⬜ 스킵 | database.types.ts 미존재 (조건부 항목) |
 
 ### 보류 항목 (운영 후 개선)
 
@@ -35,7 +54,6 @@
 | CR-015 일정 추가 form 태그 | 1차 리뷰 | Enter 제출 |
 | CR-020~028 Minor 9건 | 1차 리뷰 | |
 | NEW-002 text-[0.625rem] 가독성 | 2차 리뷰 | |
-| NEW-004 DataSourceStep htmlFor | 2차 리뷰 | |
 | NEW-005~010 Minor 6건 | 2차 리뷰 | |
 
 ### Phase 2: 추가 기능

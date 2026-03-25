@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useMemo } from "react";
 import { useBroadcastCheckin } from "@/hooks/useBroadcastCheckin";
-import { PhoneIcon } from "@/components/ui/icons";
+import { PhoneIcon, ChevronLeftIcon } from "@/components/ui/icons";
 import { createCheckin, deleteCheckin, markAbsent } from "@/actions/checkin";
 import { COPY, isLeaderRole } from "@/lib/constants";
 import { formatTime } from "@/lib/utils";
@@ -25,11 +25,11 @@ type ConfirmAction =
   | { type: "cancel"; member: Member };
 
 interface Props {
-  group: Group | null;
+  group: Group;
   members: Member[];
   checkIns: CheckIn[];
   activeSchedule: Schedule | null;
-  onClose: () => void;
+  onBack: () => void;
   onCheckInsChange: (updater: (prev: CheckIn[]) => CheckIn[]) => void;
 }
 
@@ -38,15 +38,15 @@ export default function AdminGroupDrillDown({
   members,
   checkIns,
   activeSchedule,
-  onClose,
+  onBack,
   onCheckInsChange,
 }: Props) {
   const [, startTransition] = useTransition();
-  const broadcastCheckin = useBroadcastCheckin(group?.id ?? "", activeSchedule?.id);
+  const broadcastCheckin = useBroadcastCheckin(group.id, activeSchedule?.id);
   const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
 
   const groupMembers = useMemo(
-    () => group ? members.filter((m) => m.group_id === group.id) : [],
+    () => members.filter((m) => m.group_id === group.id),
     [members, group]
   );
   const checkedMap = useMemo(
@@ -73,8 +73,6 @@ export default function AdminGroupDrillDown({
     const bOrder = !bCheckin ? 0 : bCheckin.is_absent ? 1 : 2;
     return aOrder - bOrder;
   }), [groupMembers, checkedMap]);
-
-  if (!group) return null;
 
   function handleCheckin(member: Member) {
     if (!activeSchedule) return;
@@ -130,32 +128,40 @@ export default function AdminGroupDrillDown({
 
   return (
     <>
-      <Dialog open={!!group} onOpenChange={(o) => !o && !confirm && onClose()}>
-        <DialogContent className="flex max-h-[80vh] flex-col overflow-hidden p-0">
-          <div className="flex-shrink-0 px-6 pt-6">
-            <DialogHeader>
-              <DialogTitle>{group.name}</DialogTitle>
-              <DialogDescription aria-live="polite">
-                {checkedCount}/{groupMembers.length}명 확인{absentCount > 0 && ` (불참 ${absentCount})`}
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-          <ul className="space-y-2 overflow-y-auto px-6 pb-6">
-            {sorted.map((m) => (
-              <MemberRow
-                key={m.id}
-                member={m}
-                checkin={checkedMap.get(m.id) ?? null}
-                activeSchedule={activeSchedule}
-                onCheckin={() => handleCheckin(m)}
-                onAbsent={() => setConfirm({ type: "absent", member: m })}
-                onCancel={() => setConfirm({ type: "cancel", member: m })}
-              />
-            ))}
-          </ul>
-        </DialogContent>
-      </Dialog>
+      {/* 헤더: 뒤로 + 조 이름 + 카운트 */}
+      <div className="flex-shrink-0 px-6 pt-6">
+        <button
+          onClick={onBack}
+          className="mb-2 flex min-h-11 items-center gap-0.5 -ml-2 rounded-lg px-2 text-sm text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action"
+          aria-label="현황 목록으로 돌아가기"
+        >
+          <ChevronLeftIcon className="h-4 w-4" />
+          현황
+        </button>
+        <DialogHeader>
+          <DialogTitle>{group.name}</DialogTitle>
+          <DialogDescription aria-live="polite">
+            {checkedCount}/{groupMembers.length}명 확인{absentCount > 0 && ` (불참 ${absentCount})`}
+          </DialogDescription>
+        </DialogHeader>
+      </div>
 
+      {/* 인원 목록 */}
+      <ul className="space-y-2 overflow-y-auto px-6 pb-6">
+        {sorted.map((m) => (
+          <MemberRow
+            key={m.id}
+            member={m}
+            checkin={checkedMap.get(m.id) ?? null}
+            activeSchedule={activeSchedule}
+            onCheckin={() => handleCheckin(m)}
+            onAbsent={() => setConfirm({ type: "absent", member: m })}
+            onCancel={() => setConfirm({ type: "cancel", member: m })}
+          />
+        ))}
+      </ul>
+
+      {/* 확인 모달 (별도 Dialog — 최상위 레이어) */}
       <ConfirmDialog
         action={confirm}
         onClose={() => setConfirm(null)}

@@ -86,6 +86,114 @@ export function parseCsv(csv: string): string[][] {
   return rows;
 }
 
+// 참가자 행 검증 — 이름/역할/소속조 필수값 + 역할 매핑
+function validateUserRow(
+  row: string[],
+  rowIndex: number,
+  emailSet: Set<string>
+): {
+  errors: ValidationError[];
+  name?: string;
+  phone?: string | null;
+  role?: UserRole;
+  groupName?: string;
+  busName?: string | null;
+  party?: "advance" | "rear" | null;
+  email?: string;
+} {
+  const errors: ValidationError[] = [];
+  const name = sanitizeText(row[0] ?? "");
+  const phone = row[1]?.trim() || null;
+  const roleRaw = sanitizeText(row[2] ?? "");
+  const groupName = sanitizeText(row[3] ?? "");
+  const busName = row[4]?.trim() || null;
+  const partyRaw = sanitizeText(row[5] ?? "");
+  const rowNum = rowIndex + 1;
+
+  if (!name) {
+    errors.push({ sheet: "users", row: rowNum, field: "이름", message: "이름이 없어요" });
+    return { errors };
+  }
+
+  const role = ROLE_MAP[roleRaw] ?? (() => {
+    const parenMatch = roleRaw.match(/\((.+)\)/);
+    return parenMatch ? ROLE_MAP[parenMatch[1].trim()] : undefined;
+  })();
+  if (!role) {
+    errors.push({ sheet: "users", row: rowNum, field: "역할", message: `역할은 조원/조장/관리자/관리자(조장)만 가능해요 (입력값: "${roleRaw}")` });
+    return { errors };
+  }
+
+  if (!groupName) {
+    errors.push({ sheet: "users", row: rowNum, field: "소속조", message: "소속조가 없어요" });
+    return { errors };
+  }
+
+  const needsLogin = role !== "member";
+  const email = needsLogin
+    ? `${name.toLowerCase()}${ALLOWED_EMAIL_DOMAIN}`
+    : `${MEMBER_EMAIL_PREFIX}.${name}.${rowIndex}${NO_LOGIN_EMAIL_DOMAIN}`;
+
+  if (emailSet.has(email)) {
+    errors.push({ sheet: "users", row: rowNum, field: "이름", message: `${name} 이름이 중복되어 있어요 (이메일 충돌)` });
+    return { errors };
+  }
+
+  let party: "advance" | "rear" | null = null;
+  if (partyRaw) {
+    const mapped = PARTY_MAP[partyRaw];
+    if (mapped) {
+      party = mapped;
+    } else {
+      errors.push({ sheet: "users", row: rowNum, field: "선후발", message: `선후발은 선발/후발만 가능해요 (입력값: "${partyRaw}")` });
+    }
+  }
+
+  return { errors, name, phone, role, groupName, busName, party, email };
+}
+
+// 일정 행 검증 — 일차 범위 + 일정명 필수 + 대상 매핑
+function validateScheduleRow(
+  row: string[],
+  rowIndex: number
+): {
+  errors: ValidationError[];
+  dayNumber?: number;
+  sortOrder?: number;
+  location?: string | null;
+  title?: string;
+  scheduledTime?: string | null;
+  scope?: "all" | "advance" | "rear";
+} {
+  const errors: ValidationError[] = [];
+  const rowNum = rowIndex + 1;
+  const dayRaw = row[0]?.trim() ?? "";
+  const dayNumber = parseInt(dayRaw.replace(/\D/g, ""), 10);
+  const sortOrder = parseInt(row[1], 10);
+  const location = row[2]?.trim() || null;
+  const title = row[3]?.trim();
+  const scheduledTime = row[4]?.trim() || null;
+  const scopeRaw = sanitizeText(row[5] ?? "");
+
+  if (isNaN(dayNumber) || dayNumber < MIN_DAY_NUMBER || dayNumber > MAX_DAY_NUMBER) {
+    errors.push({ sheet: "schedules", row: rowNum, field: "일차", message: `일차는 ${MIN_DAY_NUMBER}~${MAX_DAY_NUMBER}만 가능해요` });
+    return { errors };
+  }
+
+  if (!title) {
+    errors.push({ sheet: "schedules", row: rowNum, field: "일정명", message: "일정명이 없어요" });
+    return { errors };
+  }
+
+  const scope = scopeRaw ? SCOPE_MAP[scopeRaw] : "all";
+  if (!scope) {
+    errors.push({ sheet: "schedules", row: rowNum, field: "대상", message: `대상은 전체/선발/후발만 가능해요 (입력값: "${scopeRaw}")` });
+    return { errors };
+  }
+
+  return { errors, dayNumber, sortOrder: isNaN(sortOrder) ? rowIndex : sortOrder, location, title, scheduledTime, scope };
+}
+
 // 참가자 시트 파싱 (6컬럼: 이름, 전화번호, 역할, 소속조, 배정차량, 선후발)
 // 이메일은 이름 기반 자동 생성 (조장/관리자: name@도메인, 조원: nologin)
 // groups는 소속조 고유값에서 자동 추출, bus_name은 배정차량 열에서 매핑, party는 유저별
@@ -97,100 +205,35 @@ export function parseUsersSheet(rows: string[][]): {
   const users: ParsedUser[] = [];
   const errors: ValidationError[] = [];
   const emailSet = new Set<string>();
-  // 조이름 → 배정차량 매핑 (같은 조의 첫 번째 배정차량값 사용)
   const groupBusMap = new Map<string, string>();
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     if (!row || row.every((c) => !c)) continue;
 
-    const name = sanitizeText(row[0] ?? "");
-    const phone = row[1]?.trim() || null;
-    const roleRaw = sanitizeText(row[2] ?? "");
-    const groupName = sanitizeText(row[3] ?? "");
-    const busName = row[4]?.trim() || null;
-    const partyRaw = sanitizeText(row[5] ?? "");
+    const result = validateUserRow(row, i, emailSet);
+    errors.push(...result.errors);
 
-    // 이름 필수
-    if (!name) {
-      errors.push({
-        sheet: "users",
-        row: i + 1,
-        field: "이름",
-        message: "이름이 없어요",
-      });
-      continue;
+    if (!result.name || !result.role || !result.groupName || !result.email) continue;
+    // 선후발 에러가 있어도 유저 자체는 추가 (에러는 경고 성격)
+    if (result.errors.length > 0 && !result.role) continue;
+
+    emailSet.add(result.email);
+
+    if (!groupBusMap.has(result.groupName)) {
+      groupBusMap.set(result.groupName, result.busName ?? result.groupName);
     }
 
-    // 역할값 — 전체 문자열 먼저 매칭, 실패 시 괄호 안 추출
-    const role = ROLE_MAP[roleRaw] ?? (() => {
-      const parenMatch = roleRaw.match(/\((.+)\)/);
-      return parenMatch ? ROLE_MAP[parenMatch[1].trim()] : undefined;
-    })();
-    if (!role) {
-      errors.push({
-        sheet: "users",
-        row: i + 1,
-        field: "역할",
-        message: `역할은 조원/조장/관리자/관리자(조장)만 가능해요 (입력값: "${roleRaw}")`,
-      });
-      continue;
-    }
-
-    // 소속조 필수
-    if (!groupName) {
-      errors.push({
-        sheet: "users",
-        row: i + 1,
-        field: "소속조",
-        message: "소속조가 없어요",
-      });
-      continue;
-    }
-
-    // 이메일 자동 생성: 조장/관리자/관리자(조장) → LDAP 이름@도메인, 조원 → nologin
-    const needsLogin = role !== "member";
-    const email = needsLogin
-      ? `${name.toLowerCase()}${ALLOWED_EMAIL_DOMAIN}`
-      : `${MEMBER_EMAIL_PREFIX}.${name}.${i}${NO_LOGIN_EMAIL_DOMAIN}`;
-
-    // 이메일 중복 검사
-    if (emailSet.has(email)) {
-      errors.push({
-        sheet: "users",
-        row: i + 1,
-        field: "이름",
-        message: `${name} 이름이 중복되어 있어요 (이메일 충돌)`,
-      });
-      continue;
-    }
-    emailSet.add(email);
-
-    // 소속조 → 배정차량 매핑 수집 (첫 번째 값 우선)
-    if (!groupBusMap.has(groupName)) {
-      groupBusMap.set(groupName, busName ?? groupName);
-    }
-
-    // 유저별 선후발 파싱
-    let party: "advance" | "rear" | null = null;
-    if (partyRaw) {
-      const mapped = PARTY_MAP[partyRaw];
-      if (mapped) {
-        party = mapped;
-      } else {
-        errors.push({
-          sheet: "users",
-          row: i + 1,
-          field: "선후발",
-          message: `선후발은 선발/후발만 가능해요 (입력값: "${partyRaw}")`,
-        });
-      }
-    }
-
-    users.push({ name, email, phone, role, group_name: groupName, party });
+    users.push({
+      name: result.name,
+      email: result.email,
+      phone: result.phone ?? null,
+      role: result.role,
+      group_name: result.groupName,
+      party: result.party ?? null,
+    });
   }
 
-  // 소속조 고유값 → ParsedGroup[] (bus_name은 배정차량 열)
   const groups: ParsedGroup[] = Array.from(groupBusMap.entries()).map(([gn, bn]) => ({
     name: gn,
     bus_name: bn,
@@ -211,57 +254,18 @@ export function parseSchedulesSheet(rows: string[][]): {
     const row = rows[i];
     if (!row || row.every((c) => !c)) continue;
 
-    const dayRaw = row[0]?.trim() ?? "";
-    const dayNumber = parseInt(dayRaw.replace(/\D/g, ""), 10);
-    const sortOrder = parseInt(row[1], 10);
-    const location = row[2]?.trim() || null;
-    const title = row[3]?.trim();
-    const scheduledTimeRaw = row[4]?.trim() || null;
-    const scopeRaw = sanitizeText(row[5] ?? "");
+    const result = validateScheduleRow(row, i);
+    errors.push(...result.errors);
 
-    if (
-      isNaN(dayNumber) ||
-      dayNumber < MIN_DAY_NUMBER ||
-      dayNumber > MAX_DAY_NUMBER
-    ) {
-      errors.push({
-        sheet: "schedules",
-        row: i + 1,
-        field: "일차",
-        message: `일차는 ${MIN_DAY_NUMBER}~${MAX_DAY_NUMBER}만 가능해요`,
-      });
-      continue;
-    }
-
-    if (!title) {
-      errors.push({
-        sheet: "schedules",
-        row: i + 1,
-        field: "일정명",
-        message: "일정명이 없어요",
-      });
-      continue;
-    }
-
-    // 대상 (비어있으면 '전체')
-    const scope = scopeRaw ? SCOPE_MAP[scopeRaw] : "all";
-    if (!scope) {
-      errors.push({
-        sheet: "schedules",
-        row: i + 1,
-        field: "대상",
-        message: `대상은 전체/선발/후발만 가능해요 (입력값: "${scopeRaw}")`,
-      });
-      continue;
-    }
+    if (!result.title || result.dayNumber === undefined || !result.scope) continue;
 
     schedules.push({
-      day_number: dayNumber,
-      sort_order: isNaN(sortOrder) ? i : sortOrder,
-      title,
-      location,
-      scheduled_time: scheduledTimeRaw,
-      scope,
+      day_number: result.dayNumber,
+      sort_order: result.sortOrder ?? i,
+      title: result.title,
+      location: result.location ?? null,
+      scheduled_time: result.scheduledTime ?? null,
+      scope: result.scope,
     });
   }
 

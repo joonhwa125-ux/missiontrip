@@ -17,16 +17,21 @@ function LoginContent() {
   const errorMessage = errorKey ? ERROR_MESSAGES[errorKey] : null;
 
   async function handleGoogleLogin() {
-    const supabase = createClient();
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-        queryParams: {
-          hd: "linkagelab.co.kr", // G Suite 도메인 힌트
+    try {
+      const supabase = createClient();
+      await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            hd: "linkagelab.co.kr", // G Suite 도메인 힌트
+          },
         },
-      },
-    });
+      });
+    } catch {
+      // signInWithOAuth는 redirect를 트리거 — 에러는 네트워크 문제 등 예외 상황
+      window.location.href = "/login?error=auth-failed";
+    }
   }
 
   return (

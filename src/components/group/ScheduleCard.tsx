@@ -30,7 +30,7 @@ export default function ScheduleCard({
   // location 우선, 없으면 title
   const primaryText = schedule.location ?? schedule.title;
 
-  // 후발 배지 (waiting 카드 헤더용)
+  // 후발 배지 (후발만 특수 케이스이므로 배지 표시)
   const scopeLabel = schedule.scope === "rear" ? SCOPE_LABEL[schedule.scope] : null;
   const scopeBadge = scopeLabel ? (
     <span className="inline-block rounded bg-violet-100 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-violet-700">

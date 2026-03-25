@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -47,16 +47,19 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
   const [deleteUserTarget, setDeleteUserTarget] = useState<SetupUser | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const groupMap = new Map(groups.map((g) => [g.id, g.name]));
+  const groupMap = useMemo(() => new Map(groups.map((g) => [g.id, g.name])), [groups]);
 
-  const run = (action: () => Promise<{ ok: boolean; error?: string }>, onSuccess: () => void) => {
-    startTransition(async () => {
-      const result = await action();
-      if (!result.ok) { setErrorMsg(result.error ?? "오류가 발생했어요"); return; }
-      onSuccess();
-      router.refresh();
-    });
-  };
+  const run = useCallback(
+    (action: () => Promise<{ ok: boolean; error?: string }>, onSuccess: () => void) => {
+      startTransition(async () => {
+        const result = await action();
+        if (!result.ok) { setErrorMsg(result.error ?? "오류가 발생했어요"); return; }
+        onSuccess();
+        router.refresh();
+      });
+    },
+    [router]
+  );
 
 
   return (
