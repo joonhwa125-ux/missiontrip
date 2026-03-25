@@ -201,8 +201,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
           <DialogHeader>
             <DialogTitle>일정을 삭제할까요?</DialogTitle>
             <DialogDescription>
-              &ldquo;{deleteScheduleTarget?.title}&rdquo; 일정이 삭제됩니다.
-              이 일정의 체크인 기록도 함께 삭제될 수 있어요.
+              체크인 기록도 함께 삭제돼요.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -225,8 +224,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
           <DialogHeader>
             <DialogTitle>참가자를 삭제할까요?</DialogTitle>
             <DialogDescription>
-              {deleteUserTarget?.name}님이 삭제됩니다.
-              이 참가자의 체크인 기록도 함께 삭제될 수 있어요.
+              체크인 기록도 함께 삭제돼요.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
