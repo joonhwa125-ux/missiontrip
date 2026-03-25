@@ -103,7 +103,7 @@ export default function AdminScheduleCard({
         <div className="mt-3 flex items-baseline justify-between">
           <p className="text-xs text-muted-foreground">전체 진행률 {progressPct}%</p>
           <p className="text-xs font-medium text-gray-700" aria-live="polite">
-            {reportedCount}/{totalGroups}조 ({checkedCount}/{totalMembers}명){absentCount > 0 && ` (불참 ${absentCount})`}
+            {reportedCount}/{totalGroups}조 ({checkedCount}/{totalMembers}명{absentCount > 0 ? `, 불참 ${absentCount}` : ""})
           </p>
         </div>
 
