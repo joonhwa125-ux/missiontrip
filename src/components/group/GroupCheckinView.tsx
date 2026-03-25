@@ -222,8 +222,6 @@ export default function GroupCheckinView({
   const checkedCount = useMemo(() => checkIns.filter((c) => !c.is_absent).length, [checkIns]);
   // 미확인 = 체크인도 불참도 아닌 순수 미처리 인원
   const uncheckedCount = members.filter((m) => !checkedIds.has(m.id)).length;
-  // 탑승 카운트용 전체 = 불참 제외
-  const effectiveTotal = members.length - absentIds.size;
   const allComplete = members.length > 0 && uncheckedCount === 0;
   // 정렬: 미확인 → 불참 → 완료
   const sorted = [...members].sort((a, b) => {
@@ -295,7 +293,7 @@ export default function GroupCheckinView({
           className="px-4 pb-2 text-sm font-medium text-muted-foreground"
           aria-live="polite"
         >
-          {COPY.totalCount(checkedCount, effectiveTotal)}
+          {COPY.totalCount(checkedCount, members.length)}{absentIds.size > 0 && ` (불참 ${absentIds.size})`}
         </p>
       </div>
 
@@ -396,9 +394,9 @@ export default function GroupCheckinView({
       >
         <DialogContent hideClose>
           <DialogHeader>
-            <DialogTitle>불참 처리할까요?</DialogTitle>
+            <DialogTitle>{absentTarget?.name} 불참 처리할까요?</DialogTitle>
             <DialogDescription>
-              {absentTarget?.name}님을 불참 처리해요. 탑승 카운트에서 제외돼요.
+              탑승 인원에서 제외돼요.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

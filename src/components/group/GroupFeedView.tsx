@@ -185,6 +185,7 @@ function ScheduleCard({
     const checked = checkIns.filter((c) => !c.is_absent).length;
     const absentCount = checkIns.filter((c) => c.is_absent).length;
     const effectiveTotal = total - absentCount;
+    const pct = effectiveTotal > 0 ? Math.round((checked / effectiveTotal) * 100) : 0;
     return (
       <div className="rounded-2xl bg-white ring-2 ring-main-action p-4">
         <button
@@ -209,9 +210,9 @@ function ScheduleCard({
             <p className="mt-0.5 text-sm text-muted-foreground">{schedule.title}</p>
           )}
           <div className="mt-3 flex items-baseline justify-between">
-            <p className="text-xs text-muted-foreground">탑승 {effectiveTotal > 0 ? Math.round((checked / effectiveTotal) * 100) : 0}%</p>
+            <p className="text-xs text-muted-foreground">탑승 {pct}%</p>
             <p className="text-xs font-medium text-gray-700" aria-live="polite">
-              {checked}/{effectiveTotal}명{absentCount > 0 && ` (불참 ${absentCount})`}
+              {checked}/{total}명{absentCount > 0 && ` (불참 ${absentCount})`}
             </p>
           </div>
           <div
@@ -223,7 +224,7 @@ function ScheduleCard({
           >
             <div
               className="h-full rounded-full bg-complete-check transition-all"
-              style={{ width: effectiveTotal > 0 ? `${Math.round((checked / effectiveTotal) * 100)}%` : "0%" }}
+              style={{ width: effectiveTotal > 0 ? `${pct}%` : "0%" }}
             />
           </div>
         </button>

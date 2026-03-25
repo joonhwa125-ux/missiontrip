@@ -61,7 +61,6 @@ export default function AdminGroupDrillDown({
     () => groupMembers.filter((m) => checkedMap.get(m.id)?.is_absent).length,
     [groupMembers, checkedMap]
   );
-  const totalCount = groupMembers.length - absentCount;
   const checkedCount = useMemo(
     () => groupMembers.filter((m) => checkedMap.has(m.id) && !checkedMap.get(m.id)!.is_absent).length,
     [groupMembers, checkedMap]
@@ -137,7 +136,7 @@ export default function AdminGroupDrillDown({
             <DialogHeader>
               <DialogTitle>{group.name}</DialogTitle>
               <DialogDescription aria-live="polite">
-                {checkedCount}/{totalCount}명 확인
+                {checkedCount}/{groupMembers.length}명 확인{absentCount > 0 && ` (불참 ${absentCount})`}
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -280,12 +279,12 @@ function ConfirmDialog({ action, onClose, onConfirm }: ConfirmDialogProps) {
 
   const messages: Record<ConfirmAction["type"], { title: string; desc: string }> = {
     absent: {
-      title: "불참 처리할까요?",
-      desc: `${action.member.name}님을 불참 처리해요.`,
+      title: `${action.member.name} 불참 처리할까요?`,
+      desc: "탑승 인원에서 제외돼요.",
     },
     cancel: {
-      title: "체크인을 취소할까요?",
-      desc: `${action.member.name}님의 체크인을 취소해요.`,
+      title: `${action.member.name} 체크인을 취소할까요?`,
+      desc: "",
     },
   };
 
