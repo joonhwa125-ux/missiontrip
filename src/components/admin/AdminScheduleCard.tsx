@@ -2,7 +2,7 @@
 
 import { formatTime, getScheduleStatus, filterMembersByScope } from "@/lib/utils";
 import { CheckIcon } from "@/components/ui/icons";
-import { SCOPE_LABEL } from "@/lib/constants";
+import { SCOPE_LABEL, COPY } from "@/lib/constants";
 import type { Schedule, AdminCheckIn, AdminMember, AdminReport } from "@/lib/types";
 
 interface Props {
@@ -12,22 +12,19 @@ interface Props {
   members: AdminMember[];
   onSummaryTap: () => void;
   onActivate: () => void;
+  onDeactivate: () => void;
   onTimeEdit: () => void;
 }
 
 export default function AdminScheduleCard({
   schedule, checkIns, reports, members,
-  onSummaryTap, onActivate, onTimeEdit,
+  onSummaryTap, onActivate, onDeactivate, onTimeEdit,
 }: Props) {
   const status = getScheduleStatus(schedule);
   const timeDisplay = schedule.scheduled_time ? formatTime(schedule.scheduled_time) : null;
   const scopeLabel = schedule.scope === "rear" ? SCOPE_LABEL[schedule.scope] : null;
 
   const scopeMembers = filterMembersByScope(members, schedule.scope);
-  const scopeMemberIds = new Set(scopeMembers.map((m) => m.id));
-  const checkedCount = checkIns.filter((c) => !c.is_absent && scopeMemberIds.has(c.user_id)).length;
-  const absentCount = checkIns.filter((c) => c.is_absent && scopeMemberIds.has(c.user_id)).length;
-  const totalMembers = scopeMembers.length;
   const scopeGroupIds = new Set(scopeMembers.map((m) => m.group_id));
   const totalGroups = scopeGroupIds.size;
 
@@ -44,6 +41,7 @@ export default function AdminScheduleCard({
   }).length;
 
   const progressPct = totalGroups > 0 ? Math.round((reportedCount / totalGroups) * 100) : 0;
+  const allReported = totalGroups > 0 && reportedCount >= totalGroups;
 
   // location 우선, 없으면 title
   const primaryText = schedule.location ?? schedule.title;
@@ -86,24 +84,33 @@ export default function AdminScheduleCard({
         role="region"
         aria-label={`진행중 일정: ${schedule.title}`}
       >
-        {/* 헤더: 진행중 pill + 집결시간 배지 + 후발 배지 (모두 좌측) */}
+        {/* 헤더: 진행중 pill + 배지 (좌) + [종료] (우) */}
         <div className="mb-2 flex items-center gap-1">
           <span className="rounded-full bg-progress-badge px-2 py-0.5 text-xs font-bold text-[#633806]">
             진행중
           </span>
           {timeBadge}
           {scopeBadge}
+          <div className="ml-auto">
+            <button
+              onClick={onDeactivate}
+              className="min-h-11 min-w-11 rounded-xl border border-gray-300 px-3 text-xs font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label={`${schedule.title} 일정 종료`}
+            >
+              종료
+            </button>
+          </div>
         </div>
 
         {/* 장소 (primary) + 일정명 (secondary) */}
         <p className="text-base font-semibold leading-snug">{primaryText}</p>
         {subtitle}
 
-        {/* 진행률 + 조·명 수 */}
+        {/* 진행률 + 조 수 */}
         <div className="mt-3 flex items-baseline justify-between">
           <p className="text-xs text-muted-foreground">전체 진행률 {progressPct}%</p>
           <p className="text-xs font-medium text-gray-700" aria-live="polite">
-            {reportedCount}/{totalGroups}조 ({checkedCount}/{totalMembers}명{absentCount > 0 ? `, 불참 ${absentCount}` : ""})
+            {reportedCount}/{totalGroups}조
           </p>
         </div>
 
@@ -122,9 +129,20 @@ export default function AdminScheduleCard({
           />
         </div>
 
+        {/* 전 조 보고완료 배너 — 항상 렌더링, 내용만 조건부 (aria-live 마운트 타이밍) */}
+        <div role="status" aria-live="polite" aria-atomic="true" className="mt-2">
+          {allReported && (
+            <div className="flex items-center rounded-xl bg-[#EAF3DE] px-3 py-2">
+              <span className="text-xs font-medium text-[#27500A]">
+                {COPY.allReported}
+              </span>
+            </div>
+          )}
+        </div>
+
         <button
           onClick={onSummaryTap}
-          className="mt-3 w-full min-h-11 rounded-xl bg-gray-50 px-4 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
+          className="mt-2 w-full min-h-11 rounded-xl bg-gray-50 px-4 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
           aria-label="전체 현황 보기"
         >
           전체 현황 보기 &gt;
@@ -206,20 +224,11 @@ export default function AdminScheduleCard({
       {/* 장소/일정명 + 통계 */}
       <div>
         <p className="font-medium">{primaryText}</p>
-        {schedule.location ? (
-          <div className="mt-0.5 flex items-baseline justify-between gap-2">
-            <p className="text-sm text-muted-foreground">{schedule.title}</p>
-            <p className="flex-shrink-0 flex items-center gap-1 text-xs text-muted-foreground" aria-live="polite">
-              <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
-              {reportedCount}/{totalGroups}조 ({checkedCount}/{totalMembers}명{absentCount > 0 ? `, 불참 ${absentCount}` : ""})
-            </p>
-          </div>
-        ) : (
-          <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground" aria-live="polite">
-            <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
-            {reportedCount}/{totalGroups}조 ({checkedCount}/{totalMembers}명{absentCount > 0 ? `, 불참 ${absentCount}` : ""})
-          </p>
-        )}
+        {subtitle}
+        <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground" aria-live="polite">
+          <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
+          {reportedCount}/{totalGroups}조
+        </p>
       </div>
 
       <button
