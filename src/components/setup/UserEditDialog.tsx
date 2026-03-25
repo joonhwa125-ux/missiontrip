@@ -119,12 +119,12 @@ export default function UserEditDialog({ user, groups, onSave, onClose }: Props)
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">선후발</label>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">구분</label>
               <select
                 value={form.party}
                 onChange={(e) => set("party", e.target.value as GroupParty | "")}
                 className={INPUT_CLASS}
-                aria-label="선후발"
+                aria-label="구분"
               >
                 {PARTY_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -133,12 +133,12 @@ export default function UserEditDialog({ user, groups, onSave, onClose }: Props)
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">소속조</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">조편성</label>
             <select
               value={form.group_id}
               onChange={(e) => set("group_id", e.target.value)}
               className={INPUT_CLASS}
-              aria-label="소속조"
+              aria-label="조편성"
             >
               {groups.map((g) => (
                 <option key={g.id} value={g.id}>{g.name}</option>

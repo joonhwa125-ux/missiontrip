@@ -80,35 +80,35 @@ export default function ScheduleEditDialog({ schedule, onSave, onClose }: Props)
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3 py-1">
           <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">집결지</label>
+            <input
+              value={form.location}
+              onChange={(e) => set("location", e.target.value)}
+              placeholder="선택 사항"
+              className={INPUT_CLASS}
+              aria-label="집결지"
+            />
+          </div>
+          <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              일정명 <span aria-hidden="true">*</span>
+              집결지 상세 <span aria-hidden="true">*</span>
             </label>
             <input
               required
               value={form.title}
               onChange={(e) => set("title", e.target.value)}
               className={INPUT_CLASS}
-              aria-label="일정명"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">장소</label>
-            <input
-              value={form.location}
-              onChange={(e) => set("location", e.target.value)}
-              placeholder="선택 사항"
-              className={INPUT_CLASS}
-              aria-label="장소"
+              aria-label="집결지 상세"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-muted-foreground">일차</label>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">일정</label>
               <select
                 value={form.day_number}
                 onChange={(e) => set("day_number", Number(e.target.value))}
                 className={INPUT_CLASS}
-                aria-label="일차"
+                aria-label="일정"
               >
                 {[1, 2, 3].map((d) => (
                   <option key={d} value={d}>{d}일차</option>
@@ -128,22 +128,22 @@ export default function ScheduleEditDialog({ schedule, onSave, onClose }: Props)
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">예정시각 (KST)</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">예정 시간 (KST)</label>
             <input
               type="datetime-local"
               value={form.scheduled_time}
               onChange={(e) => set("scheduled_time", e.target.value)}
               className={INPUT_CLASS}
-              aria-label="예정시각"
+              aria-label="예정 시간"
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">대상</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">구분</label>
             <select
               value={form.scope}
               onChange={(e) => set("scope", e.target.value as ScheduleScope)}
               className={INPUT_CLASS}
-              aria-label="대상"
+              aria-label="구분"
             >
               {SCOPE_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
