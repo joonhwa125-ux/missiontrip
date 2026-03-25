@@ -28,12 +28,11 @@ interface Props {
   onBottomSheet: (s: Schedule) => void;
   onTimeEdit: (s: Schedule) => void;
   onToast: (msg: string) => void;
-  onRefresh: () => void;
 }
 
 export default function AdminScheduleList({
   schedules, allSchedules, checkInsMap, reportsMap, members,
-  activeSchedule, onBottomSheet, onTimeEdit, onToast, onRefresh,
+  activeSchedule, onBottomSheet, onTimeEdit, onToast,
 }: Props) {
   const [, startTransition] = useTransition();
   const { broadcast } = useBroadcast();
@@ -58,11 +57,11 @@ export default function AdminScheduleList({
           await broadcast(CHANNEL_GLOBAL, EVENT_SCHEDULE_ACTIVATED, {
             schedule_id: s.id, title: s.title, scope: s.scope,
           });
-          onRefresh();
+          // onRefresh() 제거 — self:true echo → onScheduleActivated → router.refresh() 보장
         }
       });
     },
-    [broadcast, startTransition, onRefresh]
+    [broadcast, startTransition]
   );
 
   // -- 일정 종료 Server Action --
@@ -74,11 +73,11 @@ export default function AdminScheduleList({
           await broadcast(CHANNEL_GLOBAL, EVENT_SCHEDULE_DEACTIVATED, {
             schedule_id: s.id, title: s.title,
           });
-          onRefresh();
+          // onRefresh() 제거 — self:true echo → onScheduleDeactivated → router.refresh() 보장
         }
       });
     },
-    [broadcast, startTransition, onRefresh]
+    [broadcast, startTransition]
   );
 
   // -- 수동 종료 (미확인 경고 래핑) --

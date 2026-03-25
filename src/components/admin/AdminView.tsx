@@ -367,7 +367,6 @@ export default function AdminView({
           onBottomSheet={openBottomSheet}
           onTimeEdit={setTimeEditTarget}
           onToast={showToast}
-          onRefresh={() => router.refresh()}
         />
       </div>
 
