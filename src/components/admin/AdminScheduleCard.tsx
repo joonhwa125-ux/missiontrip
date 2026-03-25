@@ -53,6 +53,10 @@ export default function AdminScheduleCard({
     </span>
   ) : null;
 
+  // 일정 상태 전환 버튼 공통 스타일
+  const statusBtnClass =
+    "flex-shrink-0 min-h-11 min-w-11 rounded-xl border border-gray-300 px-4 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-ring";
+
   // 부제목: location이 있을 때 title을 보조로 (시간 제거 — 헤더 배지로 이동)
   const subtitle = schedule.location ? (
     <p className="mt-0.5 text-sm text-muted-foreground">{schedule.title}</p>
@@ -101,7 +105,7 @@ export default function AdminScheduleCard({
           </div>
           <button
             onClick={onDeactivate}
-            className="flex-shrink-0 min-h-11 min-w-11 rounded-xl border border-gray-300 px-3 text-xs font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-ring"
+            className={statusBtnClass}
             aria-label={`${schedule.title} 일정 종료`}
           >
             종료
@@ -193,7 +197,7 @@ export default function AdminScheduleCard({
           </div>
           <button
             onClick={onActivate}
-            className="flex-shrink-0 min-h-11 rounded-xl border border-gray-300 px-4 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-ring"
+            className={statusBtnClass}
             aria-label={`${schedule.title} 체크인 시작`}
           >
             시작
