@@ -288,7 +288,7 @@ function ScheduleCard({
         {total > 0 && (
           <p className="mt-1 flex items-center gap-0.5 text-xs text-muted-foreground">
             <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
-            {completedCount}/{total}명{completedAbsent > 0 && `, 불참 ${completedAbsent}`}
+            {completedCount}/{total}명{completedAbsent > 0 && ` (불참 ${completedAbsent})`}
           </p>
         )}
       </div>
