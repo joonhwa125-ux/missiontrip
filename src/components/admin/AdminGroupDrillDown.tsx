@@ -298,7 +298,11 @@ function ConfirmDialog({ action, onClose, onConfirm }: ConfirmDialogProps) {
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent hideClose>
+      <DialogContent
+        hideClose
+        onEscapeKeyDown={(e) => e.stopPropagation()}
+        onPointerDownOutside={(e) => e.stopPropagation()}
+      >
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{desc}</DialogDescription>
