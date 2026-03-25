@@ -340,7 +340,7 @@ export default function GroupCheckinView({
         )}
         {reported ? (
           <button
-            className="flex w-full items-center justify-center gap-2 min-h-11 rounded-2xl border border-[#EBE8E3] bg-app-bg py-4 text-base font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2"
+            className="flex w-full items-center justify-center gap-2 min-h-11 rounded-xl border border-[#EBE8E3] bg-app-bg py-4 text-base font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2"
           >
             <CheckIcon className="h-5 w-5 text-complete-check" aria-hidden />
             {COPY.reportButtonDone}
@@ -348,7 +348,7 @@ export default function GroupCheckinView({
         ) : (
           <button
             onClick={() => allComplete ? handleReport() : setReportOpen(true)}
-            className="w-full min-h-11 rounded-2xl py-4 text-base font-bold bg-main-action transition-colors focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2"
+            className="w-full min-h-11 rounded-xl py-4 text-base font-bold bg-main-action transition-colors focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2"
           >
             {allComplete ? COPY.reportButtonComplete : COPY.reportButtonPending(uncheckedCount)}
           </button>

@@ -235,7 +235,7 @@ if (!user.email?.endsWith(ALLOWED_DOMAIN)) {
 | name | text | NOT NULL | 참가자 이름 |
 | email | text | UNIQUE, NOT NULL | 회사 구글 계정 이메일 (로그인 키) |
 | phone | text | nullable | 전화번호 (비상연락용, 예: 010-1234-5678) |
-| role | text | CHECK IN ('member','leader','admin') | 참가자 / 조장 / 관리자 |
+| role | text | CHECK IN ('member','leader','admin','admin_leader') | 참가자 / 조장 / 관리자 / 관리자+조장 |
 | group_id | uuid | FK → Groups.id, NOT NULL | 소속 조 |
 | created_at | timestamptz | default now() | 생성 시각 |
 
@@ -341,40 +341,49 @@ ALTER TABLE group_reports ENABLE ROW LEVEL SECURITY;
 -- Groups: 인증된 사용자 읽기 전용
 CREATE POLICY "groups_read" ON groups FOR SELECT TO authenticated USING (true);
 
--- Users: 인증된 사용자 읽기 전용 (같은 조 + 관리자)
+-- Users: 인증된 사용자 읽기 전용
 CREATE POLICY "users_read" ON users FOR SELECT TO authenticated USING (true);
 
 -- Schedules: 읽기 전체, 쓰기 admin만
 CREATE POLICY "schedules_read" ON schedules FOR SELECT TO authenticated USING (true);
 CREATE POLICY "schedules_write" ON schedules FOR ALL TO authenticated
-  USING (EXISTS (SELECT 1 FROM users WHERE users.id = auth.uid() AND users.role = 'admin'));
+  USING (EXISTS (
+    SELECT 1 FROM users WHERE users.email = auth.jwt() ->> 'email' AND users.role IN ('admin', 'admin_leader')
+  ));
 
--- Check_ins: 같은 조 읽기, 본인/조장/관리자 쓰기
+-- Check_ins: 읽기(같은 조 + admin), 쓰기(leader/admin/admin_leader)
 CREATE POLICY "checkins_read" ON check_ins FOR SELECT TO authenticated USING (
   EXISTS (
     SELECT 1 FROM users u1
     JOIN users u2 ON u1.group_id = u2.group_id
-    WHERE u1.id = check_ins.user_id AND u2.id = auth.uid()
+    WHERE u1.id = check_ins.user_id AND u2.email = auth.jwt() ->> 'email'
   )
-  OR EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin')
+  OR EXISTS (
+    SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email' AND role IN ('admin', 'admin_leader')
+  )
 );
 CREATE POLICY "checkins_insert" ON check_ins FOR INSERT TO authenticated WITH CHECK (
   EXISTS (
-    SELECT 1 FROM users WHERE id = auth.uid()
-    AND role IN ('leader', 'admin')
+    SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email'
+    AND role IN ('leader', 'admin', 'admin_leader')
   )
 );
 CREATE POLICY "checkins_delete" ON check_ins FOR DELETE TO authenticated USING (
   EXISTS (
-    SELECT 1 FROM users WHERE id = auth.uid() AND role IN ('leader', 'admin'))
+    SELECT 1 FROM users
+    WHERE email = auth.jwt() ->> 'email' AND role IN ('leader', 'admin', 'admin_leader')
+  )
 );
 
--- Group_reports: 조장 쓰기, 관리자+조장 읽기
+-- Group_reports: leader/admin/admin_leader 읽기·쓰기
 CREATE POLICY "reports_read" ON group_reports FOR SELECT TO authenticated USING (
-  EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role IN ('leader', 'admin'))
+  EXISTS (SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email' AND role IN ('leader', 'admin', 'admin_leader'))
 );
 CREATE POLICY "reports_insert" ON group_reports FOR INSERT TO authenticated WITH CHECK (
-  EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role IN ('leader', 'admin'))
+  EXISTS (SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email' AND role IN ('leader', 'admin', 'admin_leader'))
+);
+CREATE POLICY "reports_update" ON group_reports FOR UPDATE TO authenticated USING (
+  EXISTS (SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email' AND role IN ('leader', 'admin', 'admin_leader'))
 );
 ```
 

@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
   name        text        NOT NULL,
   email       text        NOT NULL UNIQUE,
   phone       text,
-  role        text        NOT NULL CHECK (role IN ('member', 'leader', 'admin')),
+  role        text        NOT NULL CHECK (role IN ('member', 'leader', 'admin', 'admin_leader')),
   group_id    uuid        NOT NULL REFERENCES groups(id),
   party       text,                                -- 선발/후발 구분 (advance | rear | null)
   created_at  timestamptz DEFAULT now()
@@ -86,7 +86,7 @@ CREATE POLICY "schedules_read" ON schedules
 CREATE POLICY "schedules_write" ON schedules
   FOR ALL TO authenticated
   USING (EXISTS (
-    SELECT 1 FROM users WHERE users.email = auth.jwt() ->> 'email' AND users.role = 'admin'
+    SELECT 1 FROM users WHERE users.email = auth.jwt() ->> 'email' AND users.role IN ('admin', 'admin_leader')
   ));
 
 -- Check_ins: 읽기(같은 조 + admin), 쓰기(leader/admin)
@@ -99,7 +99,7 @@ CREATE POLICY "checkins_read" ON check_ins
         AND u2.email = auth.jwt() ->> 'email'
     )
     OR EXISTS (
-      SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email' AND role = 'admin'
+      SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email' AND role IN ('admin', 'admin_leader')
     )
   );
 
@@ -108,7 +108,7 @@ CREATE POLICY "checkins_insert" ON check_ins
     EXISTS (
       SELECT 1 FROM users
       WHERE email = auth.jwt() ->> 'email'
-        AND role IN ('leader', 'admin')
+        AND role IN ('leader', 'admin', 'admin_leader')
     )
   );
 
@@ -116,24 +116,24 @@ CREATE POLICY "checkins_delete" ON check_ins
   FOR DELETE TO authenticated USING (
     EXISTS (
       SELECT 1 FROM users
-      WHERE email = auth.jwt() ->> 'email' AND role IN ('leader', 'admin')
+      WHERE email = auth.jwt() ->> 'email' AND role IN ('leader', 'admin', 'admin_leader')
     )
   );
 
 -- Group_reports: leader/admin 읽기·쓰기
 CREATE POLICY "reports_read" ON group_reports
   FOR SELECT TO authenticated USING (
-    EXISTS (SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email' AND role IN ('leader', 'admin'))
+    EXISTS (SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email' AND role IN ('leader', 'admin', 'admin_leader'))
   );
 
 CREATE POLICY "reports_insert" ON group_reports
   FOR INSERT TO authenticated WITH CHECK (
-    EXISTS (SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email' AND role IN ('leader', 'admin'))
+    EXISTS (SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email' AND role IN ('leader', 'admin', 'admin_leader'))
   );
 
 CREATE POLICY "reports_update" ON group_reports
   FOR UPDATE TO authenticated USING (
-    EXISTS (SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email' AND role IN ('leader', 'admin'))
+    EXISTS (SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email' AND role IN ('leader', 'admin', 'admin_leader'))
   );
 
 -- ===== 4. RPC 함수 =====

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRealtime } from "@/hooks/useRealtime";
 import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
 import { useToast } from "@/hooks/useToast";
-import { fetchScheduleCheckIns } from "@/actions/schedule";
+import { createClient } from "@/lib/supabase/client";
 import { sortSchedulesByStatus, getDefaultDay, filterMembersByScope } from "@/lib/utils";
 import PageHeader from "@/components/common/PageHeader";
 import DayTabs from "@/components/common/DayTabs";
@@ -33,6 +33,29 @@ interface Props {
   initialReportsMap: Record<string, AdminReport[]>;
 }
 
+/** 클라이언트에서 직접 체크인/보고 데이터 조회 (RLS email 기반 권한 통제) */
+async function fetchCheckInsClient(scheduleId: string) {
+  const supabase = createClient();
+  const [{ data: checkIns }, { data: reports }] = await Promise.all([
+    supabase
+      .from("check_ins")
+      .select("user_id, is_absent, checked_at")
+      .eq("schedule_id", scheduleId),
+    supabase
+      .from("group_reports")
+      .select("group_id, pending_count, reported_at")
+      .eq("schedule_id", scheduleId),
+  ]);
+  return {
+    checkIns: (checkIns ?? []).map((ci) => ({
+      user_id: ci.user_id,
+      is_absent: ci.is_absent ?? false,
+      checked_at: ci.checked_at,
+    })),
+    reports: reports ?? [],
+  };
+}
+
 export default function AdminView({
   currentUser,
   groups,
@@ -48,6 +71,13 @@ export default function AdminView({
   const [checkInsMap, setCheckInsMap] = useState(initialCheckInsMap);
   const [reportsMap, setReportsMap] = useState(initialReportsMap);
   const { toast, showToast } = useToast();
+
+  // 캐시 판별용 ref (useCallback 의존성 없이 최신 값 참조)
+  const checkInsMapRef = useRef(checkInsMap);
+  checkInsMapRef.current = checkInsMap;
+
+  // 레이스 컨디션 방어용 ref (현재 열린 바텀시트의 schedule id 추적)
+  const bottomSheetIdRef = useRef<string | null>(null);
 
   // 서버 prop → state 동기화 (router.refresh() / 페이지 재진입 시)
   // useState는 초기값만 사용하므로, prop이 바뀌면 수동으로 state를 갱신해야 한다.
@@ -73,34 +103,29 @@ export default function AdminView({
     setMembers(initialMembers);
   }
 
-  // mount 시 + activeSchedule 변경 시 서버에서 최신 체크인/보고 데이터 fetch
-  // 서버 컴포넌트의 initialCheckInsMap이 빈 상태로 전달될 수 있으므로 클라이언트에서 보완
+  // mount 시 + activeSchedule 변경 시 최신 체크인/보고 데이터 fetch (클라이언트 직접 SELECT)
   useEffect(() => {
     if (!activeSchedule) return;
     let cancelled = false;
-    const fetchFresh = async () => {
-      try {
-        const { checkIns, reports } = await fetchScheduleCheckIns(activeSchedule.id);
+    fetchCheckInsClient(activeSchedule.id)
+      .then(({ checkIns, reports }) => {
         if (cancelled) return;
         setCheckInsMap((prev) => ({ ...prev, [activeSchedule.id]: checkIns }));
         setReportsMap((prev) => ({ ...prev, [activeSchedule.id]: reports }));
-      } catch {
-        // fetch 실패 시 기존 state 유지
-      }
-    };
-    fetchFresh();
+      })
+      .catch(() => {}); // 실패 시 SSR/Realtime 데이터로 fallback — 별도 알림 불필요
     return () => { cancelled = true; };
-  }, [activeSchedule?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeSchedule?.id]); // eslint-disable-line react-hooks/exhaustive-deps — id만 의존 (객체 참조 변경 시 불필요한 재실행 방지)
 
   // 백그라운드 복귀 시 서버 데이터 갱신 (탭 전환 / 페이지 이동 후 stale 방지)
   const fetchOnVisible = useCallback(() => {
     if (!activeSchedule) return;
-    fetchScheduleCheckIns(activeSchedule.id)
+    fetchCheckInsClient(activeSchedule.id)
       .then(({ checkIns, reports }) => {
         setCheckInsMap((prev) => ({ ...prev, [activeSchedule.id]: checkIns }));
         setReportsMap((prev) => ({ ...prev, [activeSchedule.id]: reports }));
       })
-      .catch(() => {});
+      .catch(() => {}); // 실패 시 기존 캐시 유지 — 별도 알림 불필요
   }, [activeSchedule]);
 
   useVisibilityRefresh(fetchOnVisible);
@@ -116,18 +141,30 @@ export default function AdminView({
   const [bottomSheetSchedule, setBottomSheetSchedule] = useState<Schedule | null>(null);
   const [bottomSheetLoading, setBottomSheetLoading] = useState(false);
 
-  // 바텀시트 즉시 열고, 백그라운드에서 최신 데이터 fetch
+  // 바텀시트 즉시 열기: 캐시 데이터 있으면 스피너 없이, 없으면 스피너 표시
   const openBottomSheet = useCallback((schedule: Schedule | null) => {
-    if (!schedule) { setBottomSheetSchedule(null); return; }
+    if (!schedule) {
+      setBottomSheetSchedule(null);
+      bottomSheetIdRef.current = null;
+      return;
+    }
+    const targetId = schedule.id;
+    bottomSheetIdRef.current = targetId;
     setBottomSheetSchedule(schedule);
-    setBottomSheetLoading(true);
-    fetchScheduleCheckIns(schedule.id)
+
+    const hasCache = targetId in checkInsMapRef.current;
+    setBottomSheetLoading(!hasCache);
+
+    fetchCheckInsClient(targetId)
       .then(({ checkIns: freshCi, reports: freshRp }) => {
-        setCheckInsMap((prev) => ({ ...prev, [schedule.id]: freshCi }));
-        setReportsMap((prev) => ({ ...prev, [schedule.id]: freshRp }));
+        setCheckInsMap((prev) => ({ ...prev, [targetId]: freshCi }));
+        setReportsMap((prev) => ({ ...prev, [targetId]: freshRp }));
       })
-      .catch(() => {})
-      .finally(() => setBottomSheetLoading(false));
+      .catch(() => {}) // 실패 시 캐시 데이터 유지 — 별도 알림 불필요
+      .finally(() => {
+        // 레이스 컨디션 방어: 현재 바텀시트가 같은 일정일 때만 loading 해제
+        if (bottomSheetIdRef.current === targetId) setBottomSheetLoading(false);
+      });
   }, []);
 
   // 다이얼로그
@@ -379,7 +416,7 @@ export default function AdminView({
         reports={bottomSheetSchedule ? (reportsMap[bottomSheetSchedule.id] ?? []) : []}
         isReadOnly={isBottomSheetReadOnly}
         loading={bottomSheetLoading}
-        onClose={() => setBottomSheetSchedule(null)}
+        onClose={() => { setBottomSheetSchedule(null); bottomSheetIdRef.current = null; }}
         onCheckInsChange={handleBottomSheetCheckInsChange}
       />
 
