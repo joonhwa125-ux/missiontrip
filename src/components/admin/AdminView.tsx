@@ -152,8 +152,10 @@ export default function AdminView({
     bottomSheetIdRef.current = targetId;
     setBottomSheetSchedule(schedule);
 
+    const cacheKeys = Object.keys(checkInsMapRef.current);
     const hasCache = targetId in checkInsMapRef.current;
     setBottomSheetLoading(!hasCache);
+    showToast(`캐시: ${hasCache ? "HIT" : "MISS"} | keys: ${cacheKeys.length} | target: ${targetId.slice(0, 8)}`);
 
     fetchCheckInsClient(targetId)
       .then(({ checkIns: freshCi, reports: freshRp }) => {
