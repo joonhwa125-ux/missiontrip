@@ -87,39 +87,3 @@ export function MarkAbsentDialog({
     </Dialog>
   );
 }
-
-// 미완료 보고 확인 모달
-export function SubmitReportDialog({
-  open,
-  uncheckedCount,
-  onClose,
-  onConfirm,
-}: {
-  open: boolean;
-  uncheckedCount: number;
-  onClose: () => void;
-  onConfirm: () => void;
-}) {
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent hideClose>
-        <DialogHeader>
-          <DialogTitle>
-            {uncheckedCount}명이 아직이에요. 그래도 보고할까요?
-          </DialogTitle>
-        </DialogHeader>
-        <DialogFooter>
-          <DialogClose className="min-h-11 flex-1 rounded-xl bg-gray-100 text-sm font-medium">
-            취소
-          </DialogClose>
-          <button
-            onClick={onConfirm}
-            className="min-h-11 flex-1 rounded-xl bg-main-action text-sm font-bold focus-visible:ring-2 focus-visible:ring-main-action"
-          >
-            보고하기
-          </button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}

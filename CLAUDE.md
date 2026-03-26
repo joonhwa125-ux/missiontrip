@@ -75,7 +75,7 @@ src/
 - `text-decoration: line-through` (완료 카드)
 - 오프라인 배너 상단 배치
 - Polling 방식 (Realtime broadcast만 사용)
-- 보고 버튼 `disabled` 처리
+- 보고 버튼 HTML `disabled` 속성 사용 (대신 `aria-disabled` + 클릭 차단 패턴 사용)
 - 색상만으로 상태 구분 (KWCAG 1.3.3)
 - `focus-visible` 링 제거
 
@@ -511,8 +511,8 @@ NEXT_PUBLIC_TIMEZONE=Asia/Seoul               # 모든 시각 표시 KST 기준
 
 #### 4.2.7 보고 버튼
 
-- **항상 활성 — `disabled` 금지** (KWCAG 2.5.5)
-- 미완료 시: '[N]명이 아직이에요. 그래도 보고할까요?' 확인 모달
+- **전원 확인 전 비활성:** 모든 조원이 탑승 또는 불참 처리되기 전까지 `aria-disabled` + 클릭 차단. 버튼 텍스트에 'N명 남았어요'로 비활성 사유 표시. 긴급 상황 소통은 카카오워크 사용
+- **전원 확인 후 활성:** 전원 확인 완료 시 즉시 보고 가능 (확인 모달 없이 즉시 전송)
 - Realtime `'admin'` 채널로 `{type:'group_reported', group_id, pending_count}` broadcast
 - **보고 성공 피드백:** 보고 완료 시 '보고 완료!' 토스트 5초 표시 (`aria-live="polite"`, WCAG 2.2 상태 메시지 충분 읽기 시간)
 

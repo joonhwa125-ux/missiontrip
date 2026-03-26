@@ -7,7 +7,7 @@ import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { createCheckin, deleteCheckin, markAbsent } from "@/actions/checkin";
 import { submitReport } from "@/actions/report";
 import MemberCard from "./MemberCard";
-import { CancelCheckinDialog, MarkAbsentDialog, SubmitReportDialog } from "./CheckinDialogs";
+import { CancelCheckinDialog, MarkAbsentDialog } from "./CheckinDialogs";
 import { CheckIcon, ChevronLeftIcon } from "@/components/ui/icons";
 import {
   COPY,
@@ -48,7 +48,6 @@ export default function GroupCheckinView({
   const [cancelTarget, setCancelTarget] = useState<{ member: Member; isAbsent: boolean } | null>(null);
   const [absentTarget, setAbsentTarget] = useState<Member | null>(null);
   const [reported, setReported] = useState(initialReported);
-  const [reportOpen, setReportOpen] = useState(false);
   const [, startTransition] = useTransition();
 
   const { isOnline, pendingCount, addPending, addPendingReport } = useOfflineSync();
@@ -347,8 +346,14 @@ export default function GroupCheckinView({
           </button>
         ) : (
           <button
-            onClick={() => allComplete ? handleReport() : setReportOpen(true)}
-            className="w-full min-h-11 rounded-xl py-4 text-base font-bold bg-main-action transition-colors focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2"
+            aria-disabled={!allComplete}
+            onClick={allComplete ? handleReport : undefined}
+            className={cn(
+              "w-full min-h-11 rounded-xl py-4 text-base transition-colors focus-visible:ring-2 focus-visible:ring-offset-2",
+              allComplete
+                ? "bg-main-action font-bold focus-visible:ring-main-action"
+                : "bg-gray-200 text-gray-400 font-medium focus-visible:ring-gray-300"
+            )}
           >
             {allComplete ? COPY.reportButtonComplete : COPY.reportButtonPending(uncheckedCount)}
           </button>
@@ -366,12 +371,6 @@ export default function GroupCheckinView({
         target={absentTarget}
         onClose={() => setAbsentTarget(null)}
         onConfirm={handleAbsentConfirm}
-      />
-      <SubmitReportDialog
-        open={reportOpen}
-        uncheckedCount={uncheckedCount}
-        onClose={() => setReportOpen(false)}
-        onConfirm={() => { setReportOpen(false); handleReport(); }}
       />
     </div>
   );
