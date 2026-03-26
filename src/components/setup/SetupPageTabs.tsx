@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeftIcon } from "@/components/ui/icons";
+import { ChevronLeftIcon, RefreshIcon } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 import { SETUP_LAST_SYNCED_KEY, SETUP_SOURCE_KEY } from "@/lib/constants";
 
@@ -73,44 +73,62 @@ export default function SetupPageTabs({ wizard, currentData, hasData }: Props) {
       </header>
 
       {/* 탭 바 */}
-      <div
-        role="tablist"
-        aria-label="셋업 메뉴"
-        className="flex gap-1 border-b border-gray-200 bg-white px-4"
-      >
-        <button
-          role="tab"
-          id="tab-data"
-          aria-selected={tab === "data"}
-          aria-controls="panel-data"
-          onClick={() => setTab("data")}
-          disabled={!hasData}
-          className={cn(
-            "min-h-11 rounded-t-lg px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action",
-            tab === "data"
-              ? "border-b-2 border-gray-900 text-gray-900"
-              : "text-muted-foreground hover:text-gray-600",
-            !hasData && "cursor-not-allowed opacity-40"
-          )}
+      <div className="flex items-center border-b border-gray-200 bg-white px-4">
+        <div
+          role="tablist"
+          aria-label="셋업 메뉴"
+          className="flex flex-1 gap-1"
         >
-          현재 데이터
-          {!hasData && <span className="ml-1 text-xs">(없음)</span>}
-        </button>
-        <button
-          role="tab"
-          id="tab-upload"
-          aria-selected={tab === "upload"}
-          aria-controls="panel-upload"
-          onClick={() => setTab("upload")}
-          className={cn(
-            "min-h-11 rounded-t-lg px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action",
-            tab === "upload"
-              ? "border-b-2 border-gray-900 text-gray-900"
-              : "text-muted-foreground hover:text-gray-600"
-          )}
-        >
-          데이터 업로드
-        </button>
+          <button
+            role="tab"
+            id="tab-data"
+            aria-selected={tab === "data"}
+            aria-controls="panel-data"
+            onClick={() => setTab("data")}
+            disabled={!hasData}
+            className={cn(
+              "min-h-11 rounded-t-lg px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action",
+              tab === "data"
+                ? "border-b-2 border-gray-900 text-gray-900"
+                : "text-muted-foreground hover:text-gray-600",
+              !hasData && "cursor-not-allowed opacity-40"
+            )}
+          >
+            현재 데이터
+            {!hasData && <span className="ml-1 text-xs">(없음)</span>}
+          </button>
+          <button
+            role="tab"
+            id="tab-upload"
+            aria-selected={tab === "upload"}
+            aria-controls="panel-upload"
+            onClick={() => setTab("upload")}
+            className={cn(
+              "min-h-11 rounded-t-lg px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action",
+              tab === "upload"
+                ? "border-b-2 border-gray-900 text-gray-900"
+                : "text-muted-foreground hover:text-gray-600"
+            )}
+          >
+            데이터 업로드
+          </button>
+        </div>
+        {hasData && (
+          <button
+            onClick={() => router.push(
+              hasSheetSource ? "/setup?tab=upload&resync=1" : "/setup?tab=upload"
+            )}
+            className="flex flex-col items-center justify-center rounded-lg px-1 py-1 text-gray-500 focus-visible:ring-2 focus-visible:ring-gray-900"
+            aria-label="데이터 다시 불러오기"
+          >
+            <RefreshIcon className="h-4 w-4" aria-hidden />
+            {lastSynced && (
+              <span className="mt-0.5 text-[0.625rem] leading-none text-muted-foreground">
+                {formatSyncTime(lastSynced)}
+              </span>
+            )}
+          </button>
+        )}
       </div>
 
       <div
@@ -127,23 +145,6 @@ export default function SetupPageTabs({ wizard, currentData, hasData }: Props) {
         aria-labelledby="tab-data"
         className={tab !== "data" ? "hidden" : undefined}
       >
-        {/* 동기화 정보 배너 */}
-        {lastSynced && (
-          <div className="mx-4 mt-3 flex items-center justify-between rounded-xl bg-white px-4 py-3 shadow-sm">
-            <p className="text-xs text-muted-foreground">
-              마지막 동기화: {formatSyncTime(lastSynced)}
-            </p>
-            {hasSheetSource && (
-              <button
-                onClick={() => router.push("/setup?tab=upload&resync=1")}
-                className="min-h-11 rounded-xl bg-gray-100 px-4 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
-                aria-label="Google Sheets에서 데이터 다시 불러오기"
-              >
-                다시 불러오기
-              </button>
-            )}
-          </div>
-        )}
         {currentData}
       </div>
     </div>
