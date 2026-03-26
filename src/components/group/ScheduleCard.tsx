@@ -81,7 +81,7 @@ export default function ScheduleCard({
             aria-label={`${checked}/${effectiveTotal}명 탑승`}
           >
             <div
-              className="h-full rounded-full bg-complete-check transition-all"
+              className="h-full rounded-full bg-progress-bar transition-all"
               style={{ width: effectiveTotal > 0 ? `${pct}%` : "0%" }}
             />
           </div>

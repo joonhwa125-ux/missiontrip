@@ -131,7 +131,7 @@ export default function AdminScheduleCard({
           aria-label={`조 보고 진행률 ${progressPct}%`}
         >
           <div
-            className="h-full rounded-full bg-complete-check transition-all"
+            className="h-full rounded-full bg-progress-bar transition-all"
             style={{ width: `${progressPct}%` }}
           />
         </div>

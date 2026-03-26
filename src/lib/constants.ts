@@ -112,6 +112,7 @@ export const COLORS = {
   mainAction: "#FEE500",
   completeCard: "#EAF3DE",
   completeCheck: "#047857",
+  progressBar: "#3B82F6",
   offlineBanner: "#F1EFE8",
   progressBadge: "#FEF9C3",
   appBg: "#F5F3EF",

@@ -226,7 +226,7 @@ export default function AdminBottomSheet({
                           aria-label={`${checkedCount}/${totalCount}명 탑승`}
                         >
                           <div
-                            className="h-full rounded-full bg-complete-check transition-all"
+                            className="h-full rounded-full bg-progress-bar transition-all"
                             style={{ width: `${progress}%` }}
                           />
                         </div>

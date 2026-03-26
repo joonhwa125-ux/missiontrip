@@ -140,7 +140,7 @@ function GroupMiniCard({
         aria-label={`${name} ${checked}/${total}명 탑승`}
       >
         <div
-          className="h-full rounded-full bg-complete-check transition-all"
+          className="h-full rounded-full bg-progress-bar transition-all"
           style={{ width: `${progress}%` }}
         />
       </div>
