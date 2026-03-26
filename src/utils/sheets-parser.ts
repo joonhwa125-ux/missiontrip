@@ -37,6 +37,12 @@ export function extractSheetId(url: string): string | null {
   return match ? match[1] : null;
 }
 
+// Google Sheets URL에서 #gid=숫자 추출
+export function extractGid(url: string): string | null {
+  const match = url.match(/[#&?]gid=(\d+)/);
+  return match ? match[1] : null;
+}
+
 // CSV 문자열 → 2D 배열 (RFC 4180 준수 — 따옴표 내 콤마/줄바꿈 처리)
 export function parseCsv(csv: string): string[][] {
   const rows: string[][] = [];

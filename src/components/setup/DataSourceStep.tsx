@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useRef } from "react";
 import { previewFromGoogleSheet, previewFromCsv } from "@/actions/setup";
-import { extractSheetId } from "@/utils/sheets-parser";
+import { extractSheetId, extractGid } from "@/utils/sheets-parser";
 import { cn } from "@/lib/utils";
 import { UploadIcon } from "@/components/ui/icons";
 import type { SetupPreviewData } from "@/lib/types";
@@ -15,9 +15,8 @@ type SourceTab = "sheets" | "csv";
 
 export default function DataSourceStep({ onPreviewReady }: Props) {
   const [tab, setTab] = useState<SourceTab>("sheets");
-  const [sheetUrl, setSheetUrl] = useState("");
-  const [gidUsers, setGidUsers] = useState("0");
-  const [gidSchedules, setGidSchedules] = useState("1");
+  const [usersUrl, setUsersUrl] = useState("");
+  const [schedulesUrl, setSchedulesUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const userFileRef = useRef<HTMLInputElement>(null);
@@ -26,14 +25,29 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
   const [scheduleFileName, setScheduleFileName] = useState<string | null>(null);
 
   const handleGoogleSheet = () => {
-    const sheetId = extractSheetId(sheetUrl);
-    if (!sheetId) {
-      setError("올바른 Google Sheets URL을 입력해주세요");
+    const sheetId1 = extractSheetId(usersUrl);
+    const sheetId2 = extractSheetId(schedulesUrl);
+
+    if (!sheetId1 || !sheetId2) {
+      setError("참가자 탭과 일정 탭 URL을 모두 입력해주세요");
       return;
     }
+    if (sheetId1 !== sheetId2) {
+      setError("두 URL이 같은 스프레드시트를 가리키지 않아요");
+      return;
+    }
+
+    const gidUsers = extractGid(usersUrl) ?? "0";
+    const gidSchedules = extractGid(schedulesUrl) ?? "0";
+
+    if (gidUsers === gidSchedules) {
+      setError("참가자 탭과 일정 탭이 같은 시트예요. 각각 다른 탭에서 URL을 복사해주세요");
+      return;
+    }
+
     setError(null);
     startTransition(async () => {
-      const res = await previewFromGoogleSheet(sheetId, {
+      const res = await previewFromGoogleSheet(sheetId1, {
         users: gidUsers,
         schedules: gidSchedules,
       });
@@ -104,46 +118,32 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
       {/* Google Sheets 패널 */}
       {tab === "sheets" && (
         <section id="panel-sheets" role="tabpanel" className="rounded-2xl bg-white p-5">
-          <label htmlFor="ds-sheet-url" className="mb-1 block text-sm text-muted-foreground">
-            Sheet URL
-          </label>
-          <input
-            id="ds-sheet-url"
-            type="url"
-            value={sheetUrl}
-            onChange={(e) => setSheetUrl(e.target.value)}
-            placeholder="https://docs.google.com/spreadsheets/d/..."
-            className="mb-3 w-full rounded-xl border px-3 py-2.5 text-sm focus-visible:ring-2 focus-visible:ring-main-action"
-          />
-          <div className="mb-3 grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor="ds-gid-users" className="mb-1 block text-xs text-muted-foreground">
-                참가자 탭 GID
-              </label>
-              <input
-                id="ds-gid-users"
-                type="text"
-                value={gidUsers}
-                onChange={(e) => setGidUsers(e.target.value)}
-                className="w-full rounded-xl border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-main-action"
-              />
-            </div>
-            <div>
-              <label htmlFor="ds-gid-schedules" className="mb-1 block text-xs text-muted-foreground">
-                일정 탭 GID
-              </label>
-              <input
-                id="ds-gid-schedules"
-                type="text"
-                value={gidSchedules}
-                onChange={(e) => setGidSchedules(e.target.value)}
-                className="w-full rounded-xl border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-main-action"
-              />
-            </div>
+          <div className="mb-3">
+            <label htmlFor="ds-users-url" className="mb-1 block text-sm font-medium">
+              참가자 탭 URL
+            </label>
+            <input
+              id="ds-users-url"
+              type="url"
+              value={usersUrl}
+              onChange={(e) => { setUsersUrl(e.target.value); setError(null); }}
+              placeholder="참가자 시트 탭을 선택한 후 URL을 복사해 붙여넣기"
+              className="w-full rounded-xl border px-3 py-2.5 text-sm focus-visible:ring-2 focus-visible:ring-main-action"
+            />
           </div>
-          <p className="mb-3 text-xs text-muted-foreground">
-            시트 탭 선택 시 URL에서 #gid=숫자 확인. 기본: 첫 번째 탭=0
-          </p>
+          <div className="mb-4">
+            <label htmlFor="ds-schedules-url" className="mb-1 block text-sm font-medium">
+              일정 탭 URL
+            </label>
+            <input
+              id="ds-schedules-url"
+              type="url"
+              value={schedulesUrl}
+              onChange={(e) => { setSchedulesUrl(e.target.value); setError(null); }}
+              placeholder="일정 시트 탭을 선택한 후 URL을 복사해 붙여넣기"
+              className="w-full rounded-xl border px-3 py-2.5 text-sm focus-visible:ring-2 focus-visible:ring-main-action"
+            />
+          </div>
           <button
             onClick={handleGoogleSheet}
             disabled={isPending}
