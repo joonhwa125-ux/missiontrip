@@ -397,28 +397,49 @@ export default function AdminView({
         }
       />
 
-      {/* 일차 탭 */}
-      <DayTabs
-        days={days}
-        selected={selectedDay}
-        onChange={setSelectedDay}
-        panelId="admin-schedule-panel"
-      />
+      {schedules.length === 0 ? (
+        /* 일정 없음 — 초기화 직후 또는 첫 접속 */
+        <div className="flex flex-1 flex-col items-center justify-center px-6 py-20 text-center">
+          <p className="text-base font-medium text-gray-500">
+            등록된 일정이 없어요
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            설정에서 데이터를 업로드하거나,{" "}
+            <button
+              onClick={() => setAddOpen(true)}
+              className="inline font-medium text-gray-900 underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-main-action"
+            >
+              일정을 추가
+            </button>
+            해주세요
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* 일차 탭 */}
+          <DayTabs
+            days={days}
+            selected={selectedDay}
+            onChange={setSelectedDay}
+            panelId="admin-schedule-panel"
+          />
 
-      {/* 일정 카드 목록 */}
-      <div id="admin-schedule-panel" role="tabpanel" className="flex-1">
-        <AdminScheduleList
-          schedules={daySchedules}
-          allSchedules={schedules}
-          checkInsMap={checkInsMap}
-          reportsMap={reportsMap}
-          members={members}
-          activeSchedule={activeSchedule}
-          onBottomSheet={openBottomSheet}
-          onTimeEdit={setTimeEditTarget}
-          onToast={showToast}
-        />
-      </div>
+          {/* 일정 카드 목록 */}
+          <div id="admin-schedule-panel" role="tabpanel" className="flex-1">
+            <AdminScheduleList
+              schedules={daySchedules}
+              allSchedules={schedules}
+              checkInsMap={checkInsMap}
+              reportsMap={reportsMap}
+              members={members}
+              activeSchedule={activeSchedule}
+              onBottomSheet={openBottomSheet}
+              onTimeEdit={setTimeEditTarget}
+              onToast={showToast}
+            />
+          </div>
+        </>
+      )}
 
       {/* 바텀시트 — 전체 현황 */}
       <AdminBottomSheet
