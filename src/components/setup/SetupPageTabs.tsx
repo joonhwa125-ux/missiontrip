@@ -75,7 +75,7 @@ export default function SetupPageTabs({ wizard, currentData, hasData }: Props) {
             onClick={() => router.push(
               hasSheetSource ? "/setup?tab=upload&resync=1" : "/setup?tab=upload"
             )}
-            className="flex flex-col items-center justify-center rounded-lg px-2 py-1 text-gray-500 focus-visible:ring-2 focus-visible:ring-gray-900"
+            className="flex min-h-11 min-w-11 flex-col items-center justify-center rounded-lg px-2 py-1 text-gray-500 focus-visible:ring-2 focus-visible:ring-gray-900"
             aria-label="데이터 다시 불러오기"
           >
             <RefreshIcon className="h-4 w-4" aria-hidden />
