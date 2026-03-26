@@ -20,7 +20,7 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { UsersIcon, PlusIcon, SettingsIcon } from "@/components/ui/icons";
+import { UsersIcon, PlusIcon, TableIcon } from "@/components/ui/icons";
 import type { Group, Schedule, AdminMember, AdminCheckIn, AdminReport, CheckIn } from "@/lib/types";
 
 interface Props {
@@ -409,9 +409,9 @@ export default function AdminView({
             <Link
               href="/setup"
               className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
-              aria-label="설정"
+              aria-label="데이터 관리"
             >
-              <SettingsIcon className="h-6 w-6" aria-hidden />
+              <TableIcon className="h-6 w-6" aria-hidden />
             </Link>
           </div>
         }

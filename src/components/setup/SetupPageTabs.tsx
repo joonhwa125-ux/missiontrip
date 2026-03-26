@@ -68,8 +68,24 @@ export default function SetupPageTabs({ wizard, currentData, hasData }: Props) {
           >
             <ChevronLeftIcon aria-hidden />
           </Link>
-          <h1 className="text-lg font-bold">설정</h1>
+          <h1 className="text-lg font-bold">데이터 관리</h1>
         </div>
+        {hasData && (
+          <button
+            onClick={() => router.push(
+              hasSheetSource ? "/setup?tab=upload&resync=1" : "/setup?tab=upload"
+            )}
+            className="flex flex-col items-center justify-center rounded-lg px-2 py-1 text-gray-500 focus-visible:ring-2 focus-visible:ring-gray-900"
+            aria-label="데이터 다시 불러오기"
+          >
+            <RefreshIcon className="h-4 w-4" aria-hidden />
+            {lastSynced && (
+              <span className="mt-0.5 text-[0.625rem] leading-none text-muted-foreground">
+                {formatSyncTime(lastSynced)}
+              </span>
+            )}
+          </button>
+        )}
       </header>
 
       {/* 탭 바 */}
@@ -113,22 +129,6 @@ export default function SetupPageTabs({ wizard, currentData, hasData }: Props) {
             데이터 업로드
           </button>
         </div>
-        {hasData && (
-          <button
-            onClick={() => router.push(
-              hasSheetSource ? "/setup?tab=upload&resync=1" : "/setup?tab=upload"
-            )}
-            className="flex flex-col items-center justify-center rounded-lg px-1 py-1 text-gray-500 focus-visible:ring-2 focus-visible:ring-gray-900"
-            aria-label="데이터 다시 불러오기"
-          >
-            <RefreshIcon className="h-4 w-4" aria-hidden />
-            {lastSynced && (
-              <span className="mt-0.5 text-[0.625rem] leading-none text-muted-foreground">
-                {formatSyncTime(lastSynced)}
-              </span>
-            )}
-          </button>
-        )}
       </div>
 
       <div

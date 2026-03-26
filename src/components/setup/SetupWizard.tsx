@@ -116,11 +116,6 @@ export default function SetupWizard() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
-      {/* 스텝 인디케이터 */}
-      <p className="mb-4 text-right text-xs text-muted-foreground" aria-live="polite">
-        Step {step} / 3
-      </p>
-
       {step === 1 && (
         isResyncing ? (
           <div className="py-12 text-center text-sm text-muted-foreground" aria-live="polite">

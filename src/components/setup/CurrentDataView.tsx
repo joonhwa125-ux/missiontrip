@@ -110,7 +110,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
                 <th className="min-w-[160px] px-3 py-2">집결지</th>
                 <th className="min-w-[56px] px-3 py-2">예정 시간</th>
                 <th className="min-w-[48px] px-3 py-2">구분</th>
-                <th className="min-w-[108px] px-3 py-2">데이터 관리</th>
+                <th className="min-w-[108px] px-3 py-2">편집</th>
               </tr>
             </thead>
             <tbody>
@@ -149,7 +149,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
                 <th className="min-w-[80px] px-3 py-2">역할</th>
                 <th className="min-w-[96px] px-3 py-2">조편성</th>
                 <th className="min-w-[64px] px-3 py-2">구분</th>
-                <th className="min-w-[108px] px-3 py-2">데이터 관리</th>
+                <th className="min-w-[108px] px-3 py-2">편집</th>
               </tr>
             </thead>
             <tbody>
