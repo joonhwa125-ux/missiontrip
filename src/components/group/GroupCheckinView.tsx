@@ -231,10 +231,10 @@ export default function GroupCheckinView({
     <div className="flex flex-1 flex-col">
       {/* 상단 바 (뒤로 가기 포함) */}
       <header className="bg-white px-4 py-4 shadow-sm">
-        <div className="flex items-center gap-2">
+        <div className="flex items-start gap-2">
           <button
             onClick={onBack}
-            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-main-action"
+            className="flex min-h-11 min-w-11 flex-shrink-0 items-start justify-center pt-0.5 rounded-lg focus-visible:ring-2 focus-visible:ring-main-action"
             aria-label="일정 피드로 돌아가기"
           >
             <ChevronLeftIcon aria-hidden />
