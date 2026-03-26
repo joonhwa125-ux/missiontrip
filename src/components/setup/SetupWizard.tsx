@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { previewFromGoogleSheet } from "@/actions/setup";
 import { extractSheetId, extractGid } from "@/utils/sheets-parser";
@@ -28,10 +28,16 @@ export default function SetupWizard() {
   const [importError, setImportError] = useState<string | null>(null);
   const [isResyncing, setIsResyncing] = useState(false);
   const [, startTransition] = useTransition();
+  const resyncHandled = useRef(false);
 
   // resync 파라미터 감지 → 저장된 URL로 자동 fetch
   useEffect(() => {
-    if (searchParams.get("resync") !== "1" || isResyncing) return;
+    const isResync = searchParams.get("resync") === "1";
+    if (!isResync) {
+      resyncHandled.current = false;
+      return;
+    }
+    if (resyncHandled.current) return;
 
     const saved = localStorage.getItem(SETUP_SOURCE_KEY);
     if (!saved) {
@@ -54,6 +60,7 @@ export default function SetupWizard() {
         return;
       }
 
+      resyncHandled.current = true;
       setIsResyncing(true);
       setStep(1);
       setPreviewData(null);
@@ -68,6 +75,9 @@ export default function SetupWizard() {
         if (res.ok && res.data) {
           setPreviewData(res.data);
           setStep(2);
+        } else {
+          setImportError(res.error ?? "시트 데이터를 불러오지 못했어요. 다시 시도해주세요.");
+          setStep(3);
         }
         setIsResyncing(false);
         router.replace("/setup?tab=upload");
@@ -76,7 +86,7 @@ export default function SetupWizard() {
       router.replace("/setup?tab=upload");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, isResyncing]);
+  }, [searchParams]);
 
   const handlePreviewReady = (data: SetupPreviewData) => {
     setPreviewData(data);
