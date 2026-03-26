@@ -11,7 +11,7 @@ const config: Config = {
         // PRD 컬러 시스템 (8.1)
         "main-action": "#FEE500",
         "complete-card": "#EAF3DE",
-        "complete-check": "#00C471",
+        "complete-check": "#047857",
         "offline-banner": "#F1EFE8",
         "progress-badge": "#FEF9C3",
         "app-bg": "#F5F3EF",

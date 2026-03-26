@@ -111,7 +111,7 @@ export function canCheckin(role: string): boolean {
 export const COLORS = {
   mainAction: "#FEE500",
   completeCard: "#EAF3DE",
-  completeCheck: "#00C471",
+  completeCheck: "#047857",
   offlineBanner: "#F1EFE8",
   progressBadge: "#FEF9C3",
   appBg: "#F5F3EF",
