@@ -52,7 +52,15 @@ export default function GroupView({
   const [checkIns, setCheckIns] = useState<CheckIn[]>(initialCheckIns);
   const [allCheckInsState, setAllCheckInsState] = useState(allCheckIns);
   const [allReportsState, setAllReportsState] = useState(initialReports);
-  const [reported, setReported] = useState(initialReported);
+  // reported 초기값: DB 보고 이력 AND 현재 전원 확인 완료 시에만 true
+  // → 세션 중 체크인한 경우 수동 보고 필수
+  const [reported, setReported] = useState(() => {
+    if (!initialReported) return false;
+    const scope = activeSchedule?.scope ?? "all";
+    const filtered = filterMembersByScope(members, scope);
+    const ids = new Set(initialCheckIns.map((c) => c.user_id));
+    return filtered.length > 0 && filtered.every((m) => ids.has(m.id));
+  });
   const { toast, showToast } = useToast();
   // CR-009: activeSchedule을 state로 관리 — 체크인 뷰에서도 Realtime 갱신 반영
   const [currentSchedule, setCurrentSchedule] = useState(activeSchedule);
@@ -169,6 +177,16 @@ export default function GroupView({
   const checkinMembers = useMemo(() => {
     return filterMembersByScope(members, currentSchedule?.scope ?? "all");
   }, [members, currentSchedule?.scope]);
+
+  // 체크인 취소 시 reported 자동 리셋 — 전원 미완료가 되면 보고 무효화
+  const checkinComplete = useMemo(() => {
+    const ids = new Set(checkIns.map((c) => c.user_id));
+    return checkinMembers.length > 0 && checkinMembers.every((m) => ids.has(m.id));
+  }, [checkIns, checkinMembers]);
+
+  useEffect(() => {
+    if (!checkinComplete) setReported(false);
+  }, [checkinComplete]);
 
   // 보고 완료 시 allReportsState에 즉시 반영 (self-echo 미도달 대응)
   const handleReported = useCallback(() => {

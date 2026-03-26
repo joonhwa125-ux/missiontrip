@@ -47,6 +47,7 @@ export default function GroupCheckinView({
 }: Props) {
   const [cancelTarget, setCancelTarget] = useState<{ member: Member; isAbsent: boolean } | null>(null);
   const [absentTarget, setAbsentTarget] = useState<Member | null>(null);
+  const [reported, setReported] = useState(initialReported);
   const [, startTransition] = useTransition();
 
   const { isOnline, pendingCount, addPending, addPendingReport } = useOfflineSync();
@@ -105,6 +106,7 @@ export default function GroupCheckinView({
     if (!cancelTarget || !activeSchedule) return;
     const userId = cancelTarget.member.id;
     setCancelTarget(null);
+    setReported(false);
     // 낙관적 제거 전 백업 (롤백용)
     let removed: CheckIn | undefined;
     setCheckIns((prev) => {
@@ -171,6 +173,7 @@ export default function GroupCheckinView({
         pending_count: unchecked,
       });
       if (saved) {
+        setReported(true);
         onReported?.();
         showToast(COPY.reportButtonDone);
       } else {
@@ -183,6 +186,7 @@ export default function GroupCheckinView({
       try {
         const res = await submitReport(currentUser.group_id, activeSchedule.id, unchecked);
         if (res.ok) {
+          setReported(true);
           onReported?.();
           showToast(COPY.reportButtonDone);
           const reportPayload = {
@@ -211,8 +215,6 @@ export default function GroupCheckinView({
   // 미확인 = 체크인도 불참도 아닌 순수 미처리 인원
   const uncheckedCount = members.filter((m) => !checkedIds.has(m.id)).length;
   const allComplete = members.length > 0 && uncheckedCount === 0;
-  // 보고 상태 = DB 보고 이력 + 전원 확인. 취소 시 allComplete=false → 자동 해제
-  const reported = initialReported && allComplete;
   // 정렬: 미확인 → 불참 → 완료
   const sorted = [...members].sort((a, b) => {
     const aChecked = checkedIds.has(a.id);
