@@ -4,6 +4,7 @@ import { useState, useTransition, useRef } from "react";
 import { previewFromGoogleSheet, previewFromCsv } from "@/actions/setup";
 import { extractSheetId, extractGid } from "@/utils/sheets-parser";
 import { cn } from "@/lib/utils";
+import { SETUP_SOURCE_KEY } from "@/lib/constants";
 import { UploadIcon } from "@/components/ui/icons";
 import type { SetupPreviewData } from "@/lib/types";
 
@@ -15,8 +16,24 @@ type SourceTab = "sheets" | "csv";
 
 export default function DataSourceStep({ onPreviewReady }: Props) {
   const [tab, setTab] = useState<SourceTab>("sheets");
-  const [usersUrl, setUsersUrl] = useState("");
-  const [schedulesUrl, setSchedulesUrl] = useState("");
+  const [usersUrl, setUsersUrl] = useState(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      const saved = localStorage.getItem(SETUP_SOURCE_KEY);
+      if (!saved) return "";
+      const s = JSON.parse(saved);
+      return s.type === "sheets" ? (s.usersUrl as string) ?? "" : "";
+    } catch { return ""; }
+  });
+  const [schedulesUrl, setSchedulesUrl] = useState(() => {
+    if (typeof window === "undefined") return "";
+    try {
+      const saved = localStorage.getItem(SETUP_SOURCE_KEY);
+      if (!saved) return "";
+      const s = JSON.parse(saved);
+      return s.type === "sheets" ? (s.schedulesUrl as string) ?? "" : "";
+    } catch { return ""; }
+  });
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const userFileRef = useRef<HTMLInputElement>(null);
@@ -52,6 +69,9 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
         schedules: gidSchedules,
       });
       if (res.ok && res.data) {
+        localStorage.setItem(SETUP_SOURCE_KEY, JSON.stringify({
+          type: "sheets", usersUrl, schedulesUrl,
+        }));
         onPreviewReady(res.data);
       } else {
         setError(res.error ?? "알 수 없는 오류");

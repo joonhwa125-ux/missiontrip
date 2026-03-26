@@ -10,6 +10,10 @@ export const OFFLINE_PENDING_KEY = "mtrip_pending";
 export const OFFLINE_PENDING_REPORTS_KEY = "mtrip_pending_reports";
 export const ACTIVE_SCHEDULE_KEY = "mtrip_active_schedule";
 
+// 셋업 동기화 스토리지 키
+export const SETUP_LAST_SYNCED_KEY = "setup_last_synced";
+export const SETUP_SOURCE_KEY = "setup_source";
+
 // Realtime
 export const BROADCAST_SUBSCRIBE_TIMEOUT_MS = 5_000; // broadcast 채널 구독 최대 대기 시간
 

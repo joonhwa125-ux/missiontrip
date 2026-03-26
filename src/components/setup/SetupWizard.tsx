@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { previewFromGoogleSheet } from "@/actions/setup";
+import { extractSheetId, extractGid } from "@/utils/sheets-parser";
+import { SETUP_LAST_SYNCED_KEY, SETUP_SOURCE_KEY } from "@/lib/constants";
 import DataSourceStep from "./DataSourceStep";
 import PreviewStep from "./PreviewStep";
 import ImportResultStep from "./ImportResultStep";
@@ -18,10 +21,62 @@ interface ImportResult {
 
 export default function SetupWizard() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>(1);
   const [previewData, setPreviewData] = useState<SetupPreviewData | null>(null);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [isResyncing, setIsResyncing] = useState(false);
+  const [, startTransition] = useTransition();
+
+  // resync 파라미터 감지 → 저장된 URL로 자동 fetch
+  useEffect(() => {
+    if (searchParams.get("resync") !== "1" || isResyncing) return;
+
+    const saved = localStorage.getItem(SETUP_SOURCE_KEY);
+    if (!saved) {
+      router.replace("/setup?tab=upload");
+      return;
+    }
+
+    try {
+      const source = JSON.parse(saved);
+      if (source.type !== "sheets" || !source.usersUrl || !source.schedulesUrl) {
+        router.replace("/setup?tab=upload");
+        return;
+      }
+
+      const sheetId = extractSheetId(source.usersUrl);
+      const gidUsers = extractGid(source.usersUrl) ?? "0";
+      const gidSchedules = extractGid(source.schedulesUrl) ?? "0";
+      if (!sheetId) {
+        router.replace("/setup?tab=upload");
+        return;
+      }
+
+      setIsResyncing(true);
+      setStep(1);
+      setPreviewData(null);
+      setImportResult(null);
+      setImportError(null);
+
+      startTransition(async () => {
+        const res = await previewFromGoogleSheet(sheetId, {
+          users: gidUsers,
+          schedules: gidSchedules,
+        });
+        if (res.ok && res.data) {
+          setPreviewData(res.data);
+          setStep(2);
+        }
+        setIsResyncing(false);
+        router.replace("/setup?tab=upload");
+      });
+    } catch {
+      router.replace("/setup?tab=upload");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, isResyncing]);
 
   const handlePreviewReady = (data: SetupPreviewData) => {
     setPreviewData(data);
@@ -32,7 +87,8 @@ export default function SetupWizard() {
     setImportResult(result);
     setImportError(null);
     setStep(3);
-    router.replace("/setup?tab=data"); // 반영 완료 → 서버 재조회 + "현재 데이터" 탭 자동 전환
+    localStorage.setItem(SETUP_LAST_SYNCED_KEY, new Date().toISOString());
+    router.replace("/setup?tab=data");
   };
 
   const handleImportError = (error: string) => {
@@ -45,7 +101,7 @@ export default function SetupWizard() {
     setPreviewData(null);
     setImportResult(null);
     setImportError(null);
-    router.replace("/setup?tab=upload"); // 데이터 있어도 업로드 탭으로 명시 이동
+    router.replace("/setup?tab=upload");
   };
 
   return (
@@ -56,7 +112,13 @@ export default function SetupWizard() {
       </p>
 
       {step === 1 && (
-        <DataSourceStep onPreviewReady={handlePreviewReady} />
+        isResyncing ? (
+          <div className="py-12 text-center text-sm text-muted-foreground" aria-live="polite">
+            시트 데이터를 불러오는 중...
+          </div>
+        ) : (
+          <DataSourceStep onPreviewReady={handlePreviewReady} />
+        )
       )}
       {step === 2 && previewData && (
         <PreviewStep

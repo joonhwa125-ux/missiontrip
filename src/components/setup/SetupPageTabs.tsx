@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeftIcon } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
+import { SETUP_LAST_SYNCED_KEY, SETUP_SOURCE_KEY } from "@/lib/constants";
 
 interface Props {
   wizard: React.ReactNode;
@@ -12,9 +13,25 @@ interface Props {
   hasData: boolean;
 }
 
+/** 동기화 시각을 "M/D HH:MM" KST 형식으로 표시 */
+function formatSyncTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleString("ko-KR", {
+    timeZone: "Asia/Seoul",
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
 export default function SetupPageTabs({ wizard, currentData, hasData }: Props) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<"upload" | "data">("upload");
+  const [lastSynced, setLastSynced] = useState<string | null>(null);
+  const [hasSheetSource, setHasSheetSource] = useState(false);
 
   // 탭 결정 우선순위:
   // 1. ?tab=upload 명시 → 업로드 탭
@@ -27,6 +44,17 @@ export default function SetupPageTabs({ wizard, currentData, hasData }: Props) {
       setTab("data");
     }
   }, [searchParams, hasData]);
+
+  // localStorage에서 동기화 정보 읽기 (탭 전환 시 갱신)
+  useEffect(() => {
+    setLastSynced(localStorage.getItem(SETUP_LAST_SYNCED_KEY));
+    try {
+      const src = localStorage.getItem(SETUP_SOURCE_KEY);
+      setHasSheetSource(!!src && JSON.parse(src).type === "sheets");
+    } catch {
+      setHasSheetSource(false);
+    }
+  }, [tab]);
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col min-h-screen bg-app-bg">
@@ -99,6 +127,23 @@ export default function SetupPageTabs({ wizard, currentData, hasData }: Props) {
         aria-labelledby="tab-data"
         className={tab !== "data" ? "hidden" : undefined}
       >
+        {/* 동기화 정보 배너 */}
+        {lastSynced && (
+          <div className="mx-4 mt-3 flex items-center justify-between rounded-xl bg-white px-4 py-3 shadow-sm">
+            <p className="text-xs text-muted-foreground">
+              마지막 동기화: {formatSyncTime(lastSynced)}
+            </p>
+            {hasSheetSource && (
+              <button
+                onClick={() => router.push("/setup?tab=upload&resync=1")}
+                className="min-h-11 rounded-xl bg-gray-100 px-4 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
+                aria-label="Google Sheets에서 데이터 다시 불러오기"
+              >
+                다시 불러오기
+              </button>
+            )}
+          </div>
+        )}
         {currentData}
       </div>
     </div>
