@@ -213,6 +213,16 @@ export default function GroupView({
     );
   }, [currentUser.group_id]);
 
+  // 보고 무효화 (체크인 취소 시) — reported + allReportsState + ref 일괄 처리
+  const handleReportReset = useCallback(() => {
+    setReported(false);
+    reportInvalidatedRef.current = true;
+    setAllReportsState((prev) => {
+      const next = prev.filter((r) => r.group_id !== currentUser.group_id);
+      return next.length === prev.length ? prev : next;
+    });
+  }, [currentUser.group_id]);
+
   // CR-010: 체크인 진입 시 히스토리 푸시
   const handleEnterCheckin = useCallback(() => {
     history.pushState(null, "");
@@ -251,8 +261,9 @@ export default function GroupView({
           setCheckIns={setCheckIns}
           onBack={handleBack}
           showToast={showToast}
-          initialReported={reported}
+          reported={reported}
           onReported={handleReported}
+          onReportReset={handleReportReset}
         />
       )}
 

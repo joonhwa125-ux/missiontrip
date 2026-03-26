@@ -331,6 +331,14 @@ export default function AdminView({
     return filtered.map((m) => ({ id: m.id, name: m.name, party: m.party }));
   }, [activeSchedule?.scope, adminMembers]);
 
+  // 내 조 Sheet 보고 상태 (reportsMap에서 파생)
+  const sheetReported = useMemo(() => {
+    if (!activeSchedule) return false;
+    return (reportsMap[activeSchedule.id] ?? []).some(
+      (r) => r.group_id === currentUser.group_id
+    );
+  }, [activeSchedule, reportsMap, currentUser.group_id]);
+
   // B-3: 내 조 Sheet 보고 시 reportsMap 즉시 반영
   const handleSheetReported = useCallback(() => {
     if (!activeSchedule) return;
@@ -346,6 +354,18 @@ export default function AdminView({
           reported_at: new Date().toISOString(),
         }],
       };
+    });
+  }, [activeSchedule, currentUser.group_id]);
+
+  // 내 조 Sheet 보고 무효화 (체크인 취소 시)
+  const handleSheetReportReset = useCallback(() => {
+    if (!activeSchedule) return;
+    const sid = activeSchedule.id;
+    setReportsMap((prev) => {
+      const list = prev[sid] ?? [];
+      const next = list.filter((r) => r.group_id !== currentUser.group_id);
+      if (next.length === list.length) return prev;
+      return { ...prev, [sid]: next };
     });
   }, [activeSchedule, currentUser.group_id]);
 
@@ -484,14 +504,9 @@ export default function AdminView({
               setCheckIns={setSheetCheckIns}
               onBack={closeCheckinSheet}
               showToast={showToast}
-              initialReported={
-                activeSchedule
-                  ? (reportsMap[activeSchedule.id] ?? []).some(
-                      (r) => r.group_id === currentUser.group_id
-                    )
-                  : false
-              }
+              reported={sheetReported}
               onReported={handleSheetReported}
+              onReportReset={handleSheetReportReset}
             />
           </div>
         </DialogContent>

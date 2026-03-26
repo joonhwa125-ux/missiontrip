@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useTransition, useMemo, type Dispatch, type SetStateAction } from "react";
+import { useState, useCallback, useTransition, useMemo, type Dispatch, type SetStateAction } from "react";
 import { useBroadcast } from "@/hooks/useRealtime";
 import { useBroadcastCheckin } from "@/hooks/useBroadcastCheckin";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
@@ -29,8 +29,9 @@ interface Props {
   setCheckIns: Dispatch<SetStateAction<CheckIn[]>>;
   onBack: () => void;
   showToast: (msg: string) => void;
-  initialReported?: boolean;
-  onReported?: () => void;
+  reported: boolean;
+  onReported: () => void;
+  onReportReset: () => void;
 }
 
 export default function GroupCheckinView({
@@ -42,16 +43,12 @@ export default function GroupCheckinView({
   setCheckIns,
   onBack,
   showToast,
-  initialReported = false,
+  reported,
   onReported,
+  onReportReset,
 }: Props) {
   const [cancelTarget, setCancelTarget] = useState<{ member: Member; isAbsent: boolean } | null>(null);
   const [absentTarget, setAbsentTarget] = useState<Member | null>(null);
-  const [reported, setReported] = useState(initialReported);
-  // C-1: 부모(GroupView)가 Realtime/effect로 reported를 false로 바꾸면 child도 동기화
-  useEffect(() => {
-    if (!initialReported) setReported(false);
-  }, [initialReported]);
   const [, startTransition] = useTransition();
 
   const { isOnline, pendingCount, addPending, addPendingReport } = useOfflineSync();
@@ -110,7 +107,7 @@ export default function GroupCheckinView({
     if (!cancelTarget || !activeSchedule) return;
     const userId = cancelTarget.member.id;
     setCancelTarget(null);
-    setReported(false);
+    onReportReset();
     // 낙관적 제거 전 백업 (롤백용)
     let removed: CheckIn | undefined;
     setCheckIns((prev) => {
@@ -131,7 +128,7 @@ export default function GroupCheckinView({
         showToast("서버 연결에 실패했어요. 다시 시도해주세요.");
       }
     });
-  }, [cancelTarget, activeSchedule, broadcastCheckin, setCheckIns, showToast]);
+  }, [cancelTarget, activeSchedule, broadcastCheckin, setCheckIns, showToast, onReportReset]);
 
   const handleAbsentConfirm = useCallback(async () => {
     if (!absentTarget || !activeSchedule) return;
@@ -177,8 +174,7 @@ export default function GroupCheckinView({
         pending_count: unchecked,
       });
       if (saved) {
-        setReported(true);
-        onReported?.();
+        onReported();
         showToast(COPY.reportButtonDone);
       } else {
         showToast("저장 공간이 부족해요. 기기 저장소를 확인해주세요.");
@@ -190,8 +186,7 @@ export default function GroupCheckinView({
       try {
         const res = await submitReport(currentUser.group_id, activeSchedule.id, unchecked);
         if (res.ok) {
-          setReported(true);
-          onReported?.();
+          onReported();
           showToast(COPY.reportButtonDone);
           const reportPayload = {
             group_id: currentUser.group_id,

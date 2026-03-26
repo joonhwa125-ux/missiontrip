@@ -309,6 +309,94 @@ export function createServiceClient() {
 
 ---
 
+## TSG-005: 보고 완료 후 체크인 취소→재체크인 시 자동 보고완료 (이중 상태 동기화 실패)
+
+**일시:** 2026-03-27
+**심각도:** High — 수동 보고 없이 "보고 완료!" 표시 (안전 시스템 무결성 훼손)
+**영향 범위:** 조장 화면 (`/group`) 보고 흐름
+**수정 횟수:** 5회 (4회 실패 후 5회차에 근본 해결)
+
+### 증상
+
+1. 체크인 뷰에서 전원 체크인 완료 → [보고하기] 탭 → "보고 완료!" 표시
+2. 한 명의 체크인 [취소] → 미완료 상태로 복귀
+3. 다시 [왔수다!] 탭 → 전원 완료
+4. [← 뒤로]로 피드 복귀 → 체크인 뷰 재진입
+5. **보고 버튼을 누르지 않았는데 "보고 완료!" 가 자동 표시됨**
+
+### 근본 원인
+
+`reported` 상태가 **부모(GroupView)**와 **자식(GroupCheckinView)** 양쪽에 각각 `useState`로 존재하는 **이중 상태(dual state)** 패턴이었다.
+
+```
+GroupView:        const [reported, setReported] = useState(...)
+                           ↓ initialReported={reported}
+GroupCheckinView: const [reported, setReported] = useState(initialReported)
+```
+
+`useState(initialReported)`는 **마운트 시점에만 초기값을 읽는다.** 이후 부모의 `reported`가 바뀌어도 자식의 로컬 `reported`는 자동 갱신되지 않는다. 자식이 언마운트→리마운트될 때 부모 상태의 타이밍에 따라 stale 값이 전달될 수 있다.
+
+추가 악화 요인:
+- **Supabase Realtime self-echo:** `CHANNEL_GLOBAL`이 `self: true`로 구성되어, 자신이 보낸 `group_reported` broadcast가 자신에게 다시 도달 → `allReportsState`에 재삽입
+- **`allReportsState` 미정리:** 체크인 취소 시 `reported`는 리셋했지만 피드 배지용 `allReportsState`는 정리하지 않음 → 피드에서 "보고완료" 배지 유지
+
+### 실패한 수정 시도들
+
+| # | 접근 | 왜 실패했는가 |
+|---|------|--------------|
+| 1 | `reported = initialReported && allComplete` (파생값) | 전원 재체크인 시 DB 보고 이력(`initialReported=true`) + `allComplete=true` → 자동 보고완료 |
+| 2 | 세션 기반 초기화 + `if (!checkinComplete) setReported(false)` effect | 부모→자식 단방향만 동기화. `allReportsState` 미정리 → 피드 배지 stale |
+| 3 | `allReportsState` 정리 effect 추가 | 피드 배지는 해결. 하지만 자식 로컬 `reported`는 여전히 독립 상태 → 자식 리마운트 시 동기화 실패 |
+| 4 | C-1 sync useEffect + W-3 self-echo 필터 + W-2 ref 동등성 가드 | 새 edge case(타이밍, 배칭, 리마운트 순서)에서 여전히 빈틈 발생 |
+
+**4회 모두 같은 실수를 반복했다:** 이중 상태를 유지한 채 effect/ref/콜백으로 동기화를 시도. 동기화 대상이 2개이므로 타이밍·마운트·배칭에 따라 항상 새로운 빈틈이 발생한다.
+
+### 해결 (5회차 — 근본 수정)
+
+**Controlled component 패턴으로 전환.** 자식의 `useState` 자체를 제거하고 부모의 상태를 prop으로 직접 사용.
+
+```
+수정 전 (uncontrolled — 동기화 필요):
+  GroupView:        const [reported] = useState(...)
+                             ↓ initialReported={reported}
+  GroupCheckinView: const [reported] = useState(initialReported)  ← 독립 복사본
+
+수정 후 (controlled — 동기화 불필요):
+  GroupView:        const [reported] = useState(...)  ← 단일 소유
+                             ↓ reported={reported}
+  GroupCheckinView: props.reported 직접 사용           ← 상태 없음
+```
+
+**GroupCheckinView 변경:**
+- `useState(initialReported)` + sync `useEffect` 완전 삭제
+- Props: `initialReported?: boolean` → `reported: boolean`
+- `onReportReset: () => void` 콜백 추가 (체크인 취소 시 부모에게 리셋 요청)
+- `setReported(true/false)` → `onReported()` / `onReportReset()` 콜백 호출로 교체
+
+**GroupView 변경:**
+- `handleReportReset` 콜백 추가: `reported=false` + `allReportsState` 정리 + `reportInvalidatedRef=true`를 일괄 처리
+- Props: `initialReported` → `reported`, `onReportReset` 추가
+
+**AdminView 변경 (동일 패턴 적용):**
+- `sheetReported`를 `reportsMap`에서 `useMemo`로 파생 (별도 `useState` 없음)
+- `handleSheetReportReset` 콜백 추가
+
+### 교훈
+
+1. **부모-자식 간 동일 의미의 상태를 양쪽에 `useState`로 두지 않는다.** `useState(props.X)`는 초기값만 읽으므로, props 변경에 반응하지 않는 "숨은 복사본"이 된다
+2. **effect로 두 개의 독립 상태를 동기화하는 것은 본질적으로 불안정하다.** 타이밍, 배칭, 마운트/언마운트 순서에 따라 항상 새로운 edge case가 발생한다
+3. **한 번의 실패 후에는 "같은 구조에서 다른 effect 추가"가 아니라 "구조 자체를 바꿔야 하는지" 먼저 판단한다.** 이 사례에서는 2회차에서 이미 구조 변경(controlled prop)으로 전환했어야 했다
+4. **`reported`처럼 안전에 직결되는 상태는 단일 소유(single source of truth) 원칙을 엄격히 적용한다.** 편의를 위한 로컬 복사본이 안전 시스템의 무결성을 훼손할 수 있다
+
+### 진단 체크리스트 (유사 패턴 발견 시)
+
+- [ ] `useState(props.X)` 패턴이 있는지 검색: 이것은 props가 바뀌어도 갱신되지 않는 복사본
+- [ ] 부모와 자식이 같은 의미의 상태를 각각 `useState`로 갖고 있지 않은지 확인
+- [ ] 상태 동기화를 위한 `useEffect`가 2개 이상이면 구조 변경을 고려
+- [ ] 안전 관련 상태(`reported`, `checked` 등)는 반드시 단일 컴포넌트에서만 소유
+
+---
+
 ## 문서 작성 가이드
 
 ### 기록 기준
