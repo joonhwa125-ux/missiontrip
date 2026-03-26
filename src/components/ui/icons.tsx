@@ -65,7 +65,11 @@ export function PlusIcon({ className = "h-5 w-5", strokeWidth = 2, ...rest }: Ic
 export function TableIcon({ className = "h-5 w-5", strokeWidth = 2, ...rest }: IconProps) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={strokeWidth} {...rest}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3.375 19.5h17.25m-17.25 0a1.125 1.125 0 0 1-1.125-1.125M3.375 19.5h7.5c.621 0 1.125-.504 1.125-1.125m-9.75 0V5.625m0 12.75v-1.5c0-.621.504-1.125 1.125-1.125m18.375 2.625V5.625m0 12.75c0 .621-.504 1.125-1.125 1.125m1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125m0 3.75h-7.5A1.125 1.125 0 0 1 12 18.375m9.75-12.75c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125m19.5 0v1.5c0 .621-.504 1.125-1.125 1.125M2.25 5.625v1.5c0 .621.504 1.125 1.125 1.125m0 0h17.25m-17.25 0c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125m17.25-3.75h.008v.008h-.008v-.008Zm0 3.75h.008v.008h-.008v-.008Zm-15 0h.008v.008H6.75v-.008Z" />
+      <rect x="3" y="3" width="18" height="18" rx="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <line x1="3" y1="9" x2="21" y2="9" strokeLinecap="round" />
+      <line x1="3" y1="15" x2="21" y2="15" strokeLinecap="round" />
+      <line x1="9" y1="3" x2="9" y2="21" strokeLinecap="round" />
+      <line x1="15" y1="3" x2="15" y2="21" strokeLinecap="round" />
     </svg>
   );
 }
