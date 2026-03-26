@@ -108,10 +108,16 @@ export default function AdminView({
     if (!activeSchedule) return;
     let cancelled = false;
     fetchCheckInsClient(activeSchedule.id)
-      .then(({ checkIns, reports }) => {
+      .then(({ checkIns, reports: freshRp }) => {
         if (cancelled) return;
         setCheckInsMap((prev) => ({ ...prev, [activeSchedule.id]: checkIns }));
-        setReportsMap((prev) => ({ ...prev, [activeSchedule.id]: reports }));
+        // Realtime으로 먼저 도착한 보고가 fetch 결과에 없을 수 있음 — 병합
+        setReportsMap((prev) => {
+          const existing = prev[activeSchedule.id] ?? [];
+          const freshIds = new Set(freshRp.map((r) => r.group_id));
+          const realtimeOnly = existing.filter((r) => !freshIds.has(r.group_id));
+          return { ...prev, [activeSchedule.id]: [...freshRp, ...realtimeOnly] };
+        });
       })
       .catch(() => {}); // 실패 시 SSR/Realtime 데이터로 fallback — 별도 알림 불필요
     return () => { cancelled = true; };
@@ -159,7 +165,13 @@ export default function AdminView({
     fetchCheckInsClient(targetId)
       .then(({ checkIns: freshCi, reports: freshRp }) => {
         setCheckInsMap((prev) => ({ ...prev, [targetId]: freshCi }));
-        setReportsMap((prev) => ({ ...prev, [targetId]: freshRp }));
+        // Realtime으로 먼저 도착한 보고가 fetch 결과에 없을 수 있음 — 병합
+        setReportsMap((prev) => {
+          const existing = prev[targetId] ?? [];
+          const freshIds = new Set(freshRp.map((r) => r.group_id));
+          const realtimeOnly = existing.filter((r) => !freshIds.has(r.group_id));
+          return { ...prev, [targetId]: [...freshRp, ...realtimeOnly] };
+        });
       })
       .catch(() => {}) // 실패 시 캐시 데이터 유지 — 별도 알림 불필요
       .finally(() => {
