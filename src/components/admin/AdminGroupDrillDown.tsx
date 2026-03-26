@@ -129,7 +129,7 @@ export default function AdminGroupDrillDown({
   return (
     <>
       {/* 헤더: 뒤로 + 조 이름 + 카운트 */}
-      <div className="flex-shrink-0 px-4 pt-2 pb-1">
+      <div className="flex-shrink-0 px-4 pt-2 pb-0">
         <div className="flex items-start gap-1">
           <button
             onClick={onBack}
