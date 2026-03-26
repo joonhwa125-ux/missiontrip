@@ -41,7 +41,7 @@
 | 완료 체크 | complete-check | #00C471 | 체크 아이콘, 이니셜 완료 점 |
 | 공지 배너 | notice-banner | #E6F1FB | 상단 공지 배너 |
 | 오프라인 | offline-banner | #F1EFE8 | 하단 오프라인 배너 |
-| 진행중 배지 | progress-badge | #FAEEDA | 진행중 배지 배경 |
+| 진행중 배지 | progress-badge | #FEF9C3 | 진행중 배지 배경 |
 | 앱 배경 | app-bg | #F5F3EF | 전체 화면 배경 |
 
 ### 타이포그래피

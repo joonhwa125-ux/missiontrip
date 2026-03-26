@@ -109,7 +109,7 @@ export const COLORS = {
   completeCard: "#EAF3DE",
   completeCheck: "#00C471",
   offlineBanner: "#F1EFE8",
-  progressBadge: "#FAEEDA",
+  progressBadge: "#FEF9C3",
   appBg: "#F5F3EF",
 } as const;
 
