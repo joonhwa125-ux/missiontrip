@@ -18,29 +18,30 @@ export function formatTime(iso: string): string {
 }
 
 // 시각 파싱 패턴 (DRY — setup.ts의 인라인 정규식과 공유)
+// 시간은 1~2자리 허용 ("8:00", "08:00" 모두 지원)
 export const TIME_PATTERNS = {
-  fullDate: /^(\d{4})-(\d{2})-(\d{2})\s+(\d{2}):(\d{2})$/,
-  monthDay: /^(\d{2})-(\d{2})\s+(\d{2}):(\d{2})$/,
-  hourMin:  /^(\d{2}):(\d{2})$/,
+  fullDate: /^(\d{4})-(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})$/,
+  monthDay: /^(\d{2})-(\d{2})\s+(\d{1,2}):(\d{2})$/,
+  hourMin:  /^(\d{1,2}):(\d{2})$/,
 } as const;
 
 // 시간 문자열을 KST 기준 ISO 문자열로 변환
 // 지원 형식:
-//   "HH:MM"              → referenceDate 날짜 사용 (없으면 오늘 KST)
-//   "MM-DD HH:MM"        → 현재 연도 + 지정 날짜
-//   "YYYY-MM-DD HH:MM"   → 지정 날짜
+//   "H:MM" / "HH:MM"              → referenceDate 날짜 사용 (없으면 오늘 KST)
+//   "MM-DD H:MM" / "MM-DD HH:MM"  → 현재 연도 + 지정 날짜
+//   "YYYY-MM-DD HH:MM"            → 지정 날짜
 export function parseKSTTime(input: string, referenceDate?: string | null): string {
   const fullMatch = input.match(TIME_PATTERNS.fullDate);
   if (fullMatch) {
     const [, yyyy, mo, dd, hh, mi] = fullMatch;
-    return new Date(`${yyyy}-${mo}-${dd}T${hh}:${mi}:00+09:00`).toISOString();
+    return new Date(`${yyyy}-${mo}-${dd}T${hh.padStart(2, "0")}:${mi}:00+09:00`).toISOString();
   }
 
   const mmddMatch = input.match(TIME_PATTERNS.monthDay);
   if (mmddMatch) {
     const [, mo, dd, hh, mi] = mmddMatch;
     const year = new Date().toLocaleDateString("sv", { timeZone: "Asia/Seoul" }).slice(0, 4);
-    return new Date(`${year}-${mo}-${dd}T${hh}:${mi}:00+09:00`).toISOString();
+    return new Date(`${year}-${mo}-${dd}T${hh.padStart(2, "0")}:${mi}:00+09:00`).toISOString();
   }
 
   const hhmmMatch = input.match(TIME_PATTERNS.hourMin);
@@ -49,7 +50,7 @@ export function parseKSTTime(input: string, referenceDate?: string | null): stri
     const base = referenceDate
       ? new Date(referenceDate).toLocaleDateString("sv", { timeZone: "Asia/Seoul" })
       : new Date().toLocaleDateString("sv", { timeZone: "Asia/Seoul" });
-    return new Date(`${base}T${hh}:${mi}:00+09:00`).toISOString();
+    return new Date(`${base}T${hh.padStart(2, "0")}:${mi}:00+09:00`).toISOString();
   }
 
   return input; // 이미 ISO 형식
