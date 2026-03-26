@@ -13,7 +13,7 @@ const config: Config = {
         "complete-card": "#EAF3DE",
         "complete-check": "#047857",
         "offline-banner": "#F1EFE8",
-        "progress-badge": "#FFE0B2",
+        "progress-badge": "#FEF9C3",
         "app-bg": "#F5F3EF",
         // shadcn/ui CSS 변수
         background: "hsl(var(--background))",
