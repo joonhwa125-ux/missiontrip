@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
+import { MIN_DAY_NUMBER, MAX_DAY_NUMBER } from "@/lib/constants";
 import type { ActionResult, ScheduleScope } from "@/lib/types";
+
+const VALID_SCOPES: ScheduleScope[] = ["all", "advance", "rear"];
 
 // /admin + /group 캐시 무효화 헬퍼
 function revalidateMainPaths() {
@@ -68,6 +71,12 @@ export async function createSchedule(
   const admin = await requireAdmin();
   if (!admin) return { ok: false, error: "관리자 권한이 필요해요" };
 
+  const trimmedTitle = title.trim();
+  if (!trimmedTitle) return { ok: false, error: "일정명을 입력해주세요" };
+  if (!Number.isInteger(dayNumber) || dayNumber < MIN_DAY_NUMBER || dayNumber > MAX_DAY_NUMBER)
+    return { ok: false, error: `일차는 ${MIN_DAY_NUMBER}~${MAX_DAY_NUMBER}만 가능해요` };
+  if (!VALID_SCOPES.includes(scope)) return { ok: false, error: "유효하지 않은 대상이에요" };
+
   const supabase = createServiceClient();
 
   // 같은 day 내 최대 sort_order 조회 (해당 day에 일정이 없을 수 있으므로 maybeSingle)
@@ -84,7 +93,7 @@ export async function createSchedule(
   const { data, error } = await supabase
     .from("schedules")
     .insert({
-      title,
+      title: trimmedTitle,
       location,
       day_number: dayNumber,
       sort_order: nextOrder,
