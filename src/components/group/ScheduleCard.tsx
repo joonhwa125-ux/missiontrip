@@ -52,7 +52,7 @@ export default function ScheduleCard({
         >
           {/* 헤더: 진행중 pill + 집결시간 배지 + 후발 배지 (모두 좌측) */}
           <div className="mb-2 flex items-center gap-1">
-            <span className="rounded-full bg-progress-badge px-2 py-0.5 text-xs font-bold text-yellow-900">
+            <span className="rounded-full bg-progress-badge px-2 py-0.5 text-xs font-medium text-yellow-900">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-yellow-500 mr-1 align-middle" aria-hidden="true" />
               진행중
             </span>
