@@ -12,7 +12,7 @@ const config: Config = {
         "main-action": "#FEE500",
         "complete-card": "#EAF3DE",
         "complete-check": "#047857",
-        "progress-bar": "#3B82F6",
+        "progress-bar": "#0ACF83",
         "offline-banner": "#F1EFE8",
         "progress-badge": "#FEF9C3",
         "app-bg": "#F5F3EF",

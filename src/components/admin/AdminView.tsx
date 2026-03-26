@@ -385,6 +385,13 @@ export default function AdminView({
         }
         rightSlot={
           <div className="-mr-2 flex items-center">
+            <button
+              onClick={() => setAddOpen(true)}
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
+              aria-label="일정 추가"
+            >
+              <PlusIcon className="h-6 w-6" aria-hidden />
+            </button>
             {activeSchedule && adminCheckinMembers.length > 0 && (
               <button
                 onClick={openCheckinSheet}
@@ -399,13 +406,6 @@ export default function AdminView({
                 )}
               </button>
             )}
-            <button
-              onClick={() => setAddOpen(true)}
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
-              aria-label="일정 추가"
-            >
-              <PlusIcon className="h-6 w-6" aria-hidden />
-            </button>
             <Link
               href="/setup"
               className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
