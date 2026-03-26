@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useTransition, useMemo, type Dispatch, type SetStateAction } from "react";
+import { useState, useCallback, useEffect, useTransition, useMemo, type Dispatch, type SetStateAction } from "react";
 import { useBroadcast } from "@/hooks/useRealtime";
 import { useBroadcastCheckin } from "@/hooks/useBroadcastCheckin";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
@@ -48,6 +48,10 @@ export default function GroupCheckinView({
   const [cancelTarget, setCancelTarget] = useState<{ member: Member; isAbsent: boolean } | null>(null);
   const [absentTarget, setAbsentTarget] = useState<Member | null>(null);
   const [reported, setReported] = useState(initialReported);
+  // C-1: 부모(GroupView)가 Realtime/effect로 reported를 false로 바꾸면 child도 동기화
+  useEffect(() => {
+    if (!initialReported) setReported(false);
+  }, [initialReported]);
   const [, startTransition] = useTransition();
 
   const { isOnline, pendingCount, addPending, addPendingReport } = useOfflineSync();

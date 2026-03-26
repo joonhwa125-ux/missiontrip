@@ -65,6 +65,9 @@ export default function GroupView({
   // CR-009: activeSchedule을 state로 관리 — 체크인 뷰에서도 Realtime 갱신 반영
   const [currentSchedule, setCurrentSchedule] = useState(activeSchedule);
 
+  // W-3: 보고 무효화 중 self-echo 차단용 ref (취소→재체크인 사이에만 true)
+  const reportInvalidatedRef = useRef(false);
+
   // CR-010: 뒤로가기 히스토리 관리
   const viewRef = useRef(view);
   viewRef.current = view;
@@ -119,6 +122,8 @@ export default function GroupView({
       showToast("일정 시간이 변경되었어요");
     },
     onGroupReported: ({ group_id }) => {
+      // W-3: 보고 무효화 중(취소→재체크인) self-echo만 차단, 평소에는 통과 (multi-tab 호환)
+      if (group_id === currentUser.group_id && reportInvalidatedRef.current) return;
       setAllReportsState((prev) =>
         prev.some((r) => r.group_id === group_id)
           ? prev
@@ -185,8 +190,18 @@ export default function GroupView({
   }, [checkIns, checkinMembers]);
 
   useEffect(() => {
-    if (!checkinComplete) setReported(false);
-  }, [checkinComplete]);
+    if (!checkinComplete) {
+      reportInvalidatedRef.current = true;
+      setReported(false);
+      // 보고 무효화 — 체크인 상태가 변경되었으므로 재보고 필요
+      setAllReportsState((prev) => {
+        const next = prev.filter((r) => r.group_id !== currentUser.group_id);
+        return next.length === prev.length ? prev : next;
+      });
+    } else {
+      reportInvalidatedRef.current = false;
+    }
+  }, [checkinComplete, currentUser.group_id]);
 
   // 보고 완료 시 allReportsState에 즉시 반영 (self-echo 미도달 대응)
   const handleReported = useCallback(() => {
