@@ -106,7 +106,7 @@ export default function AdminScheduleCard({
           </div>
           <button
             onClick={onDeactivate}
-            className={statusBtnClass}
+            className={`${statusBtnClass} bg-stone-50`}
             aria-label={`${schedule.title} 일정 종료`}
           >
             종료

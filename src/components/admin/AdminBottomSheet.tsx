@@ -187,7 +187,7 @@ export default function AdminBottomSheet({
                             setDrillGroup(group);
                           }
                         }}
-                        className="cursor-pointer rounded-2xl border border-stone-200 bg-white p-4 text-left transition-colors active:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+                        className="cursor-pointer rounded-2xl border border-stone-200 bg-white p-4 text-left transition-colors active:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action min-h-11"
                         aria-label={`${group.name} 상세 보기`}
                       >
                         <div className="mb-1.5">

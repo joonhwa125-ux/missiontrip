@@ -67,6 +67,8 @@ export default function GroupView({
 
   // W-3: 보고 무효화 중 self-echo 차단용 ref (취소→재체크인 사이에만 true)
   const reportInvalidatedRef = useRef(false);
+  // F-4: 전원완료→미완료 전환만 감지 (초기 마운트 스킵)
+  const prevCheckinCompleteRef = useRef(false);
 
   // CR-010: 뒤로가기 히스토리 관리
   const viewRef = useRef(view);
@@ -87,16 +89,16 @@ export default function GroupView({
 
   // Realtime 구독 — GroupView 레벨 (feed <-> checkin 전환 시에도 유지)
   useRealtime(currentUser.group_id, false, {
-    onScheduleActivated: ({ schedule_id, title, scope }) => {
+    onScheduleActivated: ({ schedule_id, title, scope, location, day_number, scheduled_time }) => {
       if (viewRef.current === "checkin") {
         showToast(`새로운 일정이 시작되었어요: ${title}`);
         setCurrentSchedule((prev) => ({
           id: schedule_id,
           title,
-          location: prev?.location ?? null,
-          day_number: prev?.day_number ?? 1,
+          location: location ?? prev?.location ?? null,
+          day_number: day_number ?? prev?.day_number ?? 1,
           sort_order: prev?.sort_order ?? 0,
-          scheduled_time: prev?.scheduled_time ?? null,
+          scheduled_time: scheduled_time ?? prev?.scheduled_time ?? null,
           scope: scope ?? "all",
           is_active: true,
           activated_at: new Date().toISOString(),
@@ -202,15 +204,18 @@ export default function GroupView({
   }, [checkIns, checkinMembers]);
 
   useEffect(() => {
-    if (!checkinComplete) {
+    const wasComplete = prevCheckinCompleteRef.current;
+    prevCheckinCompleteRef.current = checkinComplete;
+
+    // 전원완료→미완료 전환 시에만 무효화 (초기 마운트 시 wasComplete=false → 스킵)
+    if (wasComplete && !checkinComplete) {
       reportInvalidatedRef.current = true;
       setReported(false);
-      // 보고 무효화 — 체크인 상태가 변경되었으므로 재보고 필요
       setAllReportsState((prev) => {
         const next = prev.filter((r) => r.group_id !== currentUser.group_id);
         return next.length === prev.length ? prev : next;
       });
-    } else {
+    } else if (checkinComplete) {
       reportInvalidatedRef.current = false;
     }
   }, [checkinComplete, currentUser.group_id]);

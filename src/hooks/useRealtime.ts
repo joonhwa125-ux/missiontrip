@@ -35,7 +35,7 @@ function unregisterChannel(ch: RealtimeChannel): void {
 }
 
 interface RealtimeCallbacks {
-  onScheduleActivated?: (payload: { schedule_id: string; title: string; scope?: ScheduleScope }) => void;
+  onScheduleActivated?: (payload: { schedule_id: string; title: string; scope?: ScheduleScope; location?: string | null; day_number?: number; scheduled_time?: string | null }) => void;
   onScheduleUpdated?: (payload: { schedule_id: string; scheduled_time: string }) => void;
   onScheduleDeactivated?: (payload: { schedule_id: string; title: string }) => void;
   onCheckinUpdated?: (payload: { user_id: string; schedule_id: string; action: "insert" | "delete"; is_absent?: boolean }) => void;

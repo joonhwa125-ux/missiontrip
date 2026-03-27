@@ -135,7 +135,7 @@ export default function GroupCheckinView({
         showToast("서버 연결에 실패했어요. 다시 시도해주세요.");
       }
     });
-  }, [cancelTarget, activeSchedule, broadcastCheckin, setCheckIns, showToast, onReportReset]);
+  }, [cancelTarget, activeSchedule, broadcastCheckin, setCheckIns, showToast, onReportReset, currentUser.group_id, broadcast]);
 
   const handleAbsentConfirm = useCallback(async () => {
     if (!absentTarget || !activeSchedule) return;
@@ -282,7 +282,7 @@ export default function GroupCheckinView({
                 </div>
                 {checked && !absent && (
                   <span
-                    className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-complete-check ring-2 ring-white"
+                    className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-600 ring-2 ring-white"
                     aria-hidden="true"
                   >
                     <CheckIcon className="h-2.5 w-2.5 text-white" aria-hidden />

@@ -36,7 +36,7 @@ interface Props {
 /** 클라이언트에서 직접 체크인/보고 데이터 조회 (RLS email 기반 권한 통제) */
 async function fetchCheckInsClient(scheduleId: string) {
   const supabase = createClient();
-  const [{ data: checkIns }, { data: reports }] = await Promise.all([
+  const [ciResult, rpResult] = await Promise.all([
     supabase
       .from("check_ins")
       .select("user_id, is_absent, checked_at")
@@ -46,13 +46,17 @@ async function fetchCheckInsClient(scheduleId: string) {
       .select("group_id, pending_count, reported_at")
       .eq("schedule_id", scheduleId),
   ]);
+  // F-1: Supabase error 시 throw → 호출자의 .catch()에서 기존 데이터 유지
+  if (ciResult.error || rpResult.error) {
+    throw new Error(ciResult.error?.message ?? rpResult.error?.message ?? "fetch failed");
+  }
   return {
-    checkIns: (checkIns ?? []).map((ci) => ({
+    checkIns: ciResult.data.map((ci) => ({
       user_id: ci.user_id,
       is_absent: ci.is_absent ?? false,
       checked_at: ci.checked_at,
     })),
-    reports: reports ?? [],
+    reports: rpResult.data,
   };
 }
 

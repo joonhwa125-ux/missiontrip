@@ -90,16 +90,24 @@ export async function deleteCheckin(
   }
 
   // 체크인 취소 → 해당 조의 보고 기록도 무효화 (stale reported 상태 방지)
-  const targetGroupId = isAdminRole(actor.role)
-    ? (await supabase.from("users").select("group_id").eq("id", userId).single()).data?.group_id
-    : actor.group_id;
+  let targetGroupId: string | null;
+  if (isAdminRole(actor.role)) {
+    const { data, error: lookupError } = await supabase
+      .from("users").select("group_id").eq("id", userId).single();
+    targetGroupId = lookupError || !data ? null : data.group_id;
+  } else {
+    targetGroupId = actor.group_id;
+  }
 
   if (targetGroupId) {
-    await supabase
+    const { error: reportError } = await supabase
       .from("group_reports")
       .delete()
       .eq("group_id", targetGroupId)
       .eq("schedule_id", scheduleId);
+    // reportError 발생 시: 2·3차 방어(Realtime broadcast + useEffect)가 클라이언트에서 보완
+    // 체크인 취소 자체는 이미 성공했으므로 ok: true 유지
+    void reportError;
   }
 
   revalidateMainPaths();

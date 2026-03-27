@@ -44,7 +44,7 @@ export async function deactivateSchedule(
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from("schedules")
-    .update({ is_active: false, activated_at: new Date().toISOString() })
+    .update({ is_active: false })
     .eq("id", scheduleId)
     .eq("is_active", true)
     .select("id");

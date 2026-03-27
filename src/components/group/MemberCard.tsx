@@ -30,14 +30,14 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
           : "border-[#E0DDD8] bg-white"
       )}
     >
-      <div className="min-w-0">
-        <p className={cn("text-base font-medium truncate", (isChecked || isAbsent) && "text-muted-foreground")}>{user.name}</p>
+      <div className={cn("min-w-0", isChecked && "flex items-center gap-2")}>
+        <p className={cn("min-w-0 text-base font-medium truncate", (isChecked || isAbsent) && "text-muted-foreground")}>{user.name}</p>
         {isChecked ? (
-          <p className="flex items-center gap-1 text-sm">
-            <CheckIcon className="h-3.5 w-3.5 text-complete-check" aria-hidden />
-            <span className="font-medium text-complete-check">{formatTime(checkIn.checked_at)}</span>
-            <span className="text-muted-foreground">탑승 완료</span>
-          </p>
+          <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+            <CheckIcon className="h-3 w-3" aria-hidden />
+            {formatTime(checkIn.checked_at)}
+            <span className="sr-only">탑승 완료</span>
+          </span>
         ) : (
           <p className="text-sm text-muted-foreground">
             {isAbsent ? COPY.absent : COPY.notChecked}

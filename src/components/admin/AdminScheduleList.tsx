@@ -56,6 +56,7 @@ export default function AdminScheduleList({
         if (res.ok) {
           await broadcast(CHANNEL_GLOBAL, EVENT_SCHEDULE_ACTIVATED, {
             schedule_id: s.id, title: s.title, scope: s.scope,
+            location: s.location, day_number: s.day_number, scheduled_time: s.scheduled_time,
           });
           // onRefresh() 제거 — self:true echo → onScheduleActivated → router.refresh() 보장
         }
