@@ -32,6 +32,8 @@ export default function SetupWizard() {
 
   // resync 파라미터 감지 → 저장된 URL로 자동 fetch
   useEffect(() => {
+    let cancelled = false;
+
     const isResync = searchParams.get("resync") === "1";
     if (!isResync) {
       resyncHandled.current = false;
@@ -72,6 +74,7 @@ export default function SetupWizard() {
           users: gidUsers,
           schedules: gidSchedules,
         });
+        if (cancelled) return;
         if (res.ok && res.data) {
           setPreviewData(res.data);
           setStep(2);
@@ -86,6 +89,8 @@ export default function SetupWizard() {
     } catch {
       router.replace("/setup?tab=upload");
     }
+
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
