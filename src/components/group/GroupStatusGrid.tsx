@@ -116,7 +116,7 @@ function GroupMiniCard({
 }) {
   const b = GROUP_BADGE_STYLE[badge];
   return (
-    <div className="rounded-xl border border-stone-200 bg-white px-3 py-2.5">
+    <div className="rounded-2xl border border-stone-200 bg-white p-4">
       <div className="mb-1.5">
         <span
           className={cn(
@@ -133,7 +133,7 @@ function GroupMiniCard({
         )}
       </div>
       <div
-        className="mb-0.5 h-1.5 overflow-hidden rounded-full bg-gray-100"
+        className="mb-0.5 h-2 overflow-hidden rounded-full bg-gray-100"
         role="progressbar"
         aria-valuenow={checked}
         aria-valuemax={total}

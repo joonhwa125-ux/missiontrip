@@ -397,6 +397,99 @@ GroupCheckinView: const [reported, setReported] = useState(initialReported)
 
 ---
 
+## TSG-006: 보고 완료 후 체크인 취소→재체크인 시 자동 보고완료 재발 (DB 상태 불일치)
+
+**일시:** 2026-03-27
+**심각도:** High — 수동 보고 없이 "보고 완료!" 자동 표시 (안전 시스템 무결성 훼손)
+**영향 범위:** 조장 화면 (`/group`) 보고 흐름
+**선행 이슈:** TSG-005 (이중 상태 구조 → Controlled prop 패턴 전환)
+
+> TSG-005의 Controlled prop 전환 이후에도 동일 증상이 재발.
+> TSG-005 수정은 `useState` 이중 복사본 문제를 해결했지만, 더 깊은 DB 레벨의 불일치가 잔존해 있었다.
+
+### 증상
+
+TSG-005와 동일한 재현 경로:
+1. 전원 체크인 → 보고 완료
+2. 한 명 취소 → "N명 남았어요" 표시 (올바름)
+3. 재체크인 → **잠시 후 자동으로 "보고 완료!" 복원**
+
+### 근본 원인
+
+**`deleteCheckin` Server Action이 `group_reports` 레코드를 삭제하지 않았다.**
+
+```
+보고 완료
+  → DB: group_reports 레코드 INSERT
+  → 로컬: reported = true
+
+체크인 취소
+  → DB: check_ins 레코드 DELETE (✅)
+  → DB: group_reports 레코드 그대로 잔존 (❌ 삭제 없음)
+  → 로컬: reported = false (handleReportReset 호출)
+
+재체크인
+  → DB: check_ins 레코드 INSERT
+  → createCheckin/deleteCheckin 내부 revalidatePath("/group") 호출
+  → Next.js RSC 재렌더 시 group/page.tsx 서버 데이터 재조회
+  → initialReported = allReports.some(r => r.group_id === ...) → true (DB에 보고 기록 잔존)
+  → 컴포넌트 remount or props 재초기화 시 reported = true 복원
+```
+
+`useState`의 초기화 함수는 마운트 시점에만 실행되므로, 정상적인 props 업데이트만으로는 상태가 바뀌지 않는다. 그러나 Next.js App Router가 `revalidatePath` 후 RSC 재조정 과정에서 컴포넌트를 재마운트하는 특정 케이스가 존재하며, 이때 DB의 stale 보고 기록이 `initialReported = true`로 주입되어 복원된다.
+
+### 해결
+
+1. **DB 레벨 (핵심 수정):** `deleteCheckin`에서 해당 조의 `group_reports` 레코드도 함께 삭제
+
+```typescript
+// src/actions/checkin.ts
+const targetGroupId = isAdminRole(actor.role)
+  ? (await supabase.from("users").select("group_id").eq("id", userId).single()).data?.group_id
+  : actor.group_id;
+
+if (targetGroupId) {
+  await supabase
+    .from("group_reports")
+    .delete()
+    .eq("group_id", targetGroupId)
+    .eq("schedule_id", scheduleId);
+}
+```
+
+2. **Realtime 이벤트 추가:** `report_invalidated` 이벤트로 다른 탭/관리자 뷰 실시간 동기화
+
+```
+EVENT_REPORT_INVALIDATED = "report_invalidated"
+payload: { group_id, schedule_id }
+
+발신: GroupCheckinView (취소 성공 후)
+수신 처리:
+  - GroupView: reported = false, allReportsState에서 제거, ref = true
+  - AdminView: reportsMap에서 해당 조 보고 기록 제거
+```
+
+3개 레이어의 3중 방어:
+- **DB 레벨:** 체크인 취소 시 보고 기록 삭제 → remount 시에도 `initialReported = false`
+- **로컬 상태:** `onReportReset()` 즉시 처리 (기존 유지)
+- **Realtime:** `report_invalidated` 이벤트로 다른 뷰 동기화
+
+### 교훈
+
+1. **Server Action에서 관련 테이블을 모두 정리하지 않으면 DB-로컬 상태 불일치가 발생한다.** 체크인 취소는 체크인 레코드만이 아니라, 체크인 상태에 의존하는 `group_reports` 레코드도 함께 정리해야 한다
+2. **`revalidatePath` + RSC 재렌더는 컴포넌트를 재마운트시킬 수 있다.** `useState`의 초기값이 DB에서 오는 경우, DB 상태가 올바르지 않으면 remount 시 stale 상태가 복원된다. DB를 항상 로컬 UI 상태와 일치하게 유지해야 한다
+3. **"이미 수정된 버그"라도 다른 레이어의 동일 원인이 잔존할 수 있다.** TSG-005는 클라이언트 상태 이중화를 해결했지만, 서버 상태(DB)의 불일치라는 독립된 원인이 남아있었다
+4. **안전에 직결되는 상태(`reported`)는 DB와의 일관성을 항상 양방향으로 검증한다.** UI 취소 → DB 반영이 불완전하면 refresh/remount 시 복원된다
+
+### 진단 체크리스트
+
+- [ ] 취소/삭제 Server Action이 관련 파생 테이블(이 경우 `group_reports`)도 함께 삭제하는지 확인
+- [ ] DB에 보고 기록이 남아있으면 `revalidatePath` 후 새로고침 시 `initialReported = true`로 복원됨
+- [ ] Realtime broadcast가 발신→수신 경로에서 `group_reported` 에코가 예상치 못하게 도달하는지 확인
+- [ ] 컴포넌트 재마운트 여부: `key` prop 변경, Next.js RSC 재조정 여부 검토
+
+---
+
 ## 문서 작성 가이드
 
 ### 기록 기준

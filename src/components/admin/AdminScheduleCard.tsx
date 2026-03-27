@@ -123,7 +123,7 @@ export default function AdminScheduleCard({
 
         {/* 프로그레스 바 */}
         <div
-          className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-gray-100"
+          className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-gray-100"
           role="progressbar"
           aria-valuenow={progressPct}
           aria-valuemin={0}
@@ -211,7 +211,7 @@ export default function AdminScheduleCard({
   // completed
   return (
     <div
-      className="rounded-2xl bg-white shadow-sm p-4 opacity-55"
+      className="rounded-2xl bg-stone-50/80 shadow-sm p-4"
       role="region"
       aria-label={`완료 일정: ${schedule.title}`}
     >

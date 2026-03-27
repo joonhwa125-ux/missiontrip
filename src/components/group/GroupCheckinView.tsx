@@ -245,12 +245,17 @@ export default function GroupCheckinView({
           >
             <ChevronLeftIcon aria-hidden />
           </button>
-          <div>
+          <div className="flex-1 min-w-0">
             <h1 className="text-lg font-bold">{groupName} 체크인</h1>
             <p className="text-sm text-muted-foreground">
               {activeSchedule?.location ?? activeSchedule?.title ?? "대기 중"}
             </p>
           </div>
+          {members.length > 0 && (
+            <span className="flex-shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+              {checkedCount + absentIds.size}/{members.length}명 완료
+            </span>
+          )}
         </div>
       </header>
 
@@ -264,11 +269,11 @@ export default function GroupCheckinView({
               <div key={m.id} className="relative flex-shrink-0">
                 <div
                   className={cn(
-                    "flex h-11 w-11 items-center justify-center rounded-full text-[0.625rem] font-bold",
+                    "flex h-12 w-12 items-center justify-center rounded-full text-[0.625rem] font-bold",
                     absent
                       ? "bg-gray-200 text-gray-500"
                       : checked
-                        ? "bg-main-action"
+                        ? "bg-main-action shadow-sm"
                         : "border-2 border-dashed border-gray-300 bg-gray-100"
                   )}
                   aria-label={`${m.name} ${absent ? "불참" : checked ? "탑승 완료" : "미탑승"}`}
@@ -277,7 +282,7 @@ export default function GroupCheckinView({
                 </div>
                 {checked && !absent && (
                   <span
-                    className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-complete-check"
+                    className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-complete-check ring-2 ring-white"
                     aria-hidden="true"
                   >
                     <CheckIcon className="h-2.5 w-2.5 text-white" aria-hidden />
@@ -297,12 +302,13 @@ export default function GroupCheckinView({
 
       {/* 전원 완료 축하 화면 */}
       {allComplete && (
-        <div className="flex flex-col items-center px-6 py-8 text-center">
-          <div className="mb-4 text-6xl" aria-hidden="true">
-            🎉
+        <div className="flex flex-col items-center bg-gradient-to-b from-orange-50/50 px-6 py-8 text-center">
+          <div className="mb-4 text-6xl animate-bounce" aria-hidden="true">
+            🍊
           </div>
           <h2 className="mb-2 text-2xl font-bold">{COPY.allComplete(groupName, absentIds.size > 0)}</h2>
-          <p className="text-muted-foreground">
+          <p className="text-lg font-medium text-stone-600">{COPY.celebrationSubtitle}</p>
+          <p className="mt-1 text-muted-foreground">
             {reported
               ? "보고 완료! 수고하셨어요."
               : absentIds.size > 0

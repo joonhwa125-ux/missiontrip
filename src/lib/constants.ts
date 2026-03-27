@@ -127,7 +127,7 @@ export const GROUP_BADGE_STYLE: Record<
   reported: { bg: "bg-[#EAF3DE]", text: "text-[#27500A]", label: "보고완료" },
   all_checked: { bg: "bg-[#FEF3C7]", text: "text-[#92400E]", label: "전원확인" },
   in_progress: { bg: "bg-progress-badge", text: "text-[#633806]", label: "진행중" },
-  not_started: { bg: "bg-secondary", text: "text-muted-foreground", label: "시작전" },
+  not_started: { bg: "bg-sky-50", text: "text-sky-700", label: "시작전" },
 };
 
 // UI 문구 (PRD 8.2)
@@ -138,7 +138,8 @@ export const COPY = {
   cancelButton: "취소",
   totalCount: (checked: number, total: number) => `${checked} / ${total}명 탑승 완료`,
   allComplete: (groupName: string, hasAbsent: boolean) =>
-    hasAbsent ? `${groupName} 전원 확인 완료!` : `${groupName} 전원 탑승 완료!`,
+    hasAbsent ? `${groupName} 전원 확인 끝!` : `${groupName} 전원 탑승 확인 끝!`,
+  celebrationSubtitle: "폭싹 속았수다!",
   reportButtonComplete: "우리 조 다 왔수다! 보고하기",
   reportButtonDone: "보고 완료!",
   reportButtonPending: (n: number) => `${n}명 남았어요`,
