@@ -149,7 +149,7 @@ export default function AdminScheduleCard({
 
         <button
           onClick={onSummaryTap}
-          className="mt-2 w-full min-h-11 rounded-xl bg-gray-50 px-4 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
+          className="mt-2 w-full min-h-11 rounded-xl border border-gray-200 bg-gray-50 px-4 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
           aria-label="현황 보기"
         >
           현황 보기 &gt;
@@ -249,7 +249,7 @@ export default function AdminScheduleCard({
 
       <button
         onClick={onSummaryTap}
-        className="mt-2 w-full min-h-11 rounded-xl bg-gray-50 px-4 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action"
+        className="mt-2 w-full min-h-11 rounded-xl border border-gray-200 bg-gray-50 px-4 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action"
         aria-label="완료 일정 현황 보기"
       >
         현황 보기 &gt;
