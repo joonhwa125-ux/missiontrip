@@ -80,7 +80,7 @@ export default function SetupPageTabs({ wizard, currentData, hasData }: Props) {
           >
             <RefreshIcon className="h-4 w-4" aria-hidden />
             {lastSynced && (
-              <span className="mt-0.5 text-[0.625rem] leading-none text-muted-foreground">
+              <span className="mt-0.5 text-xs leading-none text-muted-foreground">
                 {formatSyncTime(lastSynced)}
               </span>
             )}
@@ -100,8 +100,8 @@ export default function SetupPageTabs({ wizard, currentData, hasData }: Props) {
             id="tab-data"
             aria-selected={tab === "data"}
             aria-controls="panel-data"
-            onClick={() => setTab("data")}
-            disabled={!hasData}
+            aria-disabled={!hasData}
+            onClick={() => { if (hasData) setTab("data"); }}
             className={cn(
               "min-h-11 rounded-t-lg px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action",
               tab === "data"

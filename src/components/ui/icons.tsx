@@ -74,7 +74,6 @@ export function TableIcon({ className = "h-5 w-5", strokeWidth = 2, ...rest }: I
   );
 }
 
-
 export function RefreshIcon({ className = "h-5 w-5", strokeWidth = 2, ...rest }: IconProps) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={strokeWidth} {...rest}>

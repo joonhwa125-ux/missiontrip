@@ -76,8 +76,9 @@ export default function SetupWizard() {
           setPreviewData(res.data);
           setStep(2);
         } else {
+          // resync 중 미리보기 실패 → Step 1 복귀 (ImportResultStep 오분류 방지)
           setImportError(res.error ?? "시트 데이터를 불러오지 못했어요. 다시 시도해주세요.");
-          setStep(3);
+          setStep(1);
         }
         setIsResyncing(false);
         router.replace("/setup?tab=upload");
@@ -90,6 +91,7 @@ export default function SetupWizard() {
 
   const handlePreviewReady = (data: SetupPreviewData) => {
     setPreviewData(data);
+    setImportError(null);
     setStep(2);
   };
 
@@ -122,7 +124,17 @@ export default function SetupWizard() {
             시트 데이터를 불러오는 중...
           </div>
         ) : (
-          <DataSourceStep onPreviewReady={handlePreviewReady} />
+          <>
+            {importError && (
+              <div
+                role="alert"
+                className="mb-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700"
+              >
+                {importError}
+              </div>
+            )}
+            <DataSourceStep onPreviewReady={handlePreviewReady} />
+          </>
         )
       )}
       {step === 2 && previewData && (
