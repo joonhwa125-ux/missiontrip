@@ -103,14 +103,14 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
           <table className="w-full text-sm">
             <thead className="bg-gray-50">
-              <tr className="text-center text-xs text-muted-foreground">
-                <th className="min-w-[48px] px-3 py-2">일정</th>
-                <th className="min-w-[36px] px-3 py-2">순서</th>
-                <th className="min-w-[120px] px-3 py-2">장소</th>
-                <th className="min-w-[160px] px-3 py-2">집결지</th>
-                <th className="min-w-[56px] px-3 py-2">예정 시간</th>
-                <th className="min-w-[48px] px-3 py-2">구분</th>
-                <th className="min-w-[108px] px-3 py-2">편집</th>
+              <tr className="text-center text-xs text-muted-foreground whitespace-nowrap">
+                <th className="px-3 py-2">일차</th>
+                <th className="px-3 py-2">순서</th>
+                <th className="min-w-[100px] px-3 py-2">장소</th>
+                <th className="min-w-[120px] px-3 py-2">집결지</th>
+                <th className="px-3 py-2">시간</th>
+                <th className="px-3 py-2">구분</th>
+                <th className="px-3 py-2">편집</th>
               </tr>
             </thead>
             <tbody>

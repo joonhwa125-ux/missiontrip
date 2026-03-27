@@ -62,14 +62,12 @@ export function PlusIcon({ className = "h-5 w-5", strokeWidth = 2, ...rest }: Ic
   );
 }
 
-export function TableIcon({ className = "h-5 w-5", strokeWidth = 2, ...rest }: IconProps) {
+export function DatabaseIcon({ className = "h-5 w-5", strokeWidth = 2, ...rest }: IconProps) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={strokeWidth} {...rest}>
-      <rect x="3" y="3" width="18" height="18" rx="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      <line x1="3" y1="9" x2="21" y2="9" strokeLinecap="round" />
-      <line x1="3" y1="15" x2="21" y2="15" strokeLinecap="round" />
-      <line x1="9" y1="3" x2="9" y2="21" strokeLinecap="round" />
-      <line x1="15" y1="3" x2="15" y2="21" strokeLinecap="round" />
+      <ellipse cx="12" cy="5" rx="9" ry="3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3 5v14c0 1.657 4.03 3 9 3s9-1.343 9-3V5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3 12c0 1.657 4.03 3 9 3s9-1.343 9-3" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
