@@ -8,14 +8,27 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // PRD 컬러 시스템 (8.1)
+        // PRD 컬러 시스템 (8.1) - 개선된 통일 색상
         "main-action": "#FEE500",
-        "complete-card": "#EAF3DE",
-        "complete-check": "#047857",
+        "complete-card": "#ECFDF5",
+        "complete-check": "#059669",
         "progress-bar": "#0ACF83",
         "offline-banner": "#F1EFE8",
         "progress-badge": "#FEF9C3",
         "app-bg": "#F5F3EF",
+        // 상태 뱃지 색상
+        "status-pending": {
+          bg: "#F5F5F4",
+          text: "#78716C",
+        },
+        "status-active": {
+          bg: "#FEF9C3",
+          text: "#854D0E",
+        },
+        "status-complete": {
+          bg: "#ECFDF5",
+          text: "#059669",
+        },
         // shadcn/ui CSS 변수
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",

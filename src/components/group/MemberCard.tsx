@@ -22,17 +22,25 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
   return (
     <li
       className={cn(
-        "flex min-h-[4.5rem] items-center justify-between rounded-2xl border px-4 transition-colors",
+        "flex min-h-[4.75rem] items-center justify-between rounded-2xl border px-4 py-3 transition-all",
         isAbsent
-          ? "border-[#EBE8E3] bg-gray-100"
+          ? "border-stone-200 bg-stone-100"
           : isChecked
-          ? "border-[#EBE8E3] bg-app-bg"
-          : "border-[#E0DDD8] bg-white"
+          ? "border-emerald-100 bg-status-complete-bg/40"
+          : "border-stone-200 bg-white shadow-sm"
       )}
     >
-      <div className="min-w-0">
-        <p className={cn("text-base font-medium truncate", (isChecked || isAbsent) && "text-muted-foreground")}>{user.name}</p>
-        <p className="text-sm text-muted-foreground">
+      <div className="min-w-0 flex-1">
+        <p className={cn(
+          "text-base font-semibold truncate",
+          isAbsent ? "text-stone-400" : isChecked ? "text-stone-600" : "text-stone-900"
+        )}>
+          {user.name}
+        </p>
+        <p className={cn(
+          "text-sm mt-0.5",
+          isAbsent ? "text-stone-400" : isChecked ? "text-complete-check font-medium" : "text-stone-500"
+        )}>
           {isAbsent
             ? COPY.absent
             : isChecked
@@ -41,11 +49,11 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
         </p>
       </div>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-2 ml-3">
         {isAbsent ? (
           <button
             onClick={() => onCancel(user)}
-            className="min-h-11 min-w-16 rounded-xl border border-gray-400 bg-gray-200 px-3 text-sm font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="min-h-11 min-w-16 rounded-xl border border-stone-300 bg-white px-4 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             aria-label={`${user.name} 불참 취소`}
           >
             {COPY.cancelButton}
@@ -53,7 +61,7 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
         ) : isChecked ? (
           <button
             onClick={() => onCancel(user)}
-            className="min-h-11 min-w-16 rounded-xl border border-gray-400 bg-gray-100 px-3 text-sm font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="min-h-11 min-w-16 rounded-xl border border-stone-300 bg-white px-4 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             aria-label={`${user.name} 체크인 취소`}
           >
             {COPY.cancelButton}
@@ -62,14 +70,14 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
           <>
             <button
               onClick={() => onAbsent(user)}
-              className="min-h-11 rounded-xl border border-red-200 px-3 text-sm font-medium text-red-600 focus-visible:ring-2 focus-visible:ring-red-300 focus-visible:ring-offset-2"
+              className="min-h-11 rounded-xl border border-stone-300 bg-white px-4 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-50 focus-visible:ring-2 focus-visible:ring-stone-300 focus-visible:ring-offset-2"
               aria-label={`${user.name} 불참 처리`}
             >
               {COPY.absent}
             </button>
             <button
               onClick={() => onCheckin(user.id)}
-              className="min-h-11 min-w-[4.5rem] rounded-xl bg-main-action px-3 text-sm font-bold focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2"
+              className="min-h-11 min-w-[5rem] rounded-xl bg-main-action px-4 text-sm font-bold text-stone-900 shadow-sm transition-all hover:brightness-105 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2"
               aria-label={`${user.name} 탑승 확인`}
             >
               {COPY.checkinButton}

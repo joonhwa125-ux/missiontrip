@@ -1,6 +1,6 @@
 "use client";
 
-import { formatTime, getScheduleStatus, filterMembersByScope } from "@/lib/utils";
+import { formatTime, getScheduleStatus, filterMembersByScope, cn } from "@/lib/utils";
 import { CheckIcon } from "@/components/ui/icons";
 import { SCOPE_LABEL, COPY } from "@/lib/constants";
 import type { Schedule, AdminCheckIn, AdminMember, AdminReport } from "@/lib/types";
@@ -84,14 +84,14 @@ export default function AdminScheduleCard({
   if (status === "active") {
     return (
       <div
-        className="rounded-2xl ring-2 ring-main-action bg-white p-4"
+        className="rounded-2xl ring-2 ring-main-action bg-white p-4 shadow-sm"
         role="region"
         aria-label={`진행중 일정: ${schedule.title}`}
       >
         {/* 헤더: 진행중 pill + 배지 */}
-        <div className="mb-2 flex items-center gap-1">
-          <span className="rounded-full bg-progress-badge px-2 py-0.5 text-xs font-medium text-yellow-900">
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-yellow-500 mr-1 align-middle" aria-hidden="true" />
+        <div className="mb-3 flex items-center gap-1.5 flex-wrap">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-status-active-bg px-2.5 py-1 text-xs font-semibold text-status-active-text">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 animate-pulse" aria-hidden="true" />
             진행중
           </span>
           {timeBadge}
@@ -114,16 +114,16 @@ export default function AdminScheduleCard({
         </div>
 
         {/* 진행률 + 조 수 */}
-        <div className="mt-3 flex items-baseline justify-between">
-          <p className="text-xs text-muted-foreground">전체 진행률 {progressPct}%</p>
-          <p className="text-xs font-medium text-gray-700" aria-live="polite">
+        <div className="mt-4 flex items-baseline justify-between">
+          <p className="text-sm text-stone-600">전체 진행률 {progressPct}%</p>
+          <p className="text-sm font-semibold text-stone-800" aria-live="polite">
             {reportedCount}/{totalGroups}조
           </p>
         </div>
 
         {/* 프로그레스 바 */}
         <div
-          className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-gray-100"
+          className="mt-2 h-2 w-full overflow-hidden rounded-full bg-stone-100"
           role="progressbar"
           aria-valuenow={progressPct}
           aria-valuemin={0}
@@ -131,16 +131,20 @@ export default function AdminScheduleCard({
           aria-label={`조 보고 진행률 ${progressPct}%`}
         >
           <div
-            className="h-full rounded-full bg-progress-bar transition-all"
+            className={cn(
+              "h-full rounded-full transition-all duration-300",
+              allReported ? "bg-complete-check" : "bg-progress-bar"
+            )}
             style={{ width: `${progressPct}%` }}
           />
         </div>
 
         {/* 전 조 보고완료 배너 — 항상 렌더링, 내용만 조건부 (aria-live 마운트 타이밍) */}
-        <div role="status" aria-live="polite" aria-atomic="true" className="mt-2">
+        <div role="status" aria-live="polite" aria-atomic="true" className="mt-3">
           {allReported && (
-            <div className="flex items-center rounded-xl bg-[#EAF3DE] px-3 py-2">
-              <span className="text-xs font-medium text-[#27500A]">
+            <div className="flex items-center gap-2 rounded-xl bg-status-complete-bg px-3 py-2.5">
+              <CheckIcon className="h-4 w-4 text-complete-check" aria-hidden />
+              <span className="text-sm font-medium text-status-complete-text">
                 {COPY.allReported}
               </span>
             </div>
@@ -149,7 +153,7 @@ export default function AdminScheduleCard({
 
         <button
           onClick={onSummaryTap}
-          className="mt-2 w-full min-h-11 rounded-xl border border-gray-200 bg-gray-50 px-4 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
+          className="mt-3 w-full min-h-11 rounded-xl border border-stone-200 bg-stone-50 px-4 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100 active:bg-stone-200 focus-visible:ring-2 focus-visible:ring-main-action"
           aria-label="현황 보기"
         >
           현황 보기 &gt;
@@ -161,19 +165,19 @@ export default function AdminScheduleCard({
   if (status === "waiting") {
     return (
       <div
-        className="rounded-2xl bg-white p-4"
+        className="rounded-2xl border border-stone-200 bg-white p-4 transition-shadow hover:shadow-sm"
         role="region"
         aria-label={`예정 일정: ${schedule.title}`}
       >
         {/* 헤더: 예정 배지 + 집결시간 배지 + 후발 배지 */}
-        <div className="mb-2 flex items-center gap-1">
-          <span className="rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-800">
+        <div className="mb-3 flex items-center gap-1.5 flex-wrap">
+          <span className="rounded-full bg-status-pending-bg px-2.5 py-1 text-xs font-semibold text-status-pending-text">
             예정
           </span>
           {timeDisplay ? (
             <button
               onClick={onTimeEdit}
-              className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 focus-visible:ring-2 focus-visible:ring-main-action"
+              className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700 transition-colors hover:bg-sky-100 focus-visible:ring-2 focus-visible:ring-main-action"
               aria-label={`집결 시간 ${timeDisplay} — 탭하여 수정`}
             >
               집결 {timeDisplay}
@@ -181,7 +185,7 @@ export default function AdminScheduleCard({
           ) : (
             <button
               onClick={onTimeEdit}
-              className="rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-400 focus-visible:ring-2 focus-visible:ring-main-action"
+              className="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-400 transition-colors hover:bg-stone-200 focus-visible:ring-2 focus-visible:ring-main-action"
               aria-label="집결 시간 추가"
             >
               + 시간
@@ -193,12 +197,12 @@ export default function AdminScheduleCard({
         {/* 장소/일정명 + 시작 버튼 (우하단) */}
         <div className="flex items-end justify-between gap-3">
           <div>
-            <p className="font-medium">{primaryText}</p>
+            <p className="text-base font-semibold text-stone-800">{primaryText}</p>
             {subtitle}
           </div>
           <button
             onClick={onActivate}
-            className={statusBtnClass}
+            className="flex-shrink-0 min-h-11 min-w-16 rounded-xl border border-stone-300 bg-white px-4 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 active:bg-stone-100 focus-visible:ring-2 focus-visible:ring-ring"
             aria-label={`${schedule.title} 체크인 시작`}
           >
             시작
@@ -211,17 +215,18 @@ export default function AdminScheduleCard({
   // completed
   return (
     <div
-      className="rounded-2xl bg-white p-4 opacity-55"
+      className="rounded-2xl border border-stone-200 bg-stone-50/80 p-4"
       role="region"
       aria-label={`완료 일정: ${schedule.title}`}
     >
       {/* 헤더: 완료 배지 + 집결시간 배지 + 후발 배지 */}
-      <div className="mb-2 flex items-center gap-1">
-        <span className="rounded-full bg-[#EAF3DE] px-2 py-0.5 text-xs font-medium text-[#27500A]">
+      <div className="mb-3 flex items-center gap-1.5 flex-wrap">
+        <span className="inline-flex items-center gap-1 rounded-full bg-status-complete-bg px-2.5 py-1 text-xs font-semibold text-status-complete-text">
+          <CheckIcon className="h-3 w-3" aria-hidden />
           완료
         </span>
         {timeDisplay && (
-          <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
+          <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-500">
             집결 {timeDisplay}
           </span>
         )}
@@ -230,18 +235,18 @@ export default function AdminScheduleCard({
 
       {/* 장소/일정명 + 통계 */}
       <div>
-        <p className="font-medium">{primaryText}</p>
+        <p className="font-semibold text-stone-600">{primaryText}</p>
         {schedule.location ? (
-          <div className="mt-0.5 flex items-baseline justify-between gap-2">
-            <p className="text-sm text-muted-foreground">{schedule.title}</p>
-            <p className="flex-shrink-0 flex items-center gap-1 text-xs text-muted-foreground" aria-live="polite">
-              <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
+          <div className="mt-1 flex items-baseline justify-between gap-2">
+            <p className="text-sm text-stone-500">{schedule.title}</p>
+            <p className="flex-shrink-0 flex items-center gap-1 text-sm font-medium text-complete-check" aria-live="polite">
+              <CheckIcon className="h-3.5 w-3.5" aria-hidden />
               {reportedCount}/{totalGroups}조
             </p>
           </div>
         ) : (
-          <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground" aria-live="polite">
-            <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
+          <p className="mt-1 flex items-center gap-1 text-sm font-medium text-complete-check" aria-live="polite">
+            <CheckIcon className="h-3.5 w-3.5" aria-hidden />
             {reportedCount}/{totalGroups}조
           </p>
         )}
@@ -249,7 +254,7 @@ export default function AdminScheduleCard({
 
       <button
         onClick={onSummaryTap}
-        className="mt-2 w-full min-h-11 rounded-xl border border-gray-200 bg-gray-50 px-4 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action"
+        className="mt-3 w-full min-h-11 rounded-xl border border-stone-200 bg-white/60 px-4 text-sm font-medium text-stone-500 transition-colors hover:bg-white focus-visible:ring-2 focus-visible:ring-main-action"
         aria-label="완료 일정 현황 보기"
       >
         현황 보기 &gt;

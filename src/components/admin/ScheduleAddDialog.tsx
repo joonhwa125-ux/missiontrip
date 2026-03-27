@@ -74,28 +74,44 @@ export default function ScheduleAddDialog({
             새 일정의 이름, 장소, 일차, 시각을 입력합니다.
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
-          <input
-            placeholder="일정명 *"
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            className="w-full rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
-            aria-label="일정명"
-          />
-          <input
-            placeholder="장소 (선택)"
-            value={newLocation}
-            onChange={(e) => setNewLocation(e.target.value)}
-            className="w-full rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
-            aria-label="장소"
-          />
-          <div className="grid grid-cols-2 gap-2">
-            <div className="flex flex-col gap-1">
-              <label className="px-1 text-xs font-medium text-muted-foreground">일차</label>
+        <div className="space-y-4">
+          {/* 일정명 - 필수 필드 */}
+          <div className="flex flex-col gap-1.5">
+            <label className="px-1 text-sm font-medium text-stone-700">
+              일정명 <span className="text-red-500">*</span>
+            </label>
+            <input
+              placeholder="예: 늘봄식당, 제주공항"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3.5 text-base placeholder:text-stone-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action focus-visible:border-transparent transition-shadow"
+              aria-label="일정명"
+              aria-required="true"
+            />
+          </div>
+
+          {/* 장소 - 선택 필드 */}
+          <div className="flex flex-col gap-1.5">
+            <label className="px-1 text-sm font-medium text-stone-700">
+              집결지 <span className="text-stone-400 font-normal">(선택)</span>
+            </label>
+            <input
+              placeholder="예: 주차장, 0번 게이트"
+              value={newLocation}
+              onChange={(e) => setNewLocation(e.target.value)}
+              className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3.5 text-base placeholder:text-stone-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action focus-visible:border-transparent transition-shadow"
+              aria-label="집결지"
+            />
+          </div>
+
+          {/* 일차 & 적용 대상 */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label className="px-1 text-sm font-medium text-stone-700">일차</label>
               <select
                 value={newDay}
                 onChange={(e) => setNewDay(e.target.value)}
-                className="w-full rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+                className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3.5 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action transition-shadow"
                 aria-label="일차"
               >
                 <option value="1">1일차</option>
@@ -103,12 +119,12 @@ export default function ScheduleAddDialog({
                 <option value="3">3일차</option>
               </select>
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="px-1 text-xs font-medium text-muted-foreground">적용 대상</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="px-1 text-sm font-medium text-stone-700">적용 대상</label>
               <select
                 value={newScope}
                 onChange={(e) => setNewScope(e.target.value as ScheduleScope)}
-                className="w-full rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+                className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3.5 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action transition-shadow"
                 aria-label="적용 대상"
               >
                 <option value="all">전체</option>
@@ -117,13 +133,17 @@ export default function ScheduleAddDialog({
               </select>
             </div>
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="px-1 text-xs font-medium text-muted-foreground">예정 시각 (선택)</label>
-            <div className="flex gap-2">
+
+          {/* 예정 시각 */}
+          <div className="flex flex-col gap-1.5">
+            <label className="px-1 text-sm font-medium text-stone-700">
+              예정 시각 <span className="text-stone-400 font-normal">(선택)</span>
+            </label>
+            <div className="flex gap-3">
               <select
                 value={newHour}
                 onChange={(e) => setNewHour(e.target.value)}
-                className="flex-1 rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+                className="flex-1 rounded-xl border border-stone-200 bg-white px-4 py-3.5 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action transition-shadow"
                 aria-label="시"
               >
                 <option value="">시</option>
@@ -134,7 +154,7 @@ export default function ScheduleAddDialog({
               <select
                 value={newMinute}
                 onChange={(e) => setNewMinute(e.target.value)}
-                className="flex-1 rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+                className="flex-1 rounded-xl border border-stone-200 bg-white px-4 py-3.5 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action transition-shadow"
                 aria-label="분"
               >
                 <option value="">분</option>
@@ -145,18 +165,18 @@ export default function ScheduleAddDialog({
             </div>
           </div>
         </div>
-        <DialogFooter>
-          <DialogClose className="min-h-11 flex-1 rounded-xl bg-gray-100 text-sm font-medium">
-            취소
-          </DialogClose>
+        <DialogFooter className="flex-col gap-2 sm:flex-col">
           <button
             onClick={handleAdd}
             disabled={!newTitle.trim()}
-            className="min-h-11 flex-1 rounded-xl bg-main-action text-sm font-bold text-[#3C1E1E] focus-visible:ring-2 focus-visible:ring-main-action disabled:opacity-50"
+            className="w-full min-h-12 rounded-xl bg-main-action text-base font-bold text-stone-900 shadow-sm transition-all hover:brightness-105 focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label="일정 추가 확인"
           >
             추가
           </button>
+          <DialogClose className="w-full min-h-12 rounded-xl border border-stone-200 bg-white text-base font-medium text-stone-600 transition-colors hover:bg-stone-50 focus-visible:ring-2 focus-visible:ring-stone-300">
+            취소
+          </DialogClose>
         </DialogFooter>
       </DialogContent>
     </Dialog>

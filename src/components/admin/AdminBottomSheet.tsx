@@ -169,12 +169,16 @@ export default function AdminBottomSheet({
               </div>
             )}
             {busEntries.map(([busName, busSummaries]) => (
-              <section key={busName} className="mb-4">
-                <h3 className="mb-2 text-sm font-bold text-muted-foreground">{busName}</h3>
+              <section key={busName} className="mb-5">
+                <h3 className="mb-3 flex items-center gap-2 text-sm font-bold text-stone-700">
+                  <span className="h-1 w-1 rounded-full bg-stone-400" aria-hidden />
+                  {busName}
+                </h3>
                 <div className="grid grid-cols-2 gap-2 [&>*:last-child:nth-child(odd)]:col-span-2">
                   {busSummaries.map(({ group, totalCount, checkedCount, absentCount, badge, leader, rawTotal }) => {
                     const b = GROUP_BADGE_STYLE[badge];
                     const progress = totalCount > 0 ? (checkedCount / totalCount) * 100 : 0;
+                    const isComplete = badge === "reported";
                     return (
                       <div
                         key={group.id}
@@ -187,30 +191,35 @@ export default function AdminBottomSheet({
                             setDrillGroup(group);
                           }
                         }}
-                        className="cursor-pointer rounded-2xl border border-gray-200 bg-white p-4 text-left transition-colors active:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+                        className={cn(
+                          "cursor-pointer rounded-2xl border p-4 text-left transition-all active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action",
+                          isComplete
+                            ? "border-emerald-200 bg-status-complete-bg/50"
+                            : "border-stone-200 bg-white hover:shadow-sm"
+                        )}
                         aria-label={`${group.name} 상세 보기`}
                       >
-                        <div className="mb-1.5">
+                        <div className="mb-2">
                           <span
                             className={cn(
-                              "inline-block -ml-1 rounded-full px-2 py-0.5 text-[0.8125rem] font-medium",
+                              "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold",
                               b.bg,
                               b.text
                             )}
                           >
                             {b.label}
                           </span>
-                          <p className="mt-1 text-sm font-semibold leading-snug">{group.name}</p>
+                          <p className="mt-1.5 text-base font-bold leading-snug text-stone-800">{group.name}</p>
                         </div>
                         {leader && (
-                          <div className="mb-1.5 flex items-center gap-1 text-xs text-muted-foreground">
+                          <div className="mb-2 flex items-center gap-1.5 text-sm text-stone-500">
                             <span className="truncate">{leader.name}</span>
                             {leader.phone && (
                               <a
                                 href={`tel:${leader.phone}`}
                                 onClick={(e) => e.stopPropagation()}
                                 onKeyDown={(e) => e.stopPropagation()}
-                                className="flex min-h-11 min-w-11 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-main-action"
+                                className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-stone-400 hover:text-stone-600 focus-visible:ring-2 focus-visible:ring-main-action"
                                 aria-label={`${leader.name} 조장에게 전화`}
                               >
                                 <PhoneIcon />
@@ -219,19 +228,23 @@ export default function AdminBottomSheet({
                           </div>
                         )}
                         <div
-                          className="mb-1 h-2 overflow-hidden rounded-full bg-gray-100"
+                          className="mb-1.5 h-2 overflow-hidden rounded-full bg-stone-100"
                           role="progressbar"
                           aria-valuenow={checkedCount}
                           aria-valuemax={totalCount}
                           aria-label={`${checkedCount}/${totalCount}명 탑승`}
                         >
                           <div
-                            className="h-full rounded-full bg-progress-bar transition-all"
+                            className={cn(
+                              "h-full rounded-full transition-all duration-300",
+                              isComplete ? "bg-complete-check" : "bg-progress-bar"
+                            )}
                             style={{ width: `${progress}%` }}
                           />
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                          {checkedCount} / {rawTotal}명{absentCount > 0 ? ` (불참 ${absentCount})` : ""}
+                        <p className="text-sm text-stone-600">
+                          <span className="font-semibold">{checkedCount}</span> / {rawTotal}명
+                          {absentCount > 0 && <span className="text-stone-400"> (불참 {absentCount})</span>}
                         </p>
                       </div>
                     );

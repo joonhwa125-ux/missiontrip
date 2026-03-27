@@ -34,16 +34,26 @@
     --primary-foreground: 0 30% 18%;
     --secondary: 40 12% 92%;
     --secondary-foreground: 20 14% 30%;
-    --muted: 40 12% 92%;
-    --muted-foreground: 20 10% 45%;
+    --muted: 33 10% 93%;
+    --muted-foreground: 25 8% 45%;
     --accent: 40 12% 92%;
     --accent-foreground: 20 14% 13%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    --border: 40 10% 86%;
-    --input: 40 10% 86%;
+    --border: 33 10% 86%;
+    --input: 33 10% 88%;
     --ring: 52 100% 50%;
     --radius: 0.75rem;
+    
+    /* Status Colors - 통일된 상태 색상 시스템 */
+    --status-pending-bg: 33 10% 93%;
+    --status-pending-text: 25 8% 45%;
+    --status-active-bg: 48 96% 89%;
+    --status-active-text: 32 81% 29%;
+    --status-complete-bg: 152 76% 94%;
+    --status-complete-text: 160 84% 28%;
+    --status-reported-bg: 152 76% 94%;
+    --status-reported-text: 160 84% 28%;
   }
 
   * {

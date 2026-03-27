@@ -248,8 +248,8 @@ export default function GroupCheckinView({
       </header>
 
       {/* 이니셜 원 행 */}
-      <div className="border-b bg-white">
-        <div className="flex gap-2 overflow-x-auto px-4 py-3 scrollbar-none">
+      <div className="border-b border-stone-200 bg-white">
+        <div className="flex gap-2.5 overflow-x-auto px-4 py-4 scrollbar-none">
           {sorted.map((m) => {
             const checked = checkedIds.has(m.id);
             const absent = absentIds.has(m.id);
@@ -257,12 +257,12 @@ export default function GroupCheckinView({
               <div key={m.id} className="relative flex-shrink-0">
                 <div
                   className={cn(
-                    "flex h-11 w-11 items-center justify-center rounded-full text-[0.625rem] font-bold",
+                    "flex h-12 w-12 items-center justify-center rounded-full text-[0.625rem] font-bold transition-all",
                     absent
-                      ? "bg-gray-200 text-gray-500"
+                      ? "bg-stone-200 text-stone-400"
                       : checked
-                        ? "bg-main-action"
-                        : "border-2 border-dashed border-gray-300 bg-gray-100"
+                        ? "bg-main-action text-stone-900 shadow-sm"
+                        : "border-2 border-dashed border-stone-300 bg-stone-50 text-stone-600"
                   )}
                   aria-label={`${m.name} ${absent ? "불참" : checked ? "탑승 완료" : "미탑승"}`}
                 >
@@ -270,10 +270,10 @@ export default function GroupCheckinView({
                 </div>
                 {checked && !absent && (
                   <span
-                    className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-complete-check"
+                    className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-complete-check shadow-sm"
                     aria-hidden="true"
                   >
-                    <CheckIcon className="h-2.5 w-2.5 text-white" aria-hidden />
+                    <CheckIcon className="h-3 w-3 text-white" aria-hidden />
                   </span>
                 )}
               </div>
@@ -281,21 +281,21 @@ export default function GroupCheckinView({
           })}
         </div>
         <p
-          className="px-4 pb-2 text-sm font-medium text-muted-foreground"
+          className="px-4 pb-3 text-sm font-semibold text-stone-600"
           aria-live="polite"
         >
-          {COPY.totalCount(checkedCount, members.length)}{absentIds.size > 0 && ` (불참 ${absentIds.size})`}
+          {COPY.totalCount(checkedCount, members.length)}{absentIds.size > 0 && <span className="text-stone-400 font-normal"> (불참 {absentIds.size})</span>}
         </p>
       </div>
 
       {/* 전원 완료 축하 화면 */}
       {allComplete && (
-        <div className="flex flex-col items-center px-6 py-8 text-center">
-          <div className="mb-4 text-6xl" aria-hidden="true">
+        <div className="flex flex-col items-center px-6 py-10 text-center bg-gradient-to-b from-status-complete-bg/30 to-transparent">
+          <div className="mb-5 text-7xl animate-pop-in" aria-hidden="true">
             🎉
           </div>
-          <h2 className="mb-2 text-2xl font-bold">{COPY.allComplete(groupName, absentIds.size > 0)}</h2>
-          <p className="text-muted-foreground">
+          <h2 className="mb-2 text-2xl font-bold text-stone-900">{COPY.allComplete(groupName, absentIds.size > 0)}</h2>
+          <p className="text-stone-600">
             {reported
               ? "보고 완료! 수고하셨어요."
               : absentIds.size > 0
@@ -326,11 +326,11 @@ export default function GroupCheckinView({
       </ul>
 
       {/* CR-006+016: 보고 버튼 + 오프라인 배너를 하나의 fixed 컨테이너로 통합 */}
-      <div className="fixed bottom-0 left-1/2 w-full max-w-lg -translate-x-1/2 border-t bg-white px-4 py-3 pb-safe">
+      <div className="fixed bottom-0 left-1/2 w-full max-w-lg -translate-x-1/2 border-t border-stone-200 bg-white px-4 py-3 pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
         {/* 오프라인 배너 — 보고 버튼 위에 인라인 표시 */}
         {!isOnline && (
           <div
-            className="mb-2 rounded-lg bg-offline-banner px-3 py-2 text-center text-sm"
+            className="mb-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-center text-sm text-amber-800"
             aria-live="polite"
             role="status"
           >
@@ -339,9 +339,9 @@ export default function GroupCheckinView({
         )}
         {reported ? (
           <button
-            className="flex w-full items-center justify-center gap-2 min-h-11 rounded-xl border border-[#EBE8E3] bg-app-bg py-4 text-base font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2"
+            className="flex w-full items-center justify-center gap-2 min-h-12 rounded-xl bg-status-complete-bg py-4 text-base font-semibold text-complete-check focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2"
           >
-            <CheckIcon className="h-5 w-5 text-complete-check" aria-hidden />
+            <CheckIcon className="h-5 w-5" aria-hidden />
             {COPY.reportButtonDone}
           </button>
         ) : (
@@ -349,10 +349,10 @@ export default function GroupCheckinView({
             aria-disabled={!allComplete}
             onClick={allComplete ? handleReport : undefined}
             className={cn(
-              "w-full min-h-11 rounded-xl py-4 text-base transition-colors focus-visible:ring-2 focus-visible:ring-offset-2",
+              "w-full min-h-12 rounded-xl py-4 text-base transition-all focus-visible:ring-2 focus-visible:ring-offset-2",
               allComplete
-                ? "bg-main-action font-bold focus-visible:ring-main-action"
-                : "bg-gray-200 text-gray-400 font-medium focus-visible:ring-gray-300"
+                ? "bg-main-action font-bold text-stone-900 shadow-sm hover:brightness-105 active:scale-[0.99] focus-visible:ring-main-action"
+                : "bg-stone-200 text-stone-400 font-medium cursor-not-allowed focus-visible:ring-stone-300"
             )}
           >
             {allComplete ? COPY.reportButtonComplete : COPY.reportButtonPending(uncheckedCount)}
