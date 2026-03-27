@@ -4,7 +4,7 @@ import { ALLOWED_EMAIL_DOMAIN, ROLE_ROUTES, isAdminRole } from "@/lib/constants"
 import type { UserRole } from "@/lib/types";
 
 // 인증 불필요 경로
-const PUBLIC_PATHS = ["/login", "/auth/callback"];
+const PUBLIC_PATHS = ["/login", "/auth/callback", "/design-mockup"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
