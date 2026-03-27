@@ -2,7 +2,7 @@
 
 import { COPY } from "@/lib/constants";
 import { formatTime, cn } from "@/lib/utils";
-// 상태는 카드 배경색 + 텍스트로 표현 (아이콘 원 제거)
+import { CheckIcon } from "@/components/ui/icons";
 import type { CheckIn, GroupMember } from "@/lib/types";
 
 type Member = GroupMember;
@@ -26,26 +26,30 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
         isAbsent
           ? "border-[#EBE8E3] bg-gray-100"
           : isChecked
-          ? "border-[#EBE8E3] bg-app-bg"
+          ? "border-[#EBE8E3] bg-white/60"
           : "border-[#E0DDD8] bg-white"
       )}
     >
       <div className="min-w-0">
         <p className={cn("text-base font-medium truncate", (isChecked || isAbsent) && "text-muted-foreground")}>{user.name}</p>
-        <p className="text-sm text-muted-foreground">
-          {isAbsent
-            ? COPY.absent
-            : isChecked
-              ? COPY.checked(formatTime(checkIn.checked_at))
-              : COPY.notChecked}
-        </p>
+        {isChecked ? (
+          <p className="flex items-center gap-1 text-sm">
+            <CheckIcon className="h-3.5 w-3.5 text-complete-check" aria-hidden />
+            <span className="font-medium text-complete-check">{formatTime(checkIn.checked_at)}</span>
+            <span className="text-muted-foreground">탑승 완료</span>
+          </p>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            {isAbsent ? COPY.absent : COPY.notChecked}
+          </p>
+        )}
       </div>
 
       <div className="flex items-center gap-1.5">
         {isAbsent ? (
           <button
             onClick={() => onCancel(user)}
-            className="min-h-11 min-w-16 rounded-xl border border-gray-400 bg-gray-200 px-3 text-sm font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="min-h-11 min-w-16 rounded-xl border border-gray-500 bg-gray-200 px-3 text-sm font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             aria-label={`${user.name} 불참 취소`}
           >
             {COPY.cancelButton}
@@ -53,7 +57,7 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
         ) : isChecked ? (
           <button
             onClick={() => onCancel(user)}
-            className="min-h-11 min-w-16 rounded-xl border border-gray-400 bg-gray-100 px-3 text-sm font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="min-h-11 min-w-16 rounded-xl border border-gray-500 bg-gray-100 px-3 text-sm font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             aria-label={`${user.name} 체크인 취소`}
           >
             {COPY.cancelButton}

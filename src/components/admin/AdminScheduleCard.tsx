@@ -84,14 +84,14 @@ export default function AdminScheduleCard({
   if (status === "active") {
     return (
       <div
-        className="rounded-2xl ring-2 ring-main-action bg-white p-4"
+        className="rounded-2xl ring-2 ring-main-action bg-white shadow-sm p-4"
         role="region"
         aria-label={`진행중 일정: ${schedule.title}`}
       >
         {/* 헤더: 진행중 pill + 배지 */}
         <div className="mb-2 flex items-center gap-1">
           <span className="rounded-full bg-progress-badge px-2 py-0.5 text-xs font-medium text-yellow-900">
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-yellow-500 mr-1 align-middle" aria-hidden="true" />
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-yellow-500 mr-1 align-middle animate-pulse" aria-hidden="true" />
             진행중
           </span>
           {timeBadge}
@@ -149,7 +149,7 @@ export default function AdminScheduleCard({
 
         <button
           onClick={onSummaryTap}
-          className="mt-2 w-full min-h-11 rounded-xl border border-gray-200 bg-gray-50 px-4 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
+          className="mt-2 w-full min-h-11 rounded-xl border border-stone-200 bg-gray-50 px-4 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
           aria-label="현황 보기"
         >
           현황 보기 &gt;
@@ -161,13 +161,13 @@ export default function AdminScheduleCard({
   if (status === "waiting") {
     return (
       <div
-        className="rounded-2xl bg-white p-4"
+        className="rounded-2xl bg-white shadow-sm p-4"
         role="region"
         aria-label={`예정 일정: ${schedule.title}`}
       >
         {/* 헤더: 예정 배지 + 집결시간 배지 + 후발 배지 */}
         <div className="mb-2 flex items-center gap-1">
-          <span className="rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-800">
+          <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
             예정
           </span>
           {timeDisplay ? (
@@ -211,7 +211,7 @@ export default function AdminScheduleCard({
   // completed
   return (
     <div
-      className="rounded-2xl bg-white p-4 opacity-55"
+      className="rounded-2xl bg-white shadow-sm p-4 opacity-55"
       role="region"
       aria-label={`완료 일정: ${schedule.title}`}
     >
@@ -249,7 +249,7 @@ export default function AdminScheduleCard({
 
       <button
         onClick={onSummaryTap}
-        className="mt-2 w-full min-h-11 rounded-xl border border-gray-200 bg-gray-50 px-4 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action"
+        className="mt-2 w-full min-h-11 rounded-xl border border-stone-200 bg-gray-50 px-4 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action"
         aria-label="완료 일정 현황 보기"
       >
         현황 보기 &gt;

@@ -44,7 +44,7 @@ export default function ScheduleCard({
     const effectiveTotal = total - absentCount;
     const pct = effectiveTotal > 0 ? Math.round((checked / effectiveTotal) * 100) : 0;
     return (
-      <div className="rounded-2xl bg-white ring-2 ring-main-action p-4">
+      <div className="rounded-2xl bg-white ring-2 ring-main-action shadow-sm p-4">
         <button
           onClick={onEnterCheckin}
           className="w-full text-left min-h-11 focus-visible:ring-2 focus-visible:ring-main-action rounded-lg"
@@ -53,7 +53,7 @@ export default function ScheduleCard({
           {/* 헤더: 진행중 pill + 집결시간 배지 + 후발 배지 (모두 좌측) */}
           <div className="mb-2 flex items-center gap-1">
             <span className="rounded-full bg-progress-badge px-2 py-0.5 text-xs font-medium text-yellow-900">
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-yellow-500 mr-1 align-middle" aria-hidden="true" />
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-yellow-500 mr-1 align-middle animate-pulse" aria-hidden="true" />
               진행중
             </span>
             {timeDisplay && (
@@ -88,7 +88,7 @@ export default function ScheduleCard({
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onStatusOpen(); }}
-          className="mt-2 w-full min-h-11 rounded-xl border border-gray-200 bg-gray-50 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
+          className="mt-2 w-full min-h-11 rounded-xl border border-stone-200 bg-gray-50 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
           aria-label="현황 보기"
         >
           현황 보기 &gt;
@@ -99,10 +99,10 @@ export default function ScheduleCard({
 
   if (status === "waiting") {
     return (
-      <div className="rounded-2xl bg-white p-4">
+      <div className="rounded-2xl bg-white shadow-sm p-4">
         {/* 헤더: 예정 배지 + 집결시간 배지 + 후발 배지 */}
         <div className="mb-1.5 flex items-center gap-1">
-          <span className="rounded-full bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-800">
+          <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
             예정
           </span>
           {timeDisplay && (
@@ -124,7 +124,7 @@ export default function ScheduleCard({
   const completedAbsent = scheduleAbsentCounts[schedule.id] ?? 0;
 
   return (
-    <div className="rounded-2xl bg-white p-4 opacity-55">
+    <div className="rounded-2xl bg-white shadow-sm p-4 opacity-55">
       {/* 헤더: 완료 배지 + 집결시간 배지 + 후발 배지 */}
       <div className="mb-1.5 flex items-center gap-1">
         <span className="rounded-full bg-[#EAF3DE] px-2 py-0.5 text-xs font-medium text-[#27500A]">
