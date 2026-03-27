@@ -130,6 +130,18 @@ export default function GroupView({
           : [...prev, { group_id }]
       );
     },
+    onReportInvalidated: ({ group_id }) => {
+      // 체크인 취소 → 보고 무효화: allReportsState에서 제거
+      setAllReportsState((prev) => {
+        const next = prev.filter((r) => r.group_id !== group_id);
+        return next.length === prev.length ? prev : next;
+      });
+      // 내 조 보고 무효화 시 reported + ref도 리셋
+      if (group_id === currentUser.group_id) {
+        setReported(false);
+        reportInvalidatedRef.current = true;
+      }
+    },
     onCheckinUpdated: ({ user_id, action, is_absent }) => {
       // 전체 현황 바텀시트용 allCheckIns 업데이트 (모든 조)
       setAllCheckInsState((prev) => {

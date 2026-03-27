@@ -14,6 +14,7 @@ import {
   CHANNEL_GLOBAL,
   CHANNEL_ADMIN,
   EVENT_GROUP_REPORTED,
+  EVENT_REPORT_INVALIDATED,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import type { Schedule, CheckIn, GroupMember } from "@/lib/types";
@@ -119,6 +120,12 @@ export default function GroupCheckinView({
         const res = await deleteCheckin(userId, activeSchedule.id);
         if (res.ok) {
           await broadcastCheckin(userId, "delete");
+          // 보고 무효화 브로드캐스트 (DB에서도 삭제됨 — 다른 뷰 동기화)
+          const invalidatePayload = { group_id: currentUser.group_id, schedule_id: activeSchedule.id };
+          await Promise.allSettled([
+            broadcast(CHANNEL_GLOBAL, EVENT_REPORT_INVALIDATED, invalidatePayload),
+            broadcast(CHANNEL_ADMIN, EVENT_REPORT_INVALIDATED, invalidatePayload),
+          ]);
         } else {
           if (removed) setCheckIns((prev) => [...prev, removed!]);
           showToast(res.error ?? "취소 처리 중 오류가 발생했어요.");

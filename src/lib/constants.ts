@@ -28,6 +28,7 @@ export const EVENT_SCHEDULE_UPDATED = "schedule_updated";
 export const EVENT_SCHEDULE_DEACTIVATED = "schedule_deactivated";
 export const EVENT_CHECKIN_UPDATED = "checkin_updated";
 export const EVENT_GROUP_REPORTED = "group_reported";
+export const EVENT_REPORT_INVALIDATED = "report_invalidated";
 
 // UI 치수 (KWCAG 2.5.5)
 export const MIN_TOUCH_TARGET = 44; // px — 최소 터치 타겟

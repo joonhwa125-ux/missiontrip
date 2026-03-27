@@ -89,6 +89,19 @@ export async function deleteCheckin(
     return { ok: false, error: "취소 처리 중 오류가 발생했어요" };
   }
 
+  // 체크인 취소 → 해당 조의 보고 기록도 무효화 (stale reported 상태 방지)
+  const targetGroupId = isAdminRole(actor.role)
+    ? (await supabase.from("users").select("group_id").eq("id", userId).single()).data?.group_id
+    : actor.group_id;
+
+  if (targetGroupId) {
+    await supabase
+      .from("group_reports")
+      .delete()
+      .eq("group_id", targetGroupId)
+      .eq("schedule_id", scheduleId);
+  }
+
   revalidateMainPaths();
   return { ok: true };
 }

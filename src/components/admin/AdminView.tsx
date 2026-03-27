@@ -297,6 +297,16 @@ export default function AdminView({
         return { ...prev, [sid]: [...list, newReport] };
       });
     },
+    onReportInvalidated: ({ group_id, schedule_id }) => {
+      const sid = schedule_id?.length ? schedule_id : activeSchedule?.id;
+      if (!sid) return;
+      setReportsMap((prev) => {
+        const list = prev[sid] ?? [];
+        const next = list.filter((r) => r.group_id !== group_id);
+        if (next.length === list.length) return prev;
+        return { ...prev, [sid]: next };
+      });
+    },
     onReconnected: () => {
       router.refresh();
       showToast("연결이 복구되었어요");
