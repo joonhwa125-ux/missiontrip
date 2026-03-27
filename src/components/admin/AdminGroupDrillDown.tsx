@@ -129,11 +129,11 @@ export default function AdminGroupDrillDown({
   return (
     <>
       {/* 헤더: 뒤로 + 조 이름 + 카운트 */}
-      <div className="flex-shrink-0 px-4 pt-2 pb-0">
-        <div className="flex items-start gap-1">
+      <div className="flex-shrink-0 px-4 pb-2 pt-2">
+        <div className="flex items-center gap-1">
           <button
             onClick={onBack}
-            className="-ml-2 flex min-h-11 min-w-11 flex-shrink-0 items-start justify-center pt-0.5 rounded-lg text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action"
+            className="-ml-2 flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center rounded-lg text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action"
             aria-label="현황 목록으로 돌아가기"
           >
             <ChevronLeftIcon className="h-5 w-5" />
@@ -156,7 +156,7 @@ export default function AdminGroupDrillDown({
       </div>
 
       {/* 인원 목록 */}
-      <ul className="space-y-2 overflow-y-auto px-6 pb-6">
+      <ul className="space-y-2 overflow-y-auto px-4 pb-6 pt-1">
         {sorted.map((m) => (
           <MemberRow
             key={m.id}
@@ -213,7 +213,7 @@ function MemberRow({
     : COPY.notChecked;
 
   const statusTextClass = isChecked
-    ? "text-complete-check"
+    ? "text-stone-500"
     : "text-muted-foreground";
 
   return (
