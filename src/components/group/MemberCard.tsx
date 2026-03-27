@@ -33,7 +33,7 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
       <div className={cn("min-w-0", isChecked && "flex items-center gap-2")}>
         <p className={cn("min-w-0 text-base font-medium truncate", (isChecked || isAbsent) && "text-muted-foreground")}>{user.name}</p>
         {isChecked ? (
-          <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+          <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
             <CheckIcon className="h-3 w-3" aria-hidden />
             {formatTime(checkIn.checked_at)}
             <span className="sr-only">탑승 완료</span>
@@ -49,7 +49,7 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
         {isAbsent ? (
           <button
             onClick={() => onCancel(user)}
-            className="min-h-11 min-w-16 rounded-xl border border-gray-500 bg-gray-200 px-3 text-sm font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="min-h-11 min-w-16 rounded-xl border border-rose-300 px-3 text-sm font-medium text-rose-500 focus-visible:ring-2 focus-visible:ring-rose-300 focus-visible:ring-offset-2"
             aria-label={`${user.name} 불참 취소`}
           >
             {COPY.cancelButton}
@@ -57,7 +57,7 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
         ) : isChecked ? (
           <button
             onClick={() => onCancel(user)}
-            className="min-h-11 min-w-16 rounded-xl border border-gray-500 bg-gray-100 px-3 text-sm font-medium text-gray-600 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="min-h-11 min-w-16 rounded-xl border border-rose-300 px-3 text-sm font-medium text-rose-500 focus-visible:ring-2 focus-visible:ring-rose-300 focus-visible:ring-offset-2"
             aria-label={`${user.name} 체크인 취소`}
           >
             {COPY.cancelButton}

@@ -137,9 +137,8 @@ export const COPY = {
   checkinButton: "왔수다!",
   cancelButton: "취소",
   totalCount: (checked: number, total: number) => `${checked} / ${total}명 탑승 완료`,
-  allComplete: (groupName: string, hasAbsent: boolean) =>
-    hasAbsent ? `${groupName} 전원 확인 끝!` : `${groupName} 전원 탑승 확인 끝!`,
-  celebrationSubtitle: "폭싹 속았수다!",
+  allComplete: (groupName: string) => `${groupName} 전원 확인 끝!`,
+  celebrationSubtitle: "보고해주세요. 폭싹 속았수다!",
   reportButtonComplete: "우리 조 다 왔수다! 보고하기",
   reportButtonDone: "보고 완료!",
   reportButtonPending: (n: number) => `${n}명 남았어요`,

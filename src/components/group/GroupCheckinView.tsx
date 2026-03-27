@@ -8,7 +8,7 @@ import { createCheckin, deleteCheckin, markAbsent } from "@/actions/checkin";
 import { submitReport } from "@/actions/report";
 import MemberCard from "./MemberCard";
 import { CancelCheckinDialog, MarkAbsentDialog } from "./CheckinDialogs";
-import { CheckIcon, ChevronLeftIcon } from "@/components/ui/icons";
+import { CheckIcon, ChevronLeftIcon, XIcon } from "@/components/ui/icons";
 import {
   COPY,
   CHANNEL_GLOBAL,
@@ -29,6 +29,8 @@ interface Props {
   checkIns: CheckIn[];
   setCheckIns: Dispatch<SetStateAction<CheckIn[]>>;
   onBack: () => void;
+  /** true이면 닫기(X) 아이콘, false/생략이면 뒤로(<) 아이콘 */
+  closeMode?: boolean;
   showToast: (msg: string) => void;
   reported: boolean;
   onReported: () => void;
@@ -43,6 +45,7 @@ export default function GroupCheckinView({
   checkIns,
   setCheckIns,
   onBack,
+  closeMode,
   showToast,
   reported,
   onReported,
@@ -240,16 +243,19 @@ export default function GroupCheckinView({
         <div className="flex items-start gap-2">
           <button
             onClick={onBack}
-            className="flex min-h-11 min-w-11 flex-shrink-0 items-start justify-center pt-0.5 rounded-lg focus-visible:ring-2 focus-visible:ring-main-action"
-            aria-label="일정 피드로 돌아가기"
+            className={cn(
+              "flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-main-action",
+              !closeMode && "items-start pt-0.5"
+            )}
+            aria-label={closeMode ? "닫기" : "일정 피드로 돌아가기"}
           >
-            <ChevronLeftIcon aria-hidden />
+            {closeMode ? <XIcon className="h-5 w-5" aria-hidden /> : <ChevronLeftIcon aria-hidden />}
           </button>
           <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-bold">{groupName} 체크인</h1>
-            <p className="text-sm text-muted-foreground">
+            <h1 className="text-lg font-bold">
               {activeSchedule?.location ?? activeSchedule?.title ?? "대기 중"}
-            </p>
+            </h1>
+            <p className="text-sm text-muted-foreground">{groupName}</p>
           </div>
           {members.length > 0 && (
             <span className="flex-shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
@@ -292,12 +298,6 @@ export default function GroupCheckinView({
             );
           })}
         </div>
-        <p
-          className="px-4 pb-2 text-sm font-medium text-muted-foreground"
-          aria-live="polite"
-        >
-          {COPY.totalCount(checkedCount, members.length)}{absentIds.size > 0 && ` (불참 ${absentIds.size})`}
-        </p>
       </div>
 
       {/* 전원 완료 축하 화면 */}
@@ -306,14 +306,9 @@ export default function GroupCheckinView({
           <div className="mb-4 text-6xl animate-bounce" aria-hidden="true">
             🍊
           </div>
-          <h2 className="mb-2 text-2xl font-bold">{COPY.allComplete(groupName, absentIds.size > 0)}</h2>
-          <p className="text-lg font-medium text-stone-600">{COPY.celebrationSubtitle}</p>
-          <p className="mt-1 text-muted-foreground">
-            {reported
-              ? "보고 완료! 수고하셨어요."
-              : absentIds.size > 0
-                ? "전원 확인했어요! 보고해주세요."
-                : "모두 탑승했어요! 보고해주세요."}
+          <h2 className="mb-2 text-2xl font-bold">{COPY.allComplete(groupName)}</h2>
+          <p className="text-lg font-medium text-stone-600">
+            {reported ? "보고 완료! 수고하셨어요." : COPY.celebrationSubtitle}
           </p>
         </div>
       )}

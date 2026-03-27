@@ -517,6 +517,7 @@ export default function AdminView({
               checkIns={sheetCheckIns}
               setCheckIns={setSheetCheckIns}
               onBack={closeCheckinSheet}
+              closeMode
               showToast={showToast}
               reported={sheetReported}
               onReported={handleSheetReported}

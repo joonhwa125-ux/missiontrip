@@ -138,17 +138,20 @@ export default function AdminGroupDrillDown({
           >
             <ChevronLeftIcon className="h-5 w-5" />
           </button>
-          <div>
+          <div className="flex-1 min-w-0">
             <DialogTitle className="text-left text-base font-semibold">
               {group.name}
             </DialogTitle>
-            <DialogDescription
-              aria-live="polite"
-              className="mt-0.5 text-left text-sm text-muted-foreground"
-            >
+            <DialogDescription className="sr-only">
               {checkedCount}/{groupMembers.length}명 확인{absentCount > 0 && ` (불참 ${absentCount})`}
             </DialogDescription>
           </div>
+          <span
+            className="flex-shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700"
+            aria-live="polite"
+          >
+            {checkedCount + absentCount}/{groupMembers.length}명 완료
+          </span>
         </div>
       </div>
 
@@ -253,7 +256,7 @@ function MemberRow({
       {isChecked && hasSchedule && (
         <button
           onClick={onCancel}
-          className="min-h-11 flex-shrink-0 rounded-xl border border-gray-300 px-3 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          className="min-h-11 flex-shrink-0 rounded-xl border border-rose-300 px-3 text-xs font-medium text-rose-500 focus-visible:ring-2 focus-visible:ring-rose-300"
           aria-label={`${member.name} 체크인 취소`}
         >
           {COPY.cancelButton}
@@ -262,7 +265,7 @@ function MemberRow({
       {isAbsent && hasSchedule && (
         <button
           onClick={onCancel}
-          className="min-h-11 flex-shrink-0 rounded-xl border border-gray-300 px-3 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          className="min-h-11 flex-shrink-0 rounded-xl border border-rose-300 px-3 text-xs font-medium text-rose-500 focus-visible:ring-2 focus-visible:ring-rose-300"
           aria-label={`${member.name} 불참 취소`}
         >
           {COPY.cancelButton}
