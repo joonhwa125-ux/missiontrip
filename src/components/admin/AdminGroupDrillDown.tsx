@@ -77,7 +77,7 @@ export default function AdminGroupDrillDown({
   function handleCheckin(member: Member) {
     if (!activeSchedule) return;
     const temp: CheckIn = { user_id: member.id, is_absent: false, checked_at: new Date().toISOString() };
-    onCheckInsChange((prev) => [...prev, temp]);
+    onCheckInsChange((prev) => [...prev.filter((c) => c.user_id !== member.id), temp]);
     startTransition(async () => {
       const res = await createCheckin(member.id, activeSchedule.id);
       if (res.ok) {

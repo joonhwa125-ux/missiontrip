@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import { parseKSTTime } from "@/lib/utils";
-import { canCheckin } from "@/lib/constants";
+import { canCheckin, MIN_DAY_NUMBER, MAX_DAY_NUMBER } from "@/lib/constants";
 import type {
   ActionResult,
   SetupPreviewData,
@@ -271,10 +271,18 @@ export async function updateSchedule(
   const admin = await requireAdmin();
   if (!admin) return { ok: false, error: "관리자 권한이 필요해요" };
 
+  const trimmedTitle = data.title.trim();
+  if (!trimmedTitle) return { ok: false, error: "일정명을 입력해주세요" };
+  if (!Number.isInteger(data.day_number) || data.day_number < MIN_DAY_NUMBER || data.day_number > MAX_DAY_NUMBER)
+    return { ok: false, error: `일차는 ${MIN_DAY_NUMBER}~${MAX_DAY_NUMBER}만 가능해요` };
+  const VALID_SCOPES: ScheduleScope[] = ["all", "advance", "rear"];
+  if (!VALID_SCOPES.includes(data.scope))
+    return { ok: false, error: "유효하지 않은 대상이에요" };
+
   const supabase = createServiceClient();
   const { error } = await supabase
     .from("schedules")
-    .update(data)
+    .update({ ...data, title: trimmedTitle })
     .eq("id", scheduleId);
 
   if (error) return { ok: false, error: "일정 수정 중 오류가 발생했어요" };
@@ -388,6 +396,9 @@ export async function updateUserRole(
 
   if (userId === admin.id) {
     return { ok: false, error: "자신의 역할은 변경할 수 없어요" };
+  }
+  if (newRole !== "member" && newRole !== "leader") {
+    return { ok: false, error: "유효하지 않은 역할이에요" };
   }
 
   const supabase = createServiceClient();

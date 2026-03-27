@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { canCheckin, isAdminRole } from "@/lib/constants";
-import type { ActionResult, OfflinePendingCheckin } from "@/lib/types";
+import type { ActionResult, OfflinePendingCheckin, CheckedBy } from "@/lib/types";
 
 // /admin + /group 캐시 무효화 헬퍼 (체크인 관련 액션 공통)
 function revalidateMainPaths() {
@@ -157,6 +157,19 @@ export async function syncOfflineCheckins(
 
   if (!actor || !canCheckin(actor.role)) {
     return { ok: false, error: "권한이 없어요" };
+  }
+
+  if (!Array.isArray(checkins) || checkins.length === 0) {
+    return { ok: false, error: "동기화할 데이터가 없어요" };
+  }
+  if (checkins.length > 500) {
+    return { ok: false, error: "한 번에 동기화할 수 있는 최대 건수를 초과했어요" };
+  }
+  const VALID_CHECKED_BY: CheckedBy[] = ["leader", "admin"];
+  for (const item of checkins) {
+    if (!VALID_CHECKED_BY.includes(item.checked_by)) {
+      return { ok: false, error: "유효하지 않은 체크인 데이터예요" };
+    }
   }
 
   const supabase = createServiceClient();

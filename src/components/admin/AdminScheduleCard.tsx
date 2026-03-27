@@ -217,7 +217,8 @@ export default function AdminScheduleCard({
     >
       {/* 헤더: 완료 배지 + 집결시간 배지 + 후발 배지 */}
       <div className="mb-2 flex items-center gap-1">
-        <span className="rounded-full bg-[#EAF3DE] px-2 py-0.5 text-xs font-medium text-[#27500A]">
+        <span className="inline-flex items-center gap-0.5 rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-500">
+          <CheckIcon className="h-3 w-3" aria-hidden />
           완료
         </span>
         {timeDisplay && (
