@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useMemo } from "react";
 import { useBroadcastCheckin } from "@/hooks/useBroadcastCheckin";
-import { PhoneIcon, ChevronLeftIcon } from "@/components/ui/icons";
+import { PhoneIcon, ChevronLeftIcon, CheckIcon } from "@/components/ui/icons";
 import { createCheckin, deleteCheckin, markAbsent } from "@/actions/checkin";
 import { COPY, isLeaderRole } from "@/lib/constants";
 import { formatTime } from "@/lib/utils";
@@ -129,7 +129,7 @@ export default function AdminGroupDrillDown({
   return (
     <>
       {/* 헤더: 뒤로 + 조 이름 + 카운트 */}
-      <div className="flex-shrink-0 px-4 pb-2 pt-2">
+      <div className="flex-shrink-0 px-4 pt-2">
         <div className="flex items-center gap-1">
           <button
             onClick={onBack}
@@ -156,7 +156,7 @@ export default function AdminGroupDrillDown({
       </div>
 
       {/* 인원 목록 */}
-      <ul className="space-y-2 overflow-y-auto px-4 pb-6 pt-1">
+      <ul className="space-y-2 overflow-y-auto px-4 pb-6">
         {sorted.map((m) => (
           <MemberRow
             key={m.id}
@@ -203,35 +203,27 @@ function MemberRow({
   const isLeader = isLeaderRole(member.role);
   const hasSchedule = !!activeSchedule;
 
-  // 상태 텍스트: 모든 상태에 명시적 레이블 (KWCAG 1.3.3 감각적 특성)
-  const statusText = isAbsent
-    ? COPY.absent
-    : isChecked
-    ? checkin?.checked_at
-      ? `${formatTime(checkin.checked_at)} 확인`
-      : "확인 완료"
-    : COPY.notChecked;
-
-  const statusTextClass = isChecked
-    ? "text-stone-500"
-    : "text-muted-foreground";
-
   return (
     <li className="flex min-h-[3.5rem] items-center gap-2 rounded-xl bg-gray-50 px-3 py-2">
-      {/* 이름 + 상태 텍스트 (세로 2줄) */}
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <div className="flex items-center gap-1.5">
-          <span className="truncate font-medium">{member.name}</span>
-          {isLeader && (
-            <span className="flex-shrink-0 rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-500">
-              조장
-            </span>
-          )}
-        </div>
-        {/* 상태 텍스트: 색상 + 텍스트 이중 표현 (KWCAG 1.3.3) */}
-        <span className={`text-xs ${statusTextClass}`}>
-          {statusText}
-        </span>
+      {/* 이름 + 배지 (한 줄) */}
+      <div className="flex min-w-0 flex-1 items-center gap-1.5">
+        <span className="min-w-0 truncate font-medium">{member.name}</span>
+        {isLeader && (
+          <span className="flex-shrink-0 rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-500">
+            조장
+          </span>
+        )}
+        {isChecked ? (
+          <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+            <CheckIcon className="h-3 w-3" aria-hidden />
+            {checkin?.checked_at ? formatTime(checkin.checked_at) : "확인"}
+            <span className="sr-only">확인 완료</span>
+          </span>
+        ) : isAbsent ? (
+          <span className="flex-shrink-0 text-xs text-muted-foreground">{COPY.absent}</span>
+        ) : (
+          <span className="flex-shrink-0 text-xs text-muted-foreground">{COPY.notChecked}</span>
+        )}
       </div>
 
       {/* 체크인 액션 */}
