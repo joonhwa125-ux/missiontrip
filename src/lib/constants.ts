@@ -119,28 +119,33 @@ export const COLORS = {
 } as const;
 
 // 조 배지 스타일 (AdminBottomSheet + GroupFeedView 공통)
+// WCAG 2.1 명도대비 4.5:1 이상 준수
 export const GROUP_BADGE_STYLE: Record<
   import("./types").GroupBadgeStatus,
   { bg: string; text: string; label: string }
 > = {
-  reported: { bg: "bg-[#EAF3DE]", text: "text-[#27500A]", label: "보고완료" },
-  all_checked: { bg: "bg-[#FEF3C7]", text: "text-[#92400E]", label: "전원확인" },
-  in_progress: { bg: "bg-progress-badge", text: "text-[#633806]", label: "진행중" },
-  not_started: { bg: "bg-secondary", text: "text-muted-foreground", label: "시작전" },
+  // 보고완료: emerald 밝은 톤 (아직 일정 진행중, 액션 가능 상태)
+  reported: { bg: "bg-emerald-100", text: "text-emerald-800", label: "보고완료" },
+  // 전원확인: amber (보고 직전 단계)
+  all_checked: { bg: "bg-amber-100", text: "text-amber-800", label: "전원확인" },
+  // 진행중: amber 연한 톤
+  in_progress: { bg: "bg-amber-50", text: "text-amber-800", label: "진행중" },
+  // 시작전: neutral stone
+  not_started: { bg: "bg-stone-100", text: "text-stone-600", label: "시작전" },
 };
 
-// UI 문구 (PRD 8.2)
+// UI 문구 (PRD 8.2) - 제주 방언 적용
 export const COPY = {
   notChecked: "확인 전",
-  checked: (time: string) => `${time} 탑승 완료`,
+  checked: (time: string) => `${time} 왔수다`,
   checkinButton: "왔수다!",
   cancelButton: "취소",
   totalCount: (checked: number, total: number) => `${checked} / ${total}명 탑승 완료`,
   allComplete: (groupName: string, hasAbsent: boolean) =>
-    hasAbsent ? `${groupName} 전원 확인 완료!` : `${groupName} 전원 탑승 완료!`,
-  reportButtonComplete: "우리 조 다 왔수다! 보고하기",
-  reportButtonDone: "보고 완료!",
-  reportButtonPending: (n: number) => `${n}명 남았어요`,
+    hasAbsent ? `${groupName} 다 왔수다!` : `${groupName} 다 왔수다!`,
+  reportButtonComplete: "폭싹 속았수다! 보고하기",
+  reportButtonDone: "폭싹 속았수다!",
+  reportButtonPending: (n: number) => `${n}명 남았수다`,
   absent: "불참",
   offline: (n: number) => `오프라인 상태예요. ${n}건 저장 중 — 연결되면 자동으로 보낼게요`,
   scheduleAlert: (title: string) => `새로운 일정이 시작되었어요: ${title}`,
@@ -151,5 +156,5 @@ export const COPY = {
   absentCancel: "불참을 취소할까요?",
   scheduleDeactivated: "일정이 종료되었어요",
   deactivateConfirm: "정말 종료할까요?",
-  allReported: "모든 조가 보고했어요",
+  allReported: "모든 조가 보고했수다",
 } as const;

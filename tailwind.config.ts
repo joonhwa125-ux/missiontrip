@@ -8,7 +8,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // PRD 컬러 시스템 (8.1) - 개선된 통일 색상
+        // PRD 컬러 시스템 (8.1) - WCAG 2.1 명도대비 준수
         "main-action": "#FEE500",
         "complete-card": "#ECFDF5",
         "complete-check": "#059669",
@@ -16,18 +16,32 @@ const config: Config = {
         "offline-banner": "#F1EFE8",
         "progress-badge": "#FEF9C3",
         "app-bg": "#F5F3EF",
-        // 상태 뱃지 색상
+        // 상태 뱃지 색상 - 5단계 워크플로우
+        // 1. 시작전 (Pending) - neutral
         "status-pending": {
           bg: "#F5F5F4",
-          text: "#78716C",
+          text: "#57534E", // stone-600, 대비 5.7:1
         },
+        // 2. 진행중 (Active) - amber 계열
         "status-active": {
-          bg: "#FEF9C3",
-          text: "#854D0E",
+          bg: "#FEF3C7",  // amber-100
+          text: "#92400E", // amber-800, 대비 6.2:1
         },
+        // 3. 보고완료 (Reported) - emerald 밝은 톤 (아직 액션 가능)
+        "status-reported": {
+          bg: "#D1FAE5",  // emerald-100
+          text: "#047857", // emerald-700, 대비 4.6:1
+        },
+        // 4. 일정완료 (Completed/Archived) - muted neutral
         "status-complete": {
-          bg: "#ECFDF5",
-          text: "#059669",
+          bg: "#E7E5E4",  // stone-200
+          text: "#57534E", // stone-600, 대비 4.8:1
+        },
+        // 종료 버튼 - amber outline (시작과 짝)
+        "btn-end": {
+          bg: "#FFFBEB",   // amber-50
+          border: "#F59E0B", // amber-500
+          text: "#92400E", // amber-800, 대비 6.2:1 on amber-50
         },
         // shadcn/ui CSS 변수
         background: "hsl(var(--background))",

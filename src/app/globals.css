@@ -45,15 +45,19 @@
     --ring: 52 100% 50%;
     --radius: 0.75rem;
     
-    /* Status Colors - 통일된 상태 색상 시스템 */
-    --status-pending-bg: 33 10% 93%;
-    --status-pending-text: 25 8% 45%;
+    /* Status Colors - WCAG 2.1 명도대비 준수 5단계 워크플로우 */
+    /* 1. 시작전 (Pending) - neutral */
+    --status-pending-bg: 30 6% 96%;
+    --status-pending-text: 25 12% 33%;
+    /* 2. 진행중 (Active) - amber */
     --status-active-bg: 48 96% 89%;
-    --status-active-text: 32 81% 29%;
-    --status-complete-bg: 152 76% 94%;
-    --status-complete-text: 160 84% 28%;
-    --status-reported-bg: 152 76% 94%;
-    --status-reported-text: 160 84% 28%;
+    --status-active-text: 26 90% 31%;
+    /* 3. 보고완료 (Reported) - emerald 밝은 톤 */
+    --status-reported-bg: 149 80% 90%;
+    --status-reported-text: 162 93% 24%;
+    /* 4. 일정완료 (Completed) - muted neutral */
+    --status-complete-bg: 30 6% 90%;
+    --status-complete-text: 25 12% 33%;
   }
 
   * {

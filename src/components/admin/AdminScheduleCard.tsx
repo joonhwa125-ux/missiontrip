@@ -53,9 +53,13 @@ export default function AdminScheduleCard({
     </span>
   ) : null;
 
-  // 일정 상태 전환 버튼 공통 스타일
-  const statusBtnClass =
-    "flex-shrink-0 min-h-11 min-w-11 rounded-xl border border-gray-300 px-4 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-ring";
+  // 시작 버튼 스타일
+  const startBtnClass =
+    "flex-shrink-0 min-h-11 min-w-16 rounded-xl bg-main-action px-4 text-sm font-bold text-stone-900 shadow-sm transition-all hover:brightness-105 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-main-action";
+  
+  // 종료 버튼 스타일 - amber outline (시작과 짝, WCAG 대비 6.2:1)
+  const endBtnClass =
+    "flex-shrink-0 min-h-11 min-w-16 rounded-xl border-2 border-amber-500 bg-amber-50 px-4 text-sm font-semibold text-amber-800 transition-all hover:bg-amber-100 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-amber-400";
 
   // 부제목: location이 있을 때 title을 보조로 (시간 제거 — 헤더 배지로 이동)
   const subtitle = schedule.location ? (
