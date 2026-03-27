@@ -241,27 +241,39 @@ export default function GroupCheckinView({
       {/* 상단 바 (뒤로 가기 포함) */}
       <header className="bg-white px-4 py-4 shadow-sm">
         <div className="flex items-start gap-2">
-          <button
-            onClick={onBack}
-            className={cn(
-              "flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-main-action",
-              !closeMode && "items-start pt-0.5"
-            )}
-            aria-label={closeMode ? "닫기" : "일정 피드로 돌아가기"}
-          >
-            {closeMode ? <XIcon className="h-5 w-5" aria-hidden /> : <ChevronLeftIcon aria-hidden />}
-          </button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-lg font-bold">
-              {activeSchedule?.location ?? activeSchedule?.title ?? "대기 중"}
-            </h1>
-            <p className="text-sm text-muted-foreground">{groupName}</p>
-          </div>
-          {members.length > 0 && (
-            <span className="flex-shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-              {checkedCount + absentIds.size}/{members.length}명 완료
-            </span>
+          {!closeMode && (
+            <button
+              onClick={onBack}
+              className="flex min-h-11 min-w-11 flex-shrink-0 items-start justify-center rounded-lg pt-0.5 focus-visible:ring-2 focus-visible:ring-main-action"
+              aria-label="일정 피드로 돌아가기"
+            >
+              <ChevronLeftIcon aria-hidden />
+            </button>
           )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between">
+              <h1 className="text-lg font-bold">
+                {activeSchedule?.location ?? activeSchedule?.title ?? "대기 중"}
+              </h1>
+              {closeMode && (
+                <button
+                  onClick={onBack}
+                  className="flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-main-action"
+                  aria-label="닫기"
+                >
+                  <XIcon className="h-5 w-5" aria-hidden />
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-muted-foreground">{groupName}</p>
+              {members.length > 0 && (
+                <span className="flex-shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                  {checkedCount + absentIds.size}/{members.length}명 완료
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </header>
 
@@ -306,8 +318,8 @@ export default function GroupCheckinView({
           <div className="mb-4 text-6xl animate-bounce" aria-hidden="true">
             🍊
           </div>
-          <h2 className="mb-2 text-2xl font-bold">{COPY.allComplete(groupName)}</h2>
-          <p className="text-lg font-medium text-stone-600">
+          <h2 className="mb-2 text-2xl font-bold">{COPY.allComplete}</h2>
+          <p className="whitespace-pre-line text-lg font-medium text-stone-600">
             {reported ? "보고 완료! 수고하셨어요." : COPY.celebrationSubtitle}
           </p>
         </div>

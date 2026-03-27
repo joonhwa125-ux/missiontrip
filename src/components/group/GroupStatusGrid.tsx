@@ -116,7 +116,7 @@ function GroupMiniCard({
 }) {
   const b = GROUP_BADGE_STYLE[badge];
   return (
-    <div className="rounded-2xl border border-stone-200 bg-white p-4">
+    <div className={cn("rounded-2xl border bg-white p-4", badge === "reported" ? "border-emerald-300" : "border-stone-200")}>
       <div className="mb-1.5">
         <span
           className={cn(
