@@ -26,7 +26,11 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
-.env*.local
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
 
 # vercel
 .vercel
@@ -35,5 +39,23 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# secrets / credentials
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.csr
+credentials.json
+service-account*.json
+
 # claude code
 .claude/agent-memory/
+
+# OS
+Thumbs.db
+
+# IDE
+.idea/
+*.swp
+*.swo
