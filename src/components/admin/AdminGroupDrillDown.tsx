@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useTransition, useMemo } from "react";
+import { useBroadcast } from "@/hooks/useRealtime";
 import { useBroadcastCheckin } from "@/hooks/useBroadcastCheckin";
 import { PhoneIcon, ChevronLeftIcon, CheckIcon, MinusIcon } from "@/components/ui/icons";
 import { createCheckin, deleteCheckin, markAbsent } from "@/actions/checkin";
-import { COPY, isLeaderRole } from "@/lib/constants";
+import { COPY, CHANNEL_GLOBAL, CHANNEL_ADMIN, EVENT_REPORT_INVALIDATED, isLeaderRole } from "@/lib/constants";
 import { formatTime } from "@/lib/utils";
 import {
   Dialog,
@@ -45,6 +46,7 @@ export default function AdminGroupDrillDown({
 }: Props) {
   const [, startTransition] = useTransition();
   const broadcastCheckin = useBroadcastCheckin(group.id, activeSchedule?.id);
+  const { broadcast } = useBroadcast();
   const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
 
   const groupMembers = useMemo(
@@ -117,6 +119,12 @@ export default function AdminGroupDrillDown({
       const res = await deleteCheckin(member.id, activeSchedule.id);
       if (res.ok) {
         await broadcastCheckin(member.id, "delete");
+        // M-5: 보고 무효화 broadcast (Server Action이 DB 삭제, 클라이언트 상태 동기화)
+        const p = { group_id: group.id, schedule_id: activeSchedule.id };
+        await Promise.allSettled([
+          broadcast(CHANNEL_GLOBAL, EVENT_REPORT_INVALIDATED, p),
+          broadcast(CHANNEL_ADMIN, EVENT_REPORT_INVALIDATED, p),
+        ]);
       } else {
         if (removed) onCheckInsChange((prev) => [...prev, removed!]);
         showToast?.(res.error ?? "취소 처리 중 오류가 발생했어요.");
