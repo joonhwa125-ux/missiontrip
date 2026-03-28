@@ -321,6 +321,14 @@ export default function GroupCheckinView({
                     <CheckIcon className="h-2.5 w-2.5 text-white" aria-hidden />
                   </span>
                 )}
+                {absent && (
+                  <span
+                    className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-stone-400 ring-2 ring-white"
+                    aria-hidden="true"
+                  >
+                    <XIcon className="h-2.5 w-2.5 text-white" aria-hidden />
+                  </span>
+                )}
               </div>
             );
           })}
