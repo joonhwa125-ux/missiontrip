@@ -329,11 +329,16 @@ export default function GroupCheckinView({
 
       {/* 전원 완료 축하 화면 */}
       {allComplete && (
-        <div className="flex flex-col items-center bg-gradient-to-b from-orange-50/50 px-6 py-8 text-center">
+        <div className={cn(
+          "flex flex-col items-center bg-gradient-to-b px-6 py-8 text-center",
+          reported ? "from-sky-50/60" : "from-orange-50/50"
+        )}>
           <div className="mb-4 animate-bounce" aria-hidden="true">
-            <Image src="/horse.png" alt="" width={80} height={80} />
+            <Image src="/horse.png" alt="" width={120} height={120} />
           </div>
-          <h2 className="mb-2 text-2xl font-bold">{COPY.allComplete}</h2>
+          <h2 className="mb-2 text-2xl font-bold">
+            {reported ? COPY.allCompleteReported : COPY.allComplete}
+          </h2>
           <p className="whitespace-pre-line text-lg font-medium text-stone-600">
             {reported ? COPY.celebrationReported : COPY.celebrationSubtitle}
           </p>
