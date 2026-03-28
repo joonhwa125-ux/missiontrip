@@ -8,13 +8,11 @@ import {
   getPendingReports,
   savePendingReport,
   clearPendingReports,
-  cacheActiveSchedule,
-  getCachedActiveSchedule,
 } from "@/utils/offline";
 import { syncOfflineCheckins } from "@/actions/checkin";
 import { submitReport } from "@/actions/report";
 import { OFFLINE_PENDING_REPORTS_KEY } from "@/lib/constants";
-import type { OfflinePendingCheckin, OfflinePendingReport, Schedule } from "@/lib/types";
+import type { OfflinePendingCheckin, OfflinePendingReport } from "@/lib/types";
 
 export function useOfflineSync() {
   const [isOnline, setIsOnline] = useState(

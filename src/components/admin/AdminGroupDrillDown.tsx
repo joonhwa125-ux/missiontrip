@@ -236,7 +236,7 @@ function MemberRow({
         <>
           <button
             onClick={onAbsent}
-            className="min-h-11 flex-shrink-0 rounded-xl border border-red-200 px-3 text-xs font-medium text-red-700 focus-visible:ring-2 focus-visible:ring-red-300"
+            className="min-h-11 flex-shrink-0 rounded-xl border border-stone-300 px-3 text-xs font-medium text-stone-600 focus-visible:ring-2 focus-visible:ring-stone-300 focus-visible:ring-offset-2"
             aria-label={`${member.name} 불참 처리`}
           >
             {COPY.absent}
