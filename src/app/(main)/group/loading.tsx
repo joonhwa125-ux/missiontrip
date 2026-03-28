@@ -15,6 +15,7 @@ export default function GroupLoading() {
           </span>
         }
       />
+      <div role="status" aria-live="polite" className="sr-only">불러오는 중</div>
       <DayTabsSkeleton />
       <div className="flex-1 space-y-2 px-4 py-4">
         <ActiveCardSkeleton />
