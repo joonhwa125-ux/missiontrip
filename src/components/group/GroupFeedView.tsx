@@ -74,12 +74,11 @@ export default function GroupFeedView({
     <div className="flex-1 overflow-y-auto">
       {/* 통일 헤더 */}
       <PageHeader
-        superTitle="2026 링키지랩 미션트립"
         title="혼디모영"
         titleNode={
           <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
             <span className="inline-flex items-center gap-1">
-              <Image src="/logo.png" alt="" width={44} height={44} className="inline-block" aria-hidden="true" priority />
+              <Image src="/logo.png" alt="" width={56} height={56} quality={100} className="inline-block" aria-hidden="true" priority />
               혼디모영
             </span>
             <span className="flex-shrink-0 rounded-full bg-gray-900 px-2 py-0.5 font-semibold text-white text-[clamp(0.6875rem,2.5vw,0.875rem)]">
