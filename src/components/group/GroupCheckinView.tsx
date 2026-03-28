@@ -335,6 +335,12 @@ export default function GroupCheckinView({
         </div>
       </div>
 
+      {/* 조랑말 이미지 사전 로드 — allComplete 전에 미리 fetch하여 전환 시 즉시 표시 */}
+      <div className="sr-only" aria-hidden="true">
+        <Image src="/standing-horse.png" alt="" width={120} height={120} priority />
+        <Image src="/running-horse.png" alt="" width={120} height={120} priority />
+      </div>
+
       {/* 전원 완료 축하 화면 */}
       {allComplete && (
         <div className={cn(
@@ -344,10 +350,6 @@ export default function GroupCheckinView({
           <div className={cn("mb-4", reported && "animate-bounce")} aria-hidden="true">
             <Image src={reported ? "/running-horse.png" : "/standing-horse.png"} alt="" width={120} height={120} priority />
           </div>
-          {/* 보고 전: running-horse 프리로드 (전환 시 즉시 표시) */}
-          {!reported && (
-            <link rel="preload" href="/running-horse.png" as="image" />
-          )}
           <h2 className="mb-2 text-2xl font-bold">
             {reported ? COPY.allCompleteReported : COPY.allComplete}
           </h2>
