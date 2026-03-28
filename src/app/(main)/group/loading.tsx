@@ -9,7 +9,7 @@ export default function GroupLoading() {
         title="혼디모영"
         titleNode={
           <span className="inline-flex items-center gap-1">
-            <Image src="/돌하르방.png" alt="" width={40} height={40} quality={100} className="inline-block" aria-hidden="true" priority />
+            <Image src="/logo.png" alt="" width={40} height={40} quality={100} className="inline-block" aria-hidden="true" priority />
             혼디모영
           </span>
         }
