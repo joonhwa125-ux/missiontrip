@@ -46,6 +46,14 @@ export function XIcon({ className = "h-4 w-4", strokeWidth = 3, ...rest }: IconP
   );
 }
 
+export function MinusIcon({ className = "h-4 w-4", strokeWidth = 3, ...rest }: IconProps) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={strokeWidth} {...rest}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
+    </svg>
+  );
+}
+
 export function UsersIcon({ className = "h-5 w-5", strokeWidth = 2, ...rest }: IconProps) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={strokeWidth} {...rest}>

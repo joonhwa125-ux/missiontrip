@@ -9,7 +9,7 @@ import { submitReport } from "@/actions/report";
 import Image from "next/image";
 import MemberCard from "./MemberCard";
 import { CancelCheckinDialog, MarkAbsentDialog } from "./CheckinDialogs";
-import { CheckIcon, ChevronLeftIcon, XIcon } from "@/components/ui/icons";
+import { CheckIcon, ChevronLeftIcon, MinusIcon, XIcon } from "@/components/ui/icons";
 import {
   COPY,
   CHANNEL_GLOBAL,
@@ -326,7 +326,7 @@ export default function GroupCheckinView({
                     className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-stone-400 ring-2 ring-white"
                     aria-hidden="true"
                   >
-                    <XIcon className="h-2.5 w-2.5 text-white" aria-hidden />
+                    <MinusIcon className="h-2.5 w-2.5 text-white" aria-hidden />
                   </span>
                 )}
               </div>
