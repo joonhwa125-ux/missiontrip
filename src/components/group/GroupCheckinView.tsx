@@ -307,7 +307,7 @@ export default function GroupCheckinView({
                       ? "bg-gray-200 text-gray-500"
                       : checked
                         ? "bg-main-action shadow-sm"
-                        : "border-2 border-dashed border-gray-300 bg-gray-100"
+                        : "border-2 border-dashed border-gray-300 bg-white"
                   )}
                   aria-label={`${m.name} ${absent ? "불참" : checked ? "탑승 완료" : "미탑승"}`}
                 >
