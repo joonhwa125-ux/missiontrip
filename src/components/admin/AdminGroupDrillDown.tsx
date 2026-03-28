@@ -225,7 +225,7 @@ function MemberRow({
             <span className="sr-only">확인 완료</span>
           </span>
         ) : isAbsent ? (
-          <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-500">
+          <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-600">
             <MinusIcon className="h-3 w-3" aria-hidden />
             {COPY.absent}
           </span>
@@ -239,7 +239,7 @@ function MemberRow({
         <>
           <button
             onClick={onAbsent}
-            className="min-h-11 flex-shrink-0 rounded-xl border border-stone-300 px-3 text-xs font-medium text-stone-600 focus-visible:ring-2 focus-visible:ring-stone-300 focus-visible:ring-offset-2"
+            className="min-h-11 flex-shrink-0 rounded-xl border border-stone-300 px-3 text-xs font-bold text-stone-700 focus-visible:ring-2 focus-visible:ring-stone-300 focus-visible:ring-offset-2"
             aria-label={`${member.name} 불참 처리`}
           >
             {COPY.absent}

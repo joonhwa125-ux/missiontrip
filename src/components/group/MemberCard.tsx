@@ -39,7 +39,7 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
             <span className="sr-only">탑승 완료</span>
           </span>
         ) : isAbsent ? (
-          <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-rose-50 px-2 py-0.5 text-xs font-medium text-rose-500">
+          <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-600">
             <MinusIcon className="h-3 w-3" aria-hidden />
             {COPY.absent}
           </span>
@@ -71,7 +71,7 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
           <>
             <button
               onClick={() => onAbsent(user)}
-              className="min-h-11 min-w-11 rounded-xl border border-stone-300 px-3 text-sm font-medium text-stone-600 focus-visible:ring-2 focus-visible:ring-stone-300 focus-visible:ring-offset-2"
+              className="min-h-11 min-w-11 rounded-xl border border-stone-300 px-3 text-sm font-bold text-stone-700 focus-visible:ring-2 focus-visible:ring-stone-300 focus-visible:ring-offset-2"
               aria-label={`${user.name} 불참 처리`}
             >
               {COPY.absent}
