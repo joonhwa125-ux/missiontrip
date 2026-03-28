@@ -33,7 +33,7 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
       <div className={cn("min-w-0", isChecked && "flex items-center gap-2")}>
         <p className={cn("min-w-0 text-base font-medium truncate", (isChecked || isAbsent) && "text-muted-foreground")}>{user.name}</p>
         {isChecked ? (
-          <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+          <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-stone-50 px-2 py-0.5 text-xs font-medium text-stone-400">
             <CheckIcon className="h-3 w-3" aria-hidden />
             {formatTime(checkIn.checked_at)}
             <span className="sr-only">탑승 완료</span>

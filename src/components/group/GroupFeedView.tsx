@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Image from "next/image";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { sortSchedulesByStatus, getDefaultDay } from "@/lib/utils";
 import PageHeader from "@/components/common/PageHeader";
@@ -77,7 +78,10 @@ export default function GroupFeedView({
         title="혼디모영"
         titleNode={
           <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-            <span>🍊 혼디모영</span>
+            <span className="inline-flex items-center gap-1">
+              <Image src="/jeju_icon_1.png" alt="" width={28} height={28} className="inline-block" aria-hidden="true" />
+              혼디모영
+            </span>
             <span className="flex-shrink-0 rounded-full bg-gray-900 px-2 py-0.5 font-semibold text-white text-[clamp(0.6875rem,2.5vw,0.875rem)]">
               {groupName} 조장
             </span>

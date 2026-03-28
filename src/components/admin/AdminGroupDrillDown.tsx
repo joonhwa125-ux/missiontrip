@@ -214,7 +214,7 @@ function MemberRow({
           </span>
         )}
         {isChecked ? (
-          <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">
+          <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-stone-50 px-2 py-0.5 text-xs font-medium text-stone-400">
             <CheckIcon className="h-3 w-3" aria-hidden />
             {checkin?.checked_at ? formatTime(checkin.checked_at) : "확인"}
             <span className="sr-only">확인 완료</span>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import { Suspense } from "react";
 
@@ -39,13 +40,11 @@ function LoginContent() {
       <div className="flex w-full max-w-sm flex-col items-center gap-8">
         {/* 서비스 로고 + 명칭 */}
         <div className="flex flex-col items-center gap-3 text-center">
-          <div
-            className="flex h-16 w-16 items-center justify-center rounded-2xl bg-main-action text-2xl"
-            aria-hidden="true"
-          >
-            ✈
-          </div>
-          <h1 className="text-2xl font-bold">🍊 혼디모영</h1>
+          <Image src="/jeju_icon_0.png" alt="미션트립" width={80} height={80} priority />
+          <h1 className="inline-flex items-center gap-1.5 text-2xl font-bold">
+            <Image src="/jeju_icon_1.png" alt="" width={28} height={28} aria-hidden="true" />
+            혼디모영
+          </h1>
           <p className="text-sm text-muted-foreground">
             링키지랩 10주년 미션트립
           </p>
