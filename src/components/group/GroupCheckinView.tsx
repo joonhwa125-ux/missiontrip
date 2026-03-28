@@ -341,8 +341,8 @@ export default function GroupCheckinView({
           "flex flex-col items-center bg-gradient-to-b px-6 py-8 text-center",
           "from-sky-50/60"
         )}>
-          <div className="mb-4 animate-bounce" aria-hidden="true">
-            <Image src="/horse.png" alt="" width={120} height={120} />
+          <div className={cn("mb-4", reported && "animate-bounce")} aria-hidden="true">
+            <Image src={reported ? "/running-horse.png" : "/standing-horse.png"} alt="" width={120} height={120} />
           </div>
           <h2 className="mb-2 text-2xl font-bold">
             {reported ? COPY.allCompleteReported : COPY.allComplete}
