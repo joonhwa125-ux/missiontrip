@@ -98,8 +98,16 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <main className="flex min-h-screen items-center justify-center bg-app-bg">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-main-action border-t-transparent" aria-label="로딩 중" />
+        <main className="flex min-h-screen flex-col items-center justify-center bg-app-bg px-6">
+          <div className="flex w-full max-w-sm flex-col items-center gap-8">
+            <div className="flex flex-col items-center gap-3 text-center">
+              <Image src="/돌하르방.png" alt="미션트립" width={80} height={80} priority />
+              <h1 className="text-2xl font-bold">혼디모영</h1>
+              <p className="text-sm text-muted-foreground">링키지랩 10주년 미션트립</p>
+            </div>
+            <div className="h-11 w-full animate-pulse rounded-xl bg-gray-100" aria-hidden="true" />
+            <div role="status" aria-live="polite" className="sr-only">불러오는 중</div>
+          </div>
         </main>
       }
     >
