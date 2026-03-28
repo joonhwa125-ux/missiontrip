@@ -241,8 +241,33 @@ export default function GroupCheckinView({
     <div className="flex flex-1 flex-col">
       {/* 상단 바 (뒤로 가기 포함) */}
       <header className="bg-white px-4 py-4 shadow-sm">
-        <div className="flex items-start gap-2">
-          {!closeMode && (
+        {closeMode ? (
+          /* closeMode: 모달 패턴 — 타이틀 중앙, X 우측 */
+          <div className="relative flex items-center justify-center min-h-11">
+            <div className="text-center">
+              <h1 className="text-lg font-bold">
+                {activeSchedule?.location ?? activeSchedule?.title ?? "대기 중"}
+              </h1>
+              <div className="flex items-center justify-center gap-2">
+                <p className="text-sm text-muted-foreground">{groupName}</p>
+                {members.length > 0 && (
+                  <span className="flex-shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                    {checkedCount + absentIds.size}/{members.length}명 완료
+                  </span>
+                )}
+              </div>
+            </div>
+            <button
+              onClick={onBack}
+              className="absolute right-0 flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-main-action"
+              aria-label="닫기"
+            >
+              <XIcon className="h-5 w-5" aria-hidden />
+            </button>
+          </div>
+        ) : (
+          /* 조장 뷰: 뒤로(<) 좌측, 타이틀 좌측 정렬 */
+          <div className="flex items-start gap-2">
             <button
               onClick={onBack}
               className="flex min-h-11 min-w-11 flex-shrink-0 items-start justify-center rounded-lg pt-0.5 focus-visible:ring-2 focus-visible:ring-main-action"
@@ -250,32 +275,21 @@ export default function GroupCheckinView({
             >
               <ChevronLeftIcon aria-hidden />
             </button>
-          )}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between">
+            <div className="flex-1 min-w-0">
               <h1 className="text-lg font-bold">
                 {activeSchedule?.location ?? activeSchedule?.title ?? "대기 중"}
               </h1>
-              {closeMode && (
-                <button
-                  onClick={onBack}
-                  className="flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-main-action"
-                  aria-label="닫기"
-                >
-                  <XIcon className="h-5 w-5" aria-hidden />
-                </button>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <p className="text-sm text-muted-foreground">{groupName}</p>
-              {members.length > 0 && (
-                <span className="flex-shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-                  {checkedCount + absentIds.size}/{members.length}명 완료
-                </span>
-              )}
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground">{groupName}</p>
+                {members.length > 0 && (
+                  <span className="flex-shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                    {checkedCount + absentIds.size}/{members.length}명 완료
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </header>
 
       {/* 이니셜 원 행 */}
