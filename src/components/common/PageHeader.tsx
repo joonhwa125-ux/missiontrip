@@ -12,8 +12,8 @@ interface Props {
 
 export default function PageHeader({ title, titleNode, superTitle, subtitle, backHref, rightSlot }: Props) {
   return (
-    <header className="border-b border-gray-100 bg-white px-4 py-4">
-      <div className="flex items-end justify-between">
+    <header className="border-b border-gray-100 bg-white px-4 py-2">
+      <div className="flex items-center justify-between">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           {backHref && (
             <Link
