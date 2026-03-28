@@ -42,7 +42,7 @@ function LoginContent() {
         <div className="flex flex-col items-center gap-3 text-center">
           <Image src="/jeju_icon_0.png" alt="미션트립" width={80} height={80} priority />
           <h1 className="inline-flex items-center gap-1.5 text-2xl font-bold">
-            <Image src="/jeju_icon_1.png" alt="" width={28} height={28} aria-hidden="true" />
+            <Image src="/jeju_icon_1.png" alt="" width={36} height={36} className="mix-blend-multiply" aria-hidden="true" />
             혼디모영
           </h1>
           <p className="text-sm text-muted-foreground">
