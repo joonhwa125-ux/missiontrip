@@ -146,14 +146,14 @@ export default function ScheduleCard({
             <p className="text-sm text-muted-foreground">{schedule.title}</p>
             {total > 0 && (
               <p className="flex-shrink-0 flex items-center gap-0.5 text-xs text-muted-foreground">
-                <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
+                <CheckIcon className="h-3 w-3 text-stone-400" aria-hidden />
                 {completedCount}/{total}명{completedAbsent > 0 && ` (불참 ${completedAbsent})`}
               </p>
             )}
           </div>
         ) : total > 0 ? (
           <p className="mt-1 flex items-center gap-0.5 text-xs text-muted-foreground">
-            <CheckIcon className="h-3 w-3 text-complete-check" aria-hidden />
+            <CheckIcon className="h-3 w-3 text-stone-400" aria-hidden />
             {completedCount}/{total}명{completedAbsent > 0 && ` (불참 ${completedAbsent})`}
           </p>
         ) : null}

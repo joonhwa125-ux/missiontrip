@@ -6,6 +6,7 @@ import { useBroadcastCheckin } from "@/hooks/useBroadcastCheckin";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { createCheckin, deleteCheckin, markAbsent } from "@/actions/checkin";
 import { submitReport } from "@/actions/report";
+import Image from "next/image";
 import MemberCard from "./MemberCard";
 import { CancelCheckinDialog, MarkAbsentDialog } from "./CheckinDialogs";
 import { CheckIcon, ChevronLeftIcon, XIcon } from "@/components/ui/icons";
@@ -315,8 +316,8 @@ export default function GroupCheckinView({
       {/* 전원 완료 축하 화면 */}
       {allComplete && (
         <div className="flex flex-col items-center bg-gradient-to-b from-orange-50/50 px-6 py-8 text-center">
-          <div className="mb-4 text-6xl animate-bounce" aria-hidden="true">
-            🍊
+          <div className="mb-4 animate-bounce" aria-hidden="true">
+            <Image src="/조랑말.png" alt="" width={80} height={80} />
           </div>
           <h2 className="mb-2 text-2xl font-bold">{COPY.allComplete}</h2>
           <p className="whitespace-pre-line text-lg font-medium text-stone-600">
