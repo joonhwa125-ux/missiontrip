@@ -1,5 +1,6 @@
 import Image from "next/image";
 import PageHeader from "@/components/common/PageHeader";
+import { DayTabsSkeleton, ActiveCardSkeleton, WaitingCardSkeleton } from "@/components/common/ScheduleCardSkeleton";
 
 export default function AdminLoading() {
   return (
@@ -19,10 +20,12 @@ export default function AdminLoading() {
           </span>
         }
       />
-      <div className="flex flex-1 items-center justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-main-action" role="status">
-          <span className="sr-only">로딩 중</span>
-        </div>
+      <DayTabsSkeleton />
+      <div className="flex-1 space-y-2 px-4 py-4">
+        <ActiveCardSkeleton />
+        <WaitingCardSkeleton />
+        <WaitingCardSkeleton />
+        <WaitingCardSkeleton />
       </div>
     </div>
   );
