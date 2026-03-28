@@ -132,7 +132,7 @@ export default function ScheduleCard({
           완료
         </span>
         {timeDisplay && (
-          <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
+          <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-400">
             집결 {timeDisplay}
           </span>
         )}
