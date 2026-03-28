@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeftIcon, RefreshIcon } from "@/components/ui/icons";
+import { ChevronLeftIcon, ArrowPathIcon } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 import { SETUP_LAST_SYNCED_KEY, SETUP_SOURCE_KEY } from "@/lib/constants";
 
@@ -78,7 +78,7 @@ export default function SetupPageTabs({ wizard, currentData, hasData }: Props) {
             className="flex min-h-11 min-w-11 flex-col items-center justify-center rounded-lg px-2 py-1 text-gray-500 focus-visible:ring-2 focus-visible:ring-gray-900"
             aria-label="데이터 다시 불러오기"
           >
-            <RefreshIcon className="h-4 w-4" aria-hidden />
+            <ArrowPathIcon className="h-4 w-4" aria-hidden />
             {lastSynced && (
               <span className="mt-0.5 text-xs leading-none text-muted-foreground">
                 {formatSyncTime(lastSynced)}
