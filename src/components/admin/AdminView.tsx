@@ -390,12 +390,12 @@ export default function AdminView({
       <PageHeader
         title="혼디모영"
         titleNode={
-          <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+          <span className="inline-flex items-center gap-1.5">
             <span className="inline-flex items-center gap-1">
               <Image src="/logo.png" alt="" width={56} height={56} quality={100} className="inline-block" aria-hidden="true" priority />
               혼디모영
             </span>
-            <span className="flex-shrink-0 rounded-full bg-gray-900 px-2 py-0.5 font-semibold text-white text-[clamp(0.6875rem,2.5vw,0.875rem)]">
+            <span className="flex-shrink-0 rounded-full bg-gray-900 px-1.5 py-0.5 font-semibold text-white text-xs">
               관리자
             </span>
           </span>
