@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>E2E 테스트 시나리오</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F5F3EF; color: #1a1a1a; padding: 1rem; max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+  .subtitle { color: #666; font-size: 0.875rem; margin-bottom: 1rem; }
+  .progress-bar { background: #e5e5e5; border-radius: 999px; height: 8px; margin-bottom: 1.5rem; overflow: hidden; }
+  .progress-fill { background: #0ACF83; height: 100%; border-radius: 999px; transition: width 0.3s; }
+  .progress-text { text-align: center; font-size: 0.875rem; font-weight: 600; color: #059669; margin-bottom: 0.5rem; }
+  .section { background: white; border-radius: 1rem; padding: 1rem; margin-bottom: 0.75rem; border: 1px solid #E0DDD8; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; min-height: 2.75rem; }
+  .section-title { font-size: 1rem; font-weight: 700; }
+  .section-badge { font-size: 0.75rem; font-weight: 600; padding: 0.25rem 0.625rem; border-radius: 999px; }
+  .badge-pending { background: #FEF9C3; color: #633806; }
+  .badge-done { background: #EAF3DE; color: #27500A; }
+  .section-body { display: none; margin-top: 0.75rem; }
+  .section.open .section-body { display: block; }
+  .section.open .chevron { transform: rotate(180deg); }
+  .chevron { transition: transform 0.2s; font-size: 0.75rem; color: #999; }
+  .subsection { font-size: 0.875rem; font-weight: 700; color: #444; margin: 0.75rem 0 0.375rem; padding-top: 0.5rem; border-top: 1px solid #f0f0f0; }
+  .subsection:first-child { border-top: none; margin-top: 0; padding-top: 0; }
+  .item { display: flex; align-items: flex-start; gap: 0.5rem; padding: 0.5rem 0; border-bottom: 1px solid #f5f5f5; }
+  .item:last-child { border-bottom: none; }
+  .item input[type="checkbox"] { margin-top: 0.125rem; width: 1.25rem; height: 1.25rem; accent-color: #059669; flex-shrink: 0; cursor: pointer; }
+  .item label { font-size: 0.875rem; line-height: 1.4; cursor: pointer; flex: 1; }
+  .item.checked label { color: #999; text-decoration: line-through; }
+  .role { display: inline-block; font-size: 0.6875rem; font-weight: 700; padding: 0.125rem 0.375rem; border-radius: 0.25rem; margin-right: 0.25rem; }
+  .role-a { background: #DBEAFE; color: #1E40AF; }
+  .role-b { background: #FEF3C7; color: #92400E; }
+  .role-ab { background: #F3E8FF; color: #6B21A8; }
+  .reset-btn { display: block; margin: 1.5rem auto; padding: 0.625rem 1.5rem; background: white; border: 1px solid #fca5a5; color: #ef4444; border-radius: 0.75rem; font-size: 0.875rem; font-weight: 600; cursor: pointer; min-height: 2.75rem; }
+  .reset-btn:active { background: #fef2f2; }
+  .prep { background: #f0f9ff; border-left: 3px solid #38bdf8; padding: 0.5rem 0.75rem; border-radius: 0 0.5rem 0.5rem 0; margin-bottom: 0.75rem; font-size: 0.8125rem; color: #0369a1; }
+</style>
+</head>
+<body>
+
+<h1>E2E 테스트 시나리오</h1>
+<p class="subtitle">브라우저 2개 — 관리자(A) + 조장(B) — 체크하며 진행</p>
+<div class="progress-text" id="progressText">0 / 56 완료</div>
+<div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+
+<div class="prep">
+  <strong>사전 준비</strong><br>
+  A = 관리자 계정 (/admin) &nbsp; B = 조장 계정 (/group)<br>
+  Vercel 프로덕션 배포 + 테스트 데이터 셋업 완료 상태에서 시작
+</div>
+
+<div id="sections"></div>
+
+<button class="reset-btn" onclick="resetAll()">전체 초기화</button>
+
+<script>
+const DATA = [
+  { title: "1. 로그인", subs: [
+    { name: "1-1. 정상 로그인", items: [
+      { r: "", t: "/login 접속 → [Google로 계속하기] 버튼 표시" },
+      { r: "", t: "회사 계정으로 로그인 → 역할에 따라 /admin 또는 /group 이동" },
+      { r: "", t: "로그인 후 새로고침 → 세션 유지 (재로그인 없음)" },
+    ]},
+    { name: "1-2. 비정상 로그인", items: [
+      { r: "", t: "회사 외 구글 계정 → '회사 계정으로만 로그인할 수 있어요' 안내" },
+      { r: "", t: "DB 미등록 회사 계정 → '등록되지 않은 계정이에요' 안내" },
+    ]},
+  ]},
+  { title: "2. 일정 활성화", subs: [
+    { name: "2-1. 수동 활성화", items: [
+      { r: "a", t: "대기 일정 [활성화] 탭 → '진행중' pill + 노란 테두리" },
+      { r: "b", t: "'새로운 일정이 시작되었어요: {일정명}' 토스트 실시간 수신" },
+      { r: "b", t: "피드에서 해당 일정 '진행중' 표시" },
+    ]},
+    { name: "2-2. 미확인 경고", items: [
+      { r: "a", t: "미확인 인원 있는 상태에서 다른 일정 [활성화] → 경고 모달" },
+      { r: "a", t: "[취소] → 기존 일정 유지" },
+      { r: "a", t: "[확인] → 새 일정 전환" },
+    ]},
+    { name: "2-3. 일정 종료", items: [
+      { r: "a", t: "진행중 일정 종료 → 완료(dim) 상태" },
+      { r: "b", t: "'일정이 종료되었어요' 토스트 수신" },
+    ]},
+  ]},
+  { title: "3. 조장 체크인 (탭탭탭)", subs: [
+    { name: "3-1. 체크인 처리", items: [
+      { r: "b", t: "진행중 일정 카드 탭 → 체크인 화면 진입" },
+      { r: "b", t: "상단에 '{조명}' + 집결장소 표시" },
+      { r: "b", t: "[왔수다!] 탭 → 모달 없이 즉시 완료 처리" },
+      { r: "b", t: "카드: 연초록 배경 + 'HH:MM 탑승 완료' + 초록 체크 배지" },
+      { r: "b", t: "완료 카드 하단 자동 이동" },
+      { r: "b", t: "이니셜 원: 노란 배경 + 초록 체크 점" },
+      { r: "b", t: "상단 카운트 증가" },
+    ]},
+    { name: "3-2. 체크인 취소", items: [
+      { r: "b", t: "완료 카드 [취소] → 확인 모달 → 미완료 복귀" },
+      { r: "b", t: "카운트 감소" },
+    ]},
+    { name: "3-3. 불참 처리", items: [
+      { r: "b", t: "[불참] 탭 → 확인 모달 → 회색 배경 + '− 불참' 앰버 배지" },
+      { r: "b", t: "이니셜 원에 마이너스(−) 아이콘" },
+    ]},
+    { name: "3-4. 불참 취소", items: [
+      { r: "b", t: "불참 카드 [취소] → 확인 모달 → 미완료 복귀" },
+    ]},
+  ]},
+  { title: "4. 전원 완료 + 보고", subs: [
+    { name: "4-1. 전원 확인 완료", items: [
+      { r: "b", t: "모든 조원 체크인/불참 완료 → 축하 화면 전환" },
+      { r: "b", t: "standing-horse(정지) + '전원 확인 끝!' + '보고하기를 눌러주세요.'" },
+      { r: "b", t: "하늘색 그라데이션 배경" },
+    ]},
+    { name: "4-2. 보고 전 비활성", items: [
+      { r: "b", t: "전원 확인 전 보고 버튼 'N명 남았어요' + aria-disabled" },
+      { r: "b", t: "비활성 상태에서 탭 → 동작 없음" },
+    ]},
+    { name: "4-3. 보고 실행", items: [
+      { r: "b", t: "[보고하기] 탭 → 모달 없이 즉시 전송" },
+      { r: "b", t: "'보고 완료!' 토스트 5초 표시" },
+      { r: "b", t: "running-horse(바운스) + '보고 완료!' + '폭싹 속았수다!'" },
+      { r: "b", t: "보고 버튼 → '보고 완료!' 텍스트" },
+    ]},
+    { name: "4-4. 관리자 수신", items: [
+      { r: "a", t: "바텀시트 해당 조 배지 '보고완료' 실시간 변경" },
+      { r: "a", t: "모든 조 보고 완료 시 '모든 조가 보고했어요'" },
+    ]},
+  ]},
+  { title: "5. 관리자 현황 + 드릴다운", subs: [
+    { name: "5-1. 바텀시트 현황", items: [
+      { r: "a", t: "[전체 현황 보기] → 바텀시트, 차량별 조 그룹핑" },
+      { r: "a", t: "프로그레스 바 + 배지 + 조장 이름 + 전화 아이콘" },
+      { r: "a", t: "전화 아이콘 탭 → tel: 링크 작동" },
+    ]},
+    { name: "5-2. 드릴다운 체크인 대행", items: [
+      { r: "a", t: "조 카드 탭 → 인원 목록, [왔수다!] → 체크인 처리" },
+      { r: "b", t: "해당 조원 카드 실시간 완료 변경" },
+    ]},
+    { name: "5-3. 드릴다운 불참", items: [
+      { r: "a", t: "[불참] → 확인 모달 → 불참 처리" },
+      { r: "b", t: "해당 조원 실시간 불참 변경" },
+    ]},
+    { name: "5-4. 조장 권한 변경", items: [
+      { r: "a", t: "[조장 지정] → 모달 → '조장' 배지 표시" },
+      { r: "a", t: "[조장 해제] → 모달 → 조원 복귀" },
+    ]},
+  ]},
+  { title: "6. 실시간 동기화", subs: [
+    { name: "6-1. 조장 → 관리자", items: [
+      { r: "ab", t: "B 체크인 → A 바텀시트 카운트 실시간 증가" },
+      { r: "ab", t: "B 보고 → A 배지 '보고완료' 실시간 변경" },
+    ]},
+    { name: "6-2. 관리자 → 조장", items: [
+      { r: "ab", t: "A 일정 활성화 → B 토스트 + 피드 갱신" },
+      { r: "ab", t: "A 드릴다운 체크인 대행 → B 카드 실시간 변경" },
+      { r: "ab", t: "A 일정 시간 수정 → B '일정 시간이 변경되었어요' 토스트" },
+    ]},
+    { name: "6-3. 체크인 취소 → 보고 무효화", items: [
+      { r: "b", t: "보고 완료 후 체크인 취소 → 보고 해제, 버튼 재활성화" },
+      { r: "a", t: "해당 조 배지 '보고완료' → '진행중' 변경" },
+    ]},
+  ]},
+  { title: "7. 일정 관리", subs: [
+    { name: "7-1. 일정 추가", items: [
+      { r: "a", t: "[+ 일정 추가] → 일정명·장소·일차·시각 입력 → 저장" },
+      { r: "b", t: "새로고침 시 새 일정 표시" },
+    ]},
+    { name: "7-2. 시간 수정", items: [
+      { r: "a", t: "바텀시트에서 예정시각 수정 → 저장" },
+      { r: "b", t: "'일정 시간이 변경되었어요' 토스트 수신" },
+    ]},
+    { name: "7-3. 일차 탭", items: [
+      { r: "ab", t: "[1일차][2일차][3일차] 전환 → 해당 일차만 표시, 활성 일정 일차 기본 선택" },
+    ]},
+  ]},
+  { title: "8. 오프라인 대응", subs: [
+    { name: "8-1. 오프라인 체크인", items: [
+      { r: "b", t: "DevTools → Offline → 하단 오프라인 배너 표시" },
+      { r: "b", t: "[왔수다!] → 낙관적 업데이트로 즉시 완료" },
+      { r: "b", t: "여러 명 처리 → 건수 증가" },
+    ]},
+    { name: "8-2. 온라인 복귀", items: [
+      { r: "b", t: "Online 복귀 → 배너 사라짐 + 자동 동기화" },
+      { r: "a", t: "관리자 화면에 해당 체크인 반영" },
+    ]},
+    { name: "8-3. 오프라인 보고", items: [
+      { r: "b", t: "오프라인 전원 완료 → 보고 → 로컬 큐 저장" },
+      { r: "b", t: "온라인 복귀 → 체크인→보고 순서 sync" },
+    ]},
+  ]},
+  { title: "9. 셋업 (/setup)", subs: [
+    { name: "9-1. Google Sheets", items: [
+      { r: "a", t: "Sheet URL + GID → [불러오기] → 미리보기 표시" },
+      { r: "a", t: "검증 오류 시 빨간 하이라이트 + 메시지" },
+      { r: "a", t: "[DB에 반영] → 확인 모달 → 결과 요약" },
+    ]},
+    { name: "9-2. CSV / 재동기화 / 초기화", items: [
+      { r: "a", t: "CSV 파일 업로드 → 미리보기 → 반영" },
+      { r: "a", t: "재실행 → UPSERT 정상 (중복 스킵)" },
+      { r: "a", t: "[전체 초기화] → 확인 모달 → 삭제 (관리자 본인+조 보존)" },
+    ]},
+  ]},
+  { title: "10. 엣지 케이스", subs: [
+    { name: "", items: [
+      { r: "b", t: "체크인 중 A가 새 일정 활성화 → 토스트 + 피드 이동 링크" },
+      { r: "ab", t: "같은 인원 동시 체크인 → 중복 없이 정상 처리" },
+      { r: "a", t: "완료(dim) 카드 탭 → 바텀시트 (읽기 전용, 버튼 없음)" },
+      { r: "b", t: "활성 일정 없을 때 '현재 진행 중인 일정이 없어요'" },
+      { r: "ab", t: "체크인 화면에서 새로고침 → 상태 유지" },
+    ]},
+  ]},
+];
+
+const STORAGE_KEY = "e2e_test_state";
+
+function roleTag(r) {
+  if (r === "a") return '<span class="role role-a">A</span>';
+  if (r === "b") return '<span class="role role-b">B</span>';
+  if (r === "ab") return '<span class="role role-ab">A+B</span>';
+  return '';
+}
+
+function load() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch { return {}; } }
+function save(state) { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+
+function render() {
+  const state = load();
+  const container = document.getElementById("sections");
+  container.innerHTML = "";
+  let total = 0, done = 0;
+
+  DATA.forEach((sec, si) => {
+    const div = document.createElement("div");
+    div.className = "section" + (state["open_" + si] ? " open" : "");
+
+    let secTotal = 0, secDone = 0;
+    let bodyHtml = "";
+
+    sec.subs.forEach((sub, ssi) => {
+      if (sub.name) bodyHtml += `<div class="subsection">${sub.name}</div>`;
+      sub.items.forEach((item, ii) => {
+        const key = `${si}_${ssi}_${ii}`;
+        const checked = !!state[key];
+        secTotal++; total++;
+        if (checked) { secDone++; done++; }
+        bodyHtml += `<div class="item${checked ? " checked" : ""}">
+          <input type="checkbox" id="cb_${key}" ${checked ? "checked" : ""} onchange="toggle('${key}', ${si})">
+          <label for="cb_${key}">${roleTag(item.r)}${item.t}</label>
+        </div>`;
+      });
+    });
+
+    const allDone = secDone === secTotal;
+    div.innerHTML = `
+      <div class="section-header" onclick="toggleSection(${si})">
+        <span class="section-title">${sec.title}</span>
+        <span>
+          <span class="section-badge ${allDone ? 'badge-done' : 'badge-pending'}">${secDone}/${secTotal}</span>
+          <span class="chevron">▼</span>
+        </span>
+      </div>
+      <div class="section-body">${bodyHtml}</div>
+    `;
+    container.appendChild(div);
+  });
+
+  const pct = total ? Math.round(done / total * 100) : 0;
+  document.getElementById("progressFill").style.width = pct + "%";
+  document.getElementById("progressText").textContent = `${done} / ${total} 완료 (${pct}%)`;
+}
+
+function toggle(key, si) {
+  const state = load();
+  state[key] = !state[key];
+  state["open_" + si] = true;
+  save(state);
+  render();
+}
+
+function toggleSection(si) {
+  const state = load();
+  state["open_" + si] = !state["open_" + si];
+  save(state);
+  render();
+}
+
+function resetAll() {
+  if (confirm("모든 체크를 초기화할까요?")) {
+    localStorage.removeItem(STORAGE_KEY);
+    render();
+  }
+}
+
+render();
+</script>
+</body>
+</html>
