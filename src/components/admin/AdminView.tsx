@@ -402,7 +402,7 @@ export default function AdminView({
           </span>
         }
         rightSlot={
-          <div className="-mr-2 flex items-center">
+          <div className="-mr-2 flex items-center -space-x-1">
             <button
               onClick={() => setAddOpen(true)}
               className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
