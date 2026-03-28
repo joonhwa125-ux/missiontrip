@@ -335,7 +335,7 @@ export default function GroupCheckinView({
           </div>
           <h2 className="mb-2 text-2xl font-bold">{COPY.allComplete}</h2>
           <p className="whitespace-pre-line text-lg font-medium text-stone-600">
-            {reported ? "보고 완료! 수고하셨어요." : COPY.celebrationSubtitle}
+            {reported ? COPY.celebrationReported : COPY.celebrationSubtitle}
           </p>
         </div>
       )}
