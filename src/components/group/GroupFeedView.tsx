@@ -79,7 +79,7 @@ export default function GroupFeedView({
         titleNode={
           <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
             <span className="inline-flex items-center gap-1">
-              <Image src="/logo.png" alt="" width={36} height={36} className="inline-block" aria-hidden="true" priority />
+              <Image src="/logo.png" alt="" width={44} height={44} className="inline-block" aria-hidden="true" priority />
               혼디모영
             </span>
             <span className="flex-shrink-0 rounded-full bg-gray-900 px-2 py-0.5 font-semibold text-white text-[clamp(0.6875rem,2.5vw,0.875rem)]">

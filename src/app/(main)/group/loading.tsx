@@ -10,7 +10,7 @@ export default function GroupLoading() {
         superTitle="2026 링키지랩 미션트립"
         titleNode={
           <span className="inline-flex items-center gap-1">
-            <Image src="/logo.png" alt="" width={36} height={36} className="inline-block" aria-hidden="true" priority />
+            <Image src="/logo.png" alt="" width={44} height={44} className="inline-block" aria-hidden="true" priority />
             혼디모영
           </span>
         }
