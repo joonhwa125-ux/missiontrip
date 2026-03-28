@@ -1,18 +1,12 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import { MIN_DAY_NUMBER, MAX_DAY_NUMBER } from "@/lib/constants";
+import { revalidateMainPaths } from "./_shared";
 import type { ActionResult, ScheduleScope } from "@/lib/types";
 
 const VALID_SCOPES: ScheduleScope[] = ["all", "advance", "rear"];
-
-// /admin + /group 캐시 무효화 헬퍼
-function revalidateMainPaths() {
-  revalidatePath("/admin");
-  revalidatePath("/group");
-}
 
 // 일정 활성화 (RPC — 트랜잭션으로 동시 활성화 방지)
 export async function activateSchedule(

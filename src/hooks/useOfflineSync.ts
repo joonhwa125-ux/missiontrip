@@ -94,22 +94,11 @@ export function useOfflineSync() {
     return saved;
   }, []);
 
-  // 활성 일정 캐싱/복원
-  const cacheSchedule = useCallback((schedule: Schedule) => {
-    cacheActiveSchedule(schedule);
-  }, []);
-
-  const getCachedSchedule = useCallback((): Schedule | null => {
-    return getCachedActiveSchedule();
-  }, []);
-
   return {
     isOnline,
     pendingCount,
     addPending,
     addPendingReport,
     syncPending,
-    cacheSchedule,
-    getCachedSchedule,
   };
 }

@@ -1,16 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { canCheckin, isAdminRole } from "@/lib/constants";
+import { revalidateMainPaths } from "./_shared";
 import type { ActionResult, OfflinePendingCheckin, CheckedBy } from "@/lib/types";
-
-// /admin + /group 캐시 무효화 헬퍼 (체크인 관련 액션 공통)
-function revalidateMainPaths() {
-  revalidatePath("/admin");
-  revalidatePath("/group");
-}
 
 /** 조장의 자기 조원 접근 권한 검증. 실패 시 ActionResult 반환, 통과 시 null */
 async function validateGroupAccess(

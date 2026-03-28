@@ -31,6 +31,7 @@ interface Props {
   activeSchedule: Schedule | null;
   onBack: () => void;
   onCheckInsChange: (updater: (prev: CheckIn[]) => CheckIn[]) => void;
+  showToast?: (msg: string) => void;
 }
 
 export default function AdminGroupDrillDown({
@@ -40,6 +41,7 @@ export default function AdminGroupDrillDown({
   activeSchedule,
   onBack,
   onCheckInsChange,
+  showToast,
 }: Props) {
   const [, startTransition] = useTransition();
   const broadcastCheckin = useBroadcastCheckin(group.id, activeSchedule?.id);
@@ -84,6 +86,7 @@ export default function AdminGroupDrillDown({
         await broadcastCheckin(member.id, "insert");
       } else {
         onCheckInsChange((prev) => prev.filter((c) => c.user_id !== member.id));
+        showToast?.(res.error ?? "체크인 처리 중 오류가 발생했어요.");
       }
     });
   }
@@ -98,6 +101,7 @@ export default function AdminGroupDrillDown({
         await broadcastCheckin(member.id, "insert", true);
       } else {
         onCheckInsChange((prev) => prev.filter((c) => c.user_id !== member.id));
+        showToast?.(res.error ?? "불참 처리 중 오류가 발생했어요.");
       }
     });
   }
@@ -113,8 +117,9 @@ export default function AdminGroupDrillDown({
       const res = await deleteCheckin(member.id, activeSchedule.id);
       if (res.ok) {
         await broadcastCheckin(member.id, "delete");
-      } else if (removed) {
-        onCheckInsChange((prev) => [...prev, removed!]);
+      } else {
+        if (removed) onCheckInsChange((prev) => [...prev, removed!]);
+        showToast?.(res.error ?? "취소 처리 중 오류가 발생했어요.");
       }
     });
   }

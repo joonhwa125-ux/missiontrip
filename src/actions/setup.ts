@@ -1,10 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
 import { parseKSTTime } from "@/lib/utils";
 import { canCheckin, MIN_DAY_NUMBER, MAX_DAY_NUMBER } from "@/lib/constants";
+import { revalidateMainPaths, revalidateAllPaths } from "./_shared";
 import type {
   ActionResult,
   SetupPreviewData,
@@ -21,19 +21,6 @@ import {
   parseUsersSheet,
   parseSchedulesSheet,
 } from "@/utils/sheets-parser";
-
-// /admin + /group 캐시 무효화 헬퍼
-function revalidateMainPaths() {
-  revalidatePath("/admin");
-  revalidatePath("/group");
-}
-
-// /admin + /group + /setup 캐시 무효화 헬퍼 (setup 액션 공통)
-function revalidateAllPaths() {
-  revalidatePath("/admin");
-  revalidatePath("/group");
-  revalidatePath("/setup");
-}
 
 // Google Sheets CSV export URL 생성
 function buildCsvUrl(sheetId: string, gid: string): string {

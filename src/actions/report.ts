@@ -1,16 +1,10 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { createServiceClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { canCheckin, isAdminRole } from "@/lib/constants";
+import { revalidateMainPaths } from "./_shared";
 import type { ActionResult } from "@/lib/types";
-
-// /admin + /group 캐시 무효화 헬퍼
-function revalidateMainPaths() {
-  revalidatePath("/admin");
-  revalidatePath("/group");
-}
 
 // 조장 보고 (UPSERT — 재보고 허용)
 export async function submitReport(

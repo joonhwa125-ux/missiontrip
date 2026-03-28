@@ -31,6 +31,7 @@ interface Props {
   loading?: boolean;
   onClose: () => void;
   onCheckInsChange: React.Dispatch<React.SetStateAction<AdminCheckIn[]>>;
+  showToast?: (msg: string) => void;
 }
 
 export default function AdminBottomSheet({
@@ -43,6 +44,7 @@ export default function AdminBottomSheet({
   loading,
   onClose,
   onCheckInsChange,
+  showToast,
 }: Props) {
   const [drillGroup, setDrillGroup] = useState<Group | null>(null);
 
@@ -150,6 +152,7 @@ export default function AdminBottomSheet({
             activeSchedule={isReadOnly ? null : schedule}
             onBack={() => setDrillGroup(null)}
             onCheckInsChange={onCheckInsChange}
+            showToast={showToast}
           />
         ) : (
           <>

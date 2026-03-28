@@ -490,6 +490,7 @@ export default function AdminView({
         loading={bottomSheetLoading}
         onClose={() => { setBottomSheetSchedule(null); bottomSheetIdRef.current = null; }}
         onCheckInsChange={handleBottomSheetCheckInsChange}
+        showToast={showToast}
       />
 
       {/* 일정 추가 다이얼로그 */}

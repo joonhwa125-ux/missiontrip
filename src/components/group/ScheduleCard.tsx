@@ -78,7 +78,7 @@ export default function ScheduleCard({
             role="progressbar"
             aria-valuenow={checked}
             aria-valuemax={effectiveTotal}
-            aria-label={`${checked}/${effectiveTotal}명 탑승`}
+            aria-label={`${checked}/${total}명 탑승${absentCount > 0 ? `, 불참 ${absentCount}명` : ""}`}
           >
             <div
               className="h-full rounded-full bg-progress-bar transition-all"
