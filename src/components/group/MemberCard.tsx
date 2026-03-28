@@ -2,7 +2,7 @@
 
 import { COPY } from "@/lib/constants";
 import { formatTime, cn } from "@/lib/utils";
-import { CheckIcon } from "@/components/ui/icons";
+import { CheckIcon, MinusIcon } from "@/components/ui/icons";
 import type { CheckIn, GroupMember } from "@/lib/types";
 
 type Member = GroupMember;
@@ -30,7 +30,7 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
           : "border-[#E0DDD8] bg-white"
       )}
     >
-      <div className={cn("min-w-0", isChecked && "flex items-center gap-2")}>
+      <div className={cn("min-w-0", (isChecked || isAbsent) && "flex items-center gap-2")}>
         <p className={cn("min-w-0 text-base font-medium truncate", (isChecked || isAbsent) && "text-muted-foreground")}>{user.name}</p>
         {isChecked ? (
           <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-stone-50 px-2 py-0.5 text-xs font-medium text-stone-400">
@@ -38,9 +38,14 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
             {formatTime(checkIn.checked_at)}
             <span className="sr-only">탑승 완료</span>
           </span>
+        ) : isAbsent ? (
+          <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-400">
+            <MinusIcon className="h-3 w-3" aria-hidden />
+            {COPY.absent}
+          </span>
         ) : (
           <p className="text-sm text-muted-foreground">
-            {isAbsent ? COPY.absent : COPY.notChecked}
+            {COPY.notChecked}
           </p>
         )}
       </div>

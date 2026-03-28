@@ -2,7 +2,7 @@
 
 import { useState, useTransition, useMemo } from "react";
 import { useBroadcastCheckin } from "@/hooks/useBroadcastCheckin";
-import { PhoneIcon, ChevronLeftIcon, CheckIcon } from "@/components/ui/icons";
+import { PhoneIcon, ChevronLeftIcon, CheckIcon, MinusIcon } from "@/components/ui/icons";
 import { createCheckin, deleteCheckin, markAbsent } from "@/actions/checkin";
 import { COPY, isLeaderRole } from "@/lib/constants";
 import { formatTime } from "@/lib/utils";
@@ -225,7 +225,10 @@ function MemberRow({
             <span className="sr-only">확인 완료</span>
           </span>
         ) : isAbsent ? (
-          <span className="flex-shrink-0 text-xs text-muted-foreground">{COPY.absent}</span>
+          <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-400">
+            <MinusIcon className="h-3 w-3" aria-hidden />
+            {COPY.absent}
+          </span>
         ) : (
           <span className="flex-shrink-0 text-xs text-muted-foreground">{COPY.notChecked}</span>
         )}
