@@ -342,8 +342,12 @@ export default function GroupCheckinView({
           "from-sky-50/60"
         )}>
           <div className={cn("mb-4", reported && "animate-bounce")} aria-hidden="true">
-            <Image src={reported ? "/running-horse.png" : "/standing-horse.png"} alt="" width={120} height={120} />
+            <Image src={reported ? "/running-horse.png" : "/standing-horse.png"} alt="" width={120} height={120} priority />
           </div>
+          {/* 보고 전: running-horse 프리로드 (전환 시 즉시 표시) */}
+          {!reported && (
+            <link rel="preload" href="/running-horse.png" as="image" />
+          )}
           <h2 className="mb-2 text-2xl font-bold">
             {reported ? COPY.allCompleteReported : COPY.allComplete}
           </h2>
