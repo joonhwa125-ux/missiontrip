@@ -110,7 +110,7 @@ export default function AdminBottomSheet({
   const shuttleEntries = useMemo(() => {
     if (!schedule?.is_shuttle) return null;
     const busMap = new Map<string, { busMembers: AdminMember[]; report?: ShuttleReport }>();
-    for (const m of members) {
+    for (const m of scopeMembers) {
       if (!m.shuttle_bus) continue;
       if (!busMap.has(m.shuttle_bus)) busMap.set(m.shuttle_bus, { busMembers: [] });
       busMap.get(m.shuttle_bus)!.busMembers.push(m);
@@ -119,12 +119,12 @@ export default function AdminBottomSheet({
       if (busMap.has(r.shuttle_bus)) busMap.get(r.shuttle_bus)!.report = r;
     }
     return Array.from(busMap.entries()).sort((a, b) => a[0].localeCompare(b[0], "ko"));
-  }, [schedule?.is_shuttle, members, shuttleReports]);
+  }, [schedule?.is_shuttle, scopeMembers, shuttleReports]);
 
   // 셔틀 일정: shuttle_bus 배정 인원만 집계 / 일반 일정: scope 필터 인원
   const displayMembers = useMemo(
-    () => schedule?.is_shuttle ? members.filter((m) => !!m.shuttle_bus) : scopeMembers,
-    [schedule?.is_shuttle, members, scopeMembers]
+    () => schedule?.is_shuttle ? scopeMembers.filter((m) => !!m.shuttle_bus) : scopeMembers,
+    [schedule?.is_shuttle, scopeMembers]
   );
 
   const totalChecked = useMemo(
