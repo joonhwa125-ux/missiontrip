@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { sortSchedulesByStatus, getDefaultDay } from "@/lib/utils";
 import PageHeader from "@/components/common/PageHeader";
+import SettingsDropdown from "@/components/common/SettingsDropdown";
 import DayTabs from "@/components/common/DayTabs";
 import ScheduleCard from "./ScheduleCard";
 import GroupStatusGrid from "./GroupStatusGrid";
@@ -93,6 +94,7 @@ export default function GroupFeedView({
             </span>
           </span>
         }
+        rightSlot={<SettingsDropdown />}
       />
 
       {/* 일차 탭 + 일정 타임라인 */}

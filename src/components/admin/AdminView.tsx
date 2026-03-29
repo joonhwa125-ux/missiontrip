@@ -3,7 +3,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef, type SetStateAction } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import Link from "next/link";
 import { useRealtime } from "@/hooks/useRealtime";
 import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
 import { useToast } from "@/hooks/useToast";
@@ -21,7 +20,8 @@ import {
   DialogContent,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { UsersIcon, PlusIcon, DatabaseIcon } from "@/components/ui/icons";
+import { UsersIcon, PlusIcon } from "@/components/ui/icons";
+import SettingsDropdown from "@/components/common/SettingsDropdown";
 import type { Group, Schedule, AdminMember, AdminCheckIn, AdminReport, CheckIn } from "@/lib/types";
 
 interface Props {
@@ -423,13 +423,7 @@ export default function AdminView({
                 )}
               </button>
             )}
-            <Link
-              href="/setup"
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
-              aria-label="데이터 관리"
-            >
-              <DatabaseIcon className="h-6 w-6" aria-hidden />
-            </Link>
+            <SettingsDropdown showDataManagement />
           </div>
         }
       />
