@@ -8,12 +8,12 @@ import type { ActionResult, OfflinePendingCheckin, CheckedBy, ShuttleType } from
 
 /** 조장의 자기 조원/버스 접근 권한 검증. 실패 시 ActionResult 반환, 통과 시 null */
 async function validateGroupAccess(
+  supabase: ReturnType<typeof createServiceClient>,
   actor: { role: string; group_id: string; shuttle_bus?: string | null; return_shuttle_bus?: string | null },
   targetUserId: string,
   shuttleType: ShuttleType | null = null
 ): Promise<ActionResult | null> {
   if (isAdminRole(actor.role)) return null;
-  const supabase = createServiceClient();
 
   if (shuttleType === "departure") {
     if (!actor.shuttle_bus) {
@@ -68,11 +68,11 @@ export async function createCheckin(
     return { ok: false, error: "권한이 없어요" };
   }
 
-  const denied = await validateGroupAccess(actor, userId, shuttleType);
+  const supabase = createServiceClient();
+  const denied = await validateGroupAccess(supabase, actor, userId, shuttleType);
   if (denied) return denied;
 
   const checkedBy = isAdminRole(actor.role) ? "admin" : "leader";
-  const supabase = createServiceClient();
   const { error } = await supabase.from("check_ins").upsert(
     {
       user_id: userId,
@@ -103,10 +103,10 @@ export async function deleteCheckin(
     return { ok: false, error: "권한이 없어요" };
   }
 
-  const denied = await validateGroupAccess(actor, userId, shuttleType);
+  const supabase = createServiceClient();
+  const denied = await validateGroupAccess(supabase, actor, userId, shuttleType);
   if (denied) return denied;
 
-  const supabase = createServiceClient();
   const { error } = await supabase
     .from("check_ins")
     .delete()
@@ -174,11 +174,11 @@ export async function markAbsent(
     return { ok: false, error: "권한이 없어요" };
   }
 
-  const denied = await validateGroupAccess(actor, userId, shuttleType);
+  const supabase = createServiceClient();
+  const denied = await validateGroupAccess(supabase, actor, userId, shuttleType);
   if (denied) return denied;
 
   const checkedBy = isAdminRole(actor.role) ? "admin" : "leader";
-  const supabase = createServiceClient();
   const { error } = await supabase.from("check_ins").upsert(
     {
       user_id: userId,

@@ -63,7 +63,9 @@ export default function AdminBottomSheet({
       .from("shuttle_reports")
       .select("*")
       .eq("schedule_id", schedule.id)
-      .then(({ data }) => setShuttleReports((data ?? []) as ShuttleReport[]));
+      .then(({ data, error }) => {
+        if (!error) setShuttleReports((data ?? []) as ShuttleReport[]);
+      });
   }, [schedule?.id, schedule?.shuttle_type]);
 
   const checkedIds = useMemo(() => new Set(checkIns.map((c) => c.user_id)), [checkIns]);

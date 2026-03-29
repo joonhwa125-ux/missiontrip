@@ -94,7 +94,7 @@ export default async function GroupPage() {
     ]);
 
     const allData = allCi ?? [];
-    allCheckIns = allData as typeof allCheckIns;
+    allCheckIns = allData.map((ci) => ({ user_id: ci.user_id, is_absent: ci.is_absent }));
 
     const memberIds = new Set(members?.map((m) => m.id) ?? []);
     checkIns = allData.filter((ci) => memberIds.has(ci.user_id)) as CheckIn[];
