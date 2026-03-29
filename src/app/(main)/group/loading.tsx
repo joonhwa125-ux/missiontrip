@@ -6,11 +6,11 @@ export default function GroupLoading() {
   return (
     <div className="flex min-h-full flex-col">
       <PageHeader
-        title="혼디모영"
+        title="동행체크"
         titleNode={
           <span className="inline-flex items-center gap-1">
             <Image src="/1.png" alt="" width={40} height={40} quality={100} className="inline-block" aria-hidden="true" priority />
-            혼디모영
+            동행체크
           </span>
         }
       />
