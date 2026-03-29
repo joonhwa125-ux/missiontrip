@@ -41,12 +41,6 @@ export default function ScheduleCard({
     </span>
   ) : null;
 
-  // 셔틀 배지
-  const shuttleBadge = schedule.shuttle_type ? (
-    <span className={`inline-block rounded-full px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight ${isCompleted ? "bg-stone-100 text-stone-400" : "bg-sky-100 text-sky-700"}`}>
-      {schedule.shuttle_type === "departure" ? "출발 셔틀" : "귀가 셔틀"}
-    </span>
-  ) : null;
 
   if (status === "active") {
     const checked = checkIns.filter((c) => !c.is_absent).length;
@@ -60,7 +54,7 @@ export default function ScheduleCard({
           className="w-full text-left min-h-11 focus-visible:ring-2 focus-visible:ring-main-action rounded-lg"
           aria-label={`${schedule.title} 체크인 화면으로 이동`}
         >
-          {/* 헤더: 진행중 pill + 집결시간 배지 + 후발 배지 (모두 좌측) */}
+          {/* 헤더: 진행중 pill + 집결시간 배지 + 후발 배지 */}
           <div className="mb-2 flex items-center gap-1">
             <span className="rounded-full bg-progress-badge px-2 py-0.5 text-xs font-medium text-yellow-900">
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-yellow-500 mr-1 align-middle animate-pulse" aria-hidden="true" />
@@ -72,7 +66,7 @@ export default function ScheduleCard({
               </span>
             )}
             {scopeBadge}
-            {shuttleBadge}
+
           </div>
           <p className="text-base font-semibold leading-snug">{primaryText}</p>
           {schedule.location && (
@@ -122,7 +116,6 @@ export default function ScheduleCard({
             </span>
           )}
           {scopeBadge}
-          {shuttleBadge}
         </div>
         <p className="font-medium">{primaryText}</p>
         {schedule.location && (
@@ -137,7 +130,7 @@ export default function ScheduleCard({
 
   return (
     <div className="rounded-2xl bg-stone-50/80 shadow-sm p-4">
-      {/* 헤더: 완료 배지 + 집결시간 배지 + 후발 배지 + 셔틀 배지 */}
+      {/* 헤더: 완료 배지 + 집결시간 배지 + 후발 배지 */}
       <div className="mb-1.5 flex items-center gap-1">
         <span className="inline-flex items-center gap-0.5 rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-500">
           <CheckIcon className="h-3 w-3" aria-hidden />
@@ -149,7 +142,6 @@ export default function ScheduleCard({
           </span>
         )}
         {scopeBadge}
-        {shuttleBadge}
       </div>
       {/* 장소/일정명 + 카운트 */}
       <div>
