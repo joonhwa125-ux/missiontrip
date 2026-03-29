@@ -131,7 +131,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
                   <td className="px-2 py-2 text-center text-xs">{SCOPE_LABEL[s.scope]}</td>
                   <td className="px-2 py-2 text-center text-xs">{s.shuttle_type === "departure" ? "출발" : s.shuttle_type === "return" ? "귀가" : "-"}</td>
                   <td className="px-2 py-2">
-                    <div className="flex justify-start gap-1 whitespace-nowrap">
+                    <div className="flex justify-center gap-1 whitespace-nowrap">
                       <button onClick={() => setEditSchedule(s)} className="min-h-11 rounded-lg bg-gray-100 px-2 text-xs font-medium focus-visible:ring-2 focus-visible:ring-main-action" aria-label={`${s.title} 수정`}>수정</button>
                       <button onClick={() => setDeleteScheduleTarget(s)} disabled={s.is_active} className="min-h-11 rounded-lg bg-red-50 px-2 text-xs font-medium text-red-600 focus-visible:ring-2 focus-visible:ring-red-400 disabled:opacity-40" aria-label={s.is_active ? `${s.title} 진행중 — 삭제 불가` : `${s.title} 삭제`}>삭제</button>
                     </div>
@@ -175,7 +175,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
                   <td className="px-2 py-2 text-center text-xs">{u.shuttle_bus ?? "-"}</td>
                   <td className="px-2 py-2 text-center text-xs">{u.return_shuttle_bus ?? "-"}</td>
                   <td className="px-2 py-2">
-                    <div className="flex justify-start gap-1 whitespace-nowrap">
+                    <div className="flex justify-center gap-1 whitespace-nowrap">
                       <button onClick={() => setEditUser(u)} className="min-h-11 rounded-lg bg-gray-100 px-2 text-xs font-medium focus-visible:ring-2 focus-visible:ring-main-action" aria-label={`${u.name} 수정`}>수정</button>
                       <button onClick={() => setDeleteUserTarget(u)} disabled={u.id === currentUserId} className="min-h-11 rounded-lg bg-red-50 px-2 text-xs font-medium text-red-600 focus-visible:ring-2 focus-visible:ring-red-400 disabled:opacity-40" aria-label={u.id === currentUserId ? "본인 계정 — 삭제 불가" : `${u.name} 삭제`}>삭제</button>
                     </div>
