@@ -18,6 +18,7 @@ type SetupUser = {
   role: UserRole;
   group_id: string;
   party: GroupParty | null;
+  shuttle_bus: string | null;
 };
 
 type SetupGroup = { id: string; name: string };
@@ -31,6 +32,7 @@ interface Props {
     role: UserRole;
     group_id: string;
     party: GroupParty | null;
+    shuttle_bus: string | null;
   }) => void;
   onClose: () => void;
 }
@@ -58,6 +60,7 @@ export default function UserEditDialog({ user, groups, onSave, onClose }: Props)
     role: user.role,
     group_id: user.group_id,
     party: user.party ?? ("" as GroupParty | ""),
+    shuttle_bus: user.shuttle_bus ?? "",
   });
 
   const set = useCallback(
@@ -74,6 +77,7 @@ export default function UserEditDialog({ user, groups, onSave, onClose }: Props)
       role: form.role,
       group_id: form.group_id,
       party: (form.party as GroupParty) || null,
+      shuttle_bus: form.shuttle_bus.trim() || null,
     });
   };
 
@@ -148,6 +152,16 @@ export default function UserEditDialog({ user, groups, onSave, onClose }: Props)
                 <option key={g.id} value={g.id}>{g.name}</option>
               ))}
             </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">배정버스 (셔틀)</label>
+            <input
+              value={form.shuttle_bus}
+              onChange={(e) => set("shuttle_bus", e.target.value)}
+              placeholder="예: 판교 출발 1 (없으면 비워두세요)"
+              className={INPUT_CLASS}
+              aria-label="배정버스"
+            />
           </div>
           <DialogFooter className="pt-2">
             <button

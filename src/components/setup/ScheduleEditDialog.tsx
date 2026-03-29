@@ -20,6 +20,7 @@ interface Props {
     sort_order: number;
     scheduled_time: string | null;
     scope: ScheduleScope;
+    is_shuttle: boolean;
   }) => void;
   onClose: () => void;
 }
@@ -54,6 +55,7 @@ export default function ScheduleEditDialog({ schedule, onSave, onClose }: Props)
     sort_order: schedule.sort_order,
     scheduled_time: isoToDatetimeLocal(schedule.scheduled_time),
     scope: schedule.scope,
+    is_shuttle: schedule.is_shuttle,
   });
 
   const set = useCallback(
@@ -71,6 +73,7 @@ export default function ScheduleEditDialog({ schedule, onSave, onClose }: Props)
       sort_order: form.sort_order,
       scheduled_time: datetimeLocalToIso(form.scheduled_time),
       scope: form.scope,
+      is_shuttle: form.is_shuttle,
     });
   };
 
@@ -152,6 +155,21 @@ export default function ScheduleEditDialog({ schedule, onSave, onClose }: Props)
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={form.is_shuttle}
+                onChange={(e) => set("is_shuttle", e.target.checked)}
+                className="h-4 w-4 rounded accent-main-action"
+                aria-label="셔틀 일정 여부"
+              />
+              셔틀 일정
+            </label>
+            <span className="text-xs text-muted-foreground">
+              체크 시 셔틀 배정 인원만 체크인
+            </span>
           </div>
           <DialogFooter className="pt-2">
             <button

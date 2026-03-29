@@ -111,12 +111,13 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
                 <th className="min-w-[120px] px-3 py-2">집결지</th>
                 <th className="px-3 py-2">시간</th>
                 <th className="px-3 py-2">구분</th>
+                <th className="px-3 py-2">셔틀</th>
                 <th className="min-w-[108px] px-3 py-2">편집</th>
               </tr>
             </thead>
             <tbody>
               {schedules.length === 0 && (
-                <tr><td colSpan={7} className="py-8 text-center text-sm text-muted-foreground">등록된 일정이 없어요</td></tr>
+                <tr><td colSpan={8} className="py-8 text-center text-sm text-muted-foreground">등록된 일정이 없어요</td></tr>
               )}
               {schedules.map((s) => (
                 <tr key={s.id} className="border-t border-gray-100">
@@ -126,6 +127,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
                   <td className="px-3 py-2">{s.title}</td>
                   <td className="px-3 py-2 text-center text-xs">{s.scheduled_time ? formatTime(s.scheduled_time) : "-"}</td>
                   <td className="px-3 py-2 text-center text-xs">{SCOPE_LABEL[s.scope]}</td>
+                  <td className="px-3 py-2 text-center text-xs">{s.is_shuttle ? "셔틀" : "-"}</td>
                   <td className="px-3 py-2">
                     <div className="flex justify-start gap-1 whitespace-nowrap">
                       <button onClick={() => setEditSchedule(s)} className="min-h-11 rounded-lg bg-gray-100 px-3 text-xs font-medium focus-visible:ring-2 focus-visible:ring-main-action" aria-label={`${s.title} 수정`}>수정</button>

@@ -257,6 +257,7 @@ export async function updateSchedule(
     sort_order: number;
     scheduled_time: string | null;
     scope: ScheduleScope;
+    is_shuttle: boolean;
   }
 ): Promise<ActionResult> {
   const admin = await requireAdmin();
@@ -319,6 +320,7 @@ export async function updateUser(
     role: UserRole;
     group_id: string;
     party: GroupParty | null;
+    shuttle_bus: string | null;
   }
 ): Promise<ActionResult> {
   const admin = await requireAdmin();
