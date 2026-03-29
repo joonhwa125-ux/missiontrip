@@ -49,6 +49,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const groupMap = useMemo(() => new Map(groups.map((g) => [g.id, g.name])), [groups]);
+  const groupBusMap = useMemo(() => new Map(groups.map((g) => [g.id, g.bus_name])), [groups]);
 
   const run = useCallback(
     (action: () => Promise<{ ok: boolean; error?: string }>, onSuccess: () => void) => {
@@ -107,8 +108,8 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
               <tr className="text-center text-xs text-muted-foreground whitespace-nowrap">
                 <th className="px-3 py-2">일차</th>
                 <th className="px-3 py-2">순서</th>
+                <th className="min-w-[120px] px-3 py-2">일정명</th>
                 <th className="min-w-[100px] px-3 py-2">장소</th>
-                <th className="min-w-[120px] px-3 py-2">집결지</th>
                 <th className="px-3 py-2">시간</th>
                 <th className="px-3 py-2">구분</th>
                 <th className="px-3 py-2">셔틀</th>
@@ -123,8 +124,8 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
                 <tr key={s.id} className="border-t border-gray-100">
                   <td className="px-3 py-2 text-center">{s.day_number}일</td>
                   <td className="px-3 py-2 text-center">{s.sort_order}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{s.location ?? "-"}</td>
                   <td className="px-3 py-2">{s.title}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{s.location ?? "-"}</td>
                   <td className="px-3 py-2 text-center text-xs">{s.scheduled_time ? formatTime(s.scheduled_time) : "-"}</td>
                   <td className="px-3 py-2 text-center text-xs">{SCOPE_LABEL[s.scope]}</td>
                   <td className="px-3 py-2 text-center text-xs">{s.is_shuttle ? "셔틀" : "-"}</td>
@@ -150,7 +151,8 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
                 <th className="sticky left-0 z-10 min-w-[96px] bg-gray-50 px-3 py-2">이름</th>
                 <th className="min-w-[120px] px-3 py-2">전화번호</th>
                 <th className="min-w-[80px] px-3 py-2">역할</th>
-                <th className="min-w-[96px] px-3 py-2">조편성</th>
+                <th className="min-w-[96px] px-3 py-2">소속조</th>
+                <th className="min-w-[96px] px-3 py-2">배정차량</th>
                 <th className="min-w-[64px] px-3 py-2">구분</th>
                 <th className="min-w-[140px] px-3 py-2">배정버스</th>
                 <th className="min-w-[108px] px-3 py-2">편집</th>
@@ -158,7 +160,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
             </thead>
             <tbody>
               {users.length === 0 && (
-                <tr><td colSpan={7} className="py-8 text-center text-sm text-muted-foreground">등록된 참가자가 없어요</td></tr>
+                <tr><td colSpan={8} className="py-8 text-center text-sm text-muted-foreground">등록된 참가자가 없어요</td></tr>
               )}
               {users.map((u) => (
                 <tr key={u.id} className="border-t border-gray-100">
@@ -166,6 +168,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
                   <td className="px-3 py-2 text-xs">{u.phone ?? "-"}</td>
                   <td className="px-3 py-2 text-center text-xs">{ROLE_LABEL[u.role]}</td>
                   <td className="px-3 py-2 text-center text-xs">{groupMap.get(u.group_id) ?? "-"}</td>
+                  <td className="px-3 py-2 text-center text-xs">{groupBusMap.get(u.group_id) ?? "-"}</td>
                   <td className="px-3 py-2 text-center text-xs">{getPartyLabel(u.party)}</td>
                   <td className="px-3 py-2 text-center text-xs">{u.shuttle_bus ?? "-"}</td>
                   <td className="px-3 py-2">
