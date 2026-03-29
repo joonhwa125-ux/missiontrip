@@ -9,7 +9,7 @@ import SetupPageTabs from "@/components/setup/SetupPageTabs";
 import CurrentDataView from "@/components/setup/CurrentDataView";
 import type { Schedule, Group, UserRole, GroupParty } from "@/lib/types";
 
-export const metadata: Metadata = { title: "설정" };
+export const metadata: Metadata = { title: "데이터 관리" };
 
 export default async function SetupPage() {
   const supabase = createClient();

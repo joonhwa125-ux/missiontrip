@@ -57,7 +57,7 @@ export default function SetupPageTabs({ wizard, currentData, hasData }: Props) {
   }, [tab]);
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col min-h-screen bg-app-bg">
+    <div className="mx-auto flex w-full max-w-5xl flex-col min-h-screen bg-app-bg">
       {/* 페이지 헤더 (단일) */}
       <header className="flex items-center justify-between border-b border-gray-100 bg-white px-2 py-1">
         <div className="flex items-center gap-1">
