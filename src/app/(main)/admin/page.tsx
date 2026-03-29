@@ -24,7 +24,7 @@ export default async function AdminPage() {
 
   const { data: currentUser } = await supabase
     .from("users")
-    .select("id, role, group_id")
+    .select("id, role, group_id, shuttle_bus, return_shuttle_bus")
     .eq("email", authUser.email ?? "")
     .single();
 
@@ -37,7 +37,7 @@ export default async function AdminPage() {
     { data: schedules },
   ] = await Promise.all([
     supabase.from("groups").select("*").order("name"),
-    supabase.from("users").select("id, name, phone, role, group_id, party, shuttle_bus").order("name"),
+    supabase.from("users").select("id, name, phone, role, group_id, party, shuttle_bus, return_shuttle_bus").order("name"),
     supabase.from("schedules").select("*").eq("is_active", true).maybeSingle(),
     supabase
       .from("schedules")
@@ -85,7 +85,7 @@ export default async function AdminPage() {
   return (
     <AdminView
       key={activeSchedule?.id ?? "no-schedule"}
-      currentUser={{ id: currentUser.id, group_id: currentUser.group_id, shuttle_bus: null }}
+      currentUser={{ id: currentUser.id, group_id: currentUser.group_id, shuttle_bus: currentUser.shuttle_bus ?? null, return_shuttle_bus: currentUser.return_shuttle_bus ?? null }}
       groups={(groups as Group[]) ?? []}
       members={members ?? []}
       activeSchedule={(activeSchedule as Schedule) ?? null}

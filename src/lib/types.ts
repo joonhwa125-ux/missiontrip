@@ -5,6 +5,7 @@ export type CheckedBy = "leader" | "admin";
 export type ScheduleStatus = "active" | "completed" | "waiting";
 export type GroupParty = "advance" | "rear";
 export type ScheduleScope = "all" | "advance" | "rear";
+export type ShuttleType = "departure" | "return";
 
 export interface Group {
   id: string;
@@ -22,6 +23,7 @@ export interface User {
   group_id: string;
   party: GroupParty | null;
   shuttle_bus: string | null;
+  return_shuttle_bus: string | null;
   created_at: string;
 }
 
@@ -50,6 +52,7 @@ export interface AdminMember {
   group_id: string;
   party: GroupParty | null;
   shuttle_bus?: string | null;
+  return_shuttle_bus?: string | null;
 }
 
 export interface Schedule {
@@ -61,7 +64,7 @@ export interface Schedule {
   scheduled_time: string | null;
   scope: ScheduleScope;
   is_active: boolean;
-  is_shuttle: boolean;
+  shuttle_type: ShuttleType | null;
   activated_at: string | null;
   created_at: string;
 }
@@ -166,6 +169,7 @@ export interface ParsedUser {
   group_name: string;
   party: GroupParty | null;
   shuttle_bus?: string | null;
+  return_shuttle_bus?: string | null;
 }
 
 export interface ParsedSchedule {
@@ -175,7 +179,7 @@ export interface ParsedSchedule {
   location: string | null;
   scheduled_time: string | null;
   scope: ScheduleScope;
-  is_shuttle: boolean;
+  shuttle_type: ShuttleType | null;
 }
 
 export interface SetupPreviewData {

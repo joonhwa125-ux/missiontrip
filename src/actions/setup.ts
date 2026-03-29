@@ -13,6 +13,7 @@ import type {
   ParsedSchedule,
   ValidationError,
   ScheduleScope,
+  ShuttleType,
   UserRole,
   GroupParty,
 } from "@/lib/types";
@@ -129,7 +130,7 @@ async function upsertUsers(
   const payload: {
     name: string; email: string; phone: string | null;
     role: string; group_id: string; party: string | null;
-    shuttle_bus: string | null;
+    shuttle_bus: string | null; return_shuttle_bus: string | null;
   }[] = [];
 
   for (const u of users) {
@@ -141,6 +142,7 @@ async function upsertUsers(
       name: u.name, email: u.email, phone: u.phone,
       role: u.role, group_id: groupId, party: u.party,
       shuttle_bus: u.shuttle_bus ?? null,
+      return_shuttle_bus: u.return_shuttle_bus ?? null,
     });
   }
 
@@ -162,7 +164,7 @@ async function upsertSchedules(
     day_number: s.day_number,
     sort_order: s.sort_order,
     scope: s.scope,
-    is_shuttle: s.is_shuttle,
+    shuttle_type: s.shuttle_type,
     scheduled_time: s.scheduled_time ? parseKSTTime(s.scheduled_time) : null,
   }));
 
@@ -257,7 +259,7 @@ export async function updateSchedule(
     sort_order: number;
     scheduled_time: string | null;
     scope: ScheduleScope;
-    is_shuttle: boolean;
+    shuttle_type: ShuttleType | null;
   }
 ): Promise<ActionResult> {
   const admin = await requireAdmin();
@@ -321,6 +323,7 @@ export async function updateUser(
     group_id: string;
     party: GroupParty | null;
     shuttle_bus: string | null;
+    return_shuttle_bus: string | null;
   }
 ): Promise<ActionResult> {
   const admin = await requireAdmin();

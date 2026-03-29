@@ -9,7 +9,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import type { Schedule, ScheduleScope } from "@/lib/types";
+import type { Schedule, ScheduleScope, ShuttleType } from "@/lib/types";
 
 interface Props {
   schedule: Schedule;
@@ -20,7 +20,7 @@ interface Props {
     sort_order: number;
     scheduled_time: string | null;
     scope: ScheduleScope;
-    is_shuttle: boolean;
+    shuttle_type: ShuttleType | null;
   }) => void;
   onClose: () => void;
 }
@@ -55,7 +55,7 @@ export default function ScheduleEditDialog({ schedule, onSave, onClose }: Props)
     sort_order: schedule.sort_order,
     scheduled_time: isoToDatetimeLocal(schedule.scheduled_time),
     scope: schedule.scope,
-    is_shuttle: schedule.is_shuttle,
+    shuttle_type: schedule.shuttle_type,
   });
 
   const set = useCallback(
@@ -73,7 +73,7 @@ export default function ScheduleEditDialog({ schedule, onSave, onClose }: Props)
       sort_order: form.sort_order,
       scheduled_time: datetimeLocalToIso(form.scheduled_time),
       scope: form.scope,
-      is_shuttle: form.is_shuttle,
+      shuttle_type: form.shuttle_type,
     });
   };
 
@@ -156,20 +156,18 @@ export default function ScheduleEditDialog({ schedule, onSave, onClose }: Props)
               ))}
             </select>
           </div>
-          <div className="flex items-center gap-3">
-            <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
-              <input
-                type="checkbox"
-                checked={form.is_shuttle}
-                onChange={(e) => set("is_shuttle", e.target.checked)}
-                className="h-4 w-4 rounded accent-main-action"
-                aria-label="셔틀 일정 여부"
-              />
-              셔틀 일정
-            </label>
-            <span className="text-xs text-muted-foreground">
-              체크 시 셔틀 배정 인원만 체크인
-            </span>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">셔틀 구분</label>
+            <select
+              value={form.shuttle_type ?? ""}
+              onChange={(e) => set("shuttle_type", (e.target.value as ShuttleType) || null)}
+              className={INPUT_CLASS}
+              aria-label="셔틀 구분"
+            >
+              <option value="">없음 (일반 일정)</option>
+              <option value="departure">출발 셔틀</option>
+              <option value="return">귀가 셔틀</option>
+            </select>
           </div>
           <DialogFooter className="pt-2">
             <button

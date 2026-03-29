@@ -23,7 +23,7 @@ import type { Schedule, CheckIn, GroupMember } from "@/lib/types";
 type Member = GroupMember;
 
 interface Props {
-  currentUser: { id: string; group_id: string; shuttle_bus: string | null };
+  currentUser: { id: string; group_id: string; shuttle_bus: string | null; return_shuttle_bus: string | null };
   groupName: string;
   members: Member[];
   activeSchedule: Schedule | null;
@@ -58,7 +58,7 @@ export default function GroupCheckinView({
 
   const { isOnline, pendingCount, addPending, addPendingReport } = useOfflineSync();
   const { broadcast } = useBroadcast();
-  const broadcastCheckin = useBroadcastCheckin(currentUser.group_id, activeSchedule?.id, activeSchedule?.is_shuttle ?? false);
+  const broadcastCheckin = useBroadcastCheckin(currentUser.group_id, activeSchedule?.id, activeSchedule?.shuttle_type ?? null);
 
   const handleCheckin = useCallback(
     async (userId: string) => {
@@ -92,7 +92,7 @@ export default function GroupCheckinView({
 
       startTransition(async () => {
         try {
-          const res = await createCheckin(userId, activeSchedule.id, activeSchedule.is_shuttle);
+          const res = await createCheckin(userId, activeSchedule.id, activeSchedule.shuttle_type ?? null);
           if (res.ok) {
             await broadcastCheckin(userId, "insert");
           } else {
@@ -121,11 +121,11 @@ export default function GroupCheckinView({
     });
     startTransition(async () => {
       try {
-        const res = await deleteCheckin(userId, activeSchedule.id, activeSchedule.is_shuttle);
+        const res = await deleteCheckin(userId, activeSchedule.id, activeSchedule.shuttle_type ?? null);
         if (res.ok) {
           await broadcastCheckin(userId, "delete");
           // 보고 무효화 브로드캐스트 — 일반 일정만 (셔틀 보고는 shuttle_reports 기반, group_id 무의미)
-          if (!activeSchedule.is_shuttle) {
+          if (!activeSchedule.shuttle_type) {
             const invalidatePayload = { group_id: currentUser.group_id, schedule_id: activeSchedule.id };
             await Promise.allSettled([
               broadcast(CHANNEL_GLOBAL, EVENT_REPORT_INVALIDATED, invalidatePayload),
@@ -160,7 +160,7 @@ export default function GroupCheckinView({
     setCheckIns((prev) => [...prev.filter((c) => c.user_id !== userId), temp]);
     startTransition(async () => {
       try {
-        const res = await markAbsent(userId, activeSchedule.id, activeSchedule.is_shuttle);
+        const res = await markAbsent(userId, activeSchedule.id, activeSchedule.shuttle_type ?? null);
         if (res.ok) {
           await broadcastCheckin(userId, "insert", true);
         } else {
@@ -180,17 +180,22 @@ export default function GroupCheckinView({
       (m) => !checkIns.some((c) => c.user_id === m.id)
     ).length;
 
-    const isShuttle = activeSchedule.is_shuttle;
+    const shuttleType = activeSchedule.shuttle_type;
+    const shuttleBus = shuttleType === "departure"
+      ? currentUser.shuttle_bus
+      : shuttleType === "return"
+        ? currentUser.return_shuttle_bus
+        : null;
 
-    if (isShuttle && !currentUser.shuttle_bus) {
+    if (shuttleType && !shuttleBus) {
       showToast("셔틀 버스 배정 정보가 없어요");
       return;
     }
 
     if (!isOnline) {
       const saved = addPendingReport(
-        isShuttle
-          ? { group_id: null, shuttle_bus: currentUser.shuttle_bus, schedule_id: activeSchedule.id, pending_count: unchecked }
+        shuttleType
+          ? { group_id: null, shuttle_bus: shuttleBus, schedule_id: activeSchedule.id, pending_count: unchecked }
           : { group_id: currentUser.group_id, shuttle_bus: null, schedule_id: activeSchedule.id, pending_count: unchecked }
       );
       if (saved) {
@@ -204,13 +209,13 @@ export default function GroupCheckinView({
 
     startTransition(async () => {
       try {
-        const res = isShuttle
-          ? await submitShuttleReport(currentUser.shuttle_bus!, activeSchedule.id, unchecked)
+        const res = shuttleType
+          ? await submitShuttleReport(shuttleBus!, activeSchedule.id, unchecked)
           : await submitReport(currentUser.group_id, activeSchedule.id, unchecked);
         if (res.ok) {
           onReported();
           showToast(COPY.reportButtonDone);
-          if (!isShuttle) {
+          if (!shuttleType) {
             const reportPayload = {
               group_id: currentUser.group_id,
               schedule_id: activeSchedule.id,
@@ -229,7 +234,7 @@ export default function GroupCheckinView({
         showToast("서버 연결에 실패했어요. 다시 시도해주세요.");
       }
     });
-  }, [activeSchedule, members, checkIns, currentUser.group_id, currentUser.shuttle_bus, broadcast, isOnline, addPendingReport, showToast, onReported]);
+  }, [activeSchedule, members, checkIns, currentUser.group_id, currentUser.shuttle_bus, currentUser.return_shuttle_bus, broadcast, isOnline, addPendingReport, showToast, onReported]);
 
   // CR-005: checkIns → 불참/확인/미확인 정확히 분리
   const checkedIds = useMemo(() => new Set(checkIns.map((c) => c.user_id)), [checkIns]);

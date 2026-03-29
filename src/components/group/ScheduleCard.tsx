@@ -39,9 +39,9 @@ export default function ScheduleCard({
   ) : null;
 
   // 셔틀 배지
-  const shuttleBadge = schedule.is_shuttle ? (
+  const shuttleBadge = schedule.shuttle_type ? (
     <span className="inline-block rounded-full bg-sky-100 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-sky-700">
-      셔틀
+      {schedule.shuttle_type === "departure" ? "출발 셔틀" : "귀가 셔틀"}
     </span>
   ) : null;
 
@@ -119,6 +119,7 @@ export default function ScheduleCard({
             </span>
           )}
           {scopeBadge}
+          {shuttleBadge}
         </div>
         <p className="font-medium">{primaryText}</p>
         {schedule.location && (
@@ -133,7 +134,7 @@ export default function ScheduleCard({
 
   return (
     <div className="rounded-2xl bg-stone-50/80 shadow-sm p-4">
-      {/* 헤더: 완료 배지 + 집결시간 배지 + 후발 배지 */}
+      {/* 헤더: 완료 배지 + 집결시간 배지 + 후발 배지 + 셔틀 배지 */}
       <div className="mb-1.5 flex items-center gap-1">
         <span className="inline-flex items-center gap-0.5 rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-500">
           <CheckIcon className="h-3 w-3" aria-hidden />
@@ -145,6 +146,7 @@ export default function ScheduleCard({
           </span>
         )}
         {scopeBadge}
+        {shuttleBadge}
       </div>
       {/* 장소/일정명 + 카운트 */}
       <div>

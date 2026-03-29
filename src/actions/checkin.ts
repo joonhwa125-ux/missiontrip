@@ -4,18 +4,18 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { canCheckin, isAdminRole } from "@/lib/constants";
 import { revalidateMainPaths } from "./_shared";
-import type { ActionResult, OfflinePendingCheckin, CheckedBy } from "@/lib/types";
+import type { ActionResult, OfflinePendingCheckin, CheckedBy, ShuttleType } from "@/lib/types";
 
 /** 조장의 자기 조원/버스 접근 권한 검증. 실패 시 ActionResult 반환, 통과 시 null */
 async function validateGroupAccess(
-  actor: { role: string; group_id: string; shuttle_bus?: string | null },
+  actor: { role: string; group_id: string; shuttle_bus?: string | null; return_shuttle_bus?: string | null },
   targetUserId: string,
-  isShuttle = false
+  shuttleType: ShuttleType | null = null
 ): Promise<ActionResult | null> {
   if (isAdminRole(actor.role)) return null;
   const supabase = createServiceClient();
 
-  if (isShuttle) {
+  if (shuttleType === "departure") {
     if (!actor.shuttle_bus) {
       return { ok: false, error: "셔틀 담당 조장만 처리할 수 있어요" };
     }
@@ -25,6 +25,21 @@ async function validateGroupAccess(
       .eq("id", targetUserId)
       .single();
     if (data?.shuttle_bus !== actor.shuttle_bus) {
+      return { ok: false, error: "내 버스 탑승자만 처리할 수 있어요" };
+    }
+    return null;
+  }
+
+  if (shuttleType === "return") {
+    if (!actor.return_shuttle_bus) {
+      return { ok: false, error: "귀가 셔틀 담당 조장만 처리할 수 있어요" };
+    }
+    const { data } = await supabase
+      .from("users")
+      .select("return_shuttle_bus")
+      .eq("id", targetUserId)
+      .single();
+    if (data?.return_shuttle_bus !== actor.return_shuttle_bus) {
       return { ok: false, error: "내 버스 탑승자만 처리할 수 있어요" };
     }
     return null;
@@ -45,7 +60,7 @@ async function validateGroupAccess(
 export async function createCheckin(
   userId: string,
   scheduleId: string,
-  isShuttle = false
+  shuttleType: ShuttleType | null = null
 ): Promise<ActionResult> {
   const actor = await getCurrentUser();
 
@@ -53,7 +68,7 @@ export async function createCheckin(
     return { ok: false, error: "권한이 없어요" };
   }
 
-  const denied = await validateGroupAccess(actor, userId, isShuttle);
+  const denied = await validateGroupAccess(actor, userId, shuttleType);
   if (denied) return denied;
 
   const checkedBy = isAdminRole(actor.role) ? "admin" : "leader";
@@ -80,7 +95,7 @@ export async function createCheckin(
 export async function deleteCheckin(
   userId: string,
   scheduleId: string,
-  isShuttle = false
+  shuttleType: ShuttleType | null = null
 ): Promise<ActionResult> {
   const actor = await getCurrentUser();
 
@@ -88,7 +103,7 @@ export async function deleteCheckin(
     return { ok: false, error: "권한이 없어요" };
   }
 
-  const denied = await validateGroupAccess(actor, userId, isShuttle);
+  const denied = await validateGroupAccess(actor, userId, shuttleType);
   if (denied) return denied;
 
   const supabase = createServiceClient();
@@ -103,18 +118,22 @@ export async function deleteCheckin(
   }
 
   // 체크인 취소 → 보고 기록도 무효화 (stale reported 상태 방지)
-  if (isShuttle) {
+  if (shuttleType) {
     // 셔틀 일정: shuttle_reports 무효화
     let targetShuttleBus: string | null;
     if (isAdminRole(actor.role)) {
-      const { data } = await supabase
-        .from("users").select("shuttle_bus").eq("id", userId).single();
-      targetShuttleBus = data?.shuttle_bus ?? null;
+      if (shuttleType === "departure") {
+        const { data } = await supabase.from("users").select("shuttle_bus").eq("id", userId).single();
+        targetShuttleBus = data?.shuttle_bus ?? null;
+      } else {
+        const { data } = await supabase.from("users").select("return_shuttle_bus").eq("id", userId).single();
+        targetShuttleBus = data?.return_shuttle_bus ?? null;
+      }
     } else {
-      targetShuttleBus = actor.shuttle_bus ?? null;
+      targetShuttleBus = shuttleType === "departure" ? (actor.shuttle_bus ?? null) : (actor.return_shuttle_bus ?? null);
     }
     if (targetShuttleBus) {
-      void supabase
+      await supabase
         .from("shuttle_reports")
         .delete()
         .eq("shuttle_bus", targetShuttleBus)
@@ -131,7 +150,7 @@ export async function deleteCheckin(
       targetGroupId = actor.group_id;
     }
     if (targetGroupId) {
-      void supabase
+      await supabase
         .from("group_reports")
         .delete()
         .eq("group_id", targetGroupId)
@@ -147,7 +166,7 @@ export async function deleteCheckin(
 export async function markAbsent(
   userId: string,
   scheduleId: string,
-  isShuttle = false
+  shuttleType: ShuttleType | null = null
 ): Promise<ActionResult> {
   const actor = await getCurrentUser();
 
@@ -155,7 +174,7 @@ export async function markAbsent(
     return { ok: false, error: "권한이 없어요" };
   }
 
-  const denied = await validateGroupAccess(actor, userId, isShuttle);
+  const denied = await validateGroupAccess(actor, userId, shuttleType);
   if (denied) return denied;
 
   const checkedBy = isAdminRole(actor.role) ? "admin" : "leader";

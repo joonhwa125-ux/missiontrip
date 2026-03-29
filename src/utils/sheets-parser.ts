@@ -4,6 +4,7 @@ import type {
   ParsedSchedule,
   ValidationError,
   UserRole,
+  ShuttleType,
 } from "@/lib/types";
 import {
   ALLOWED_EMAIL_DOMAIN,
@@ -93,7 +94,7 @@ export function parseCsv(csv: string): string[][] {
 }
 
 // 참가자 행 검증 — 이름/역할/소속조 필수값 + 역할 매핑
-// 컬럼 순서: 0=이름, 1=전화번호, 2=역할, 3=소속조, 4=배정차량, 5=배정버스(셔틀), 6=선후발
+// 컬럼 순서: 0=이름, 1=전화번호, 2=역할, 3=소속조, 4=배정차량, 5=출발셔틀버스, 6=귀가셔틀버스, 7=선후발
 function validateUserRow(
   row: string[],
   rowIndex: number,
@@ -106,6 +107,7 @@ function validateUserRow(
   groupName?: string;
   busName?: string | null;
   shuttleBus?: string | null;
+  returnShuttleBus?: string | null;
   party?: "advance" | "rear" | null;
   email?: string;
 } {
@@ -115,8 +117,9 @@ function validateUserRow(
   const roleRaw = sanitizeText(row[2] ?? "");
   const groupName = sanitizeText(row[3] ?? "");
   const busName = row[4]?.trim() || null;
-  const shuttleBus = row[5]?.trim() || null;    // 신규: col5 배정버스 (셔틀 탑승자만)
-  const partyRaw = sanitizeText(row[6] ?? "");  // 기존 col5 → col6으로 이동
+  const shuttleBus = row[5]?.trim() || null;         // col5: 출발 셔틀버스
+  const returnShuttleBus = row[6]?.trim() || null;   // col6: 귀가 셔틀버스 (신규)
+  const partyRaw = sanitizeText(row[7] ?? "");       // col7: 선후발 (기존 col6 → col7)
   const rowNum = rowIndex + 1;
 
   if (!name) {
@@ -158,11 +161,11 @@ function validateUserRow(
     }
   }
 
-  return { errors, name, phone, role, groupName, busName, shuttleBus, party, email };
+  return { errors, name, phone, role, groupName, busName, shuttleBus, returnShuttleBus, party, email };
 }
 
 // 일정 행 검증 — 일차 범위 + 일정명 필수 + 대상 매핑
-// 컬럼 순서: 0=일차, 1=순서, 2=장소, 3=일정명, 4=예정시각, 5=대상, 6=셔틀여부
+// 컬럼 순서: 0=일차, 1=순서, 2=장소, 3=일정명, 4=예정시각, 5=대상, 6=셔틀여부(출발/귀가/빈칸)
 function validateScheduleRow(
   row: string[],
   rowIndex: number
@@ -174,7 +177,7 @@ function validateScheduleRow(
   title?: string;
   scheduledTime?: string | null;
   scope?: "all" | "advance" | "rear";
-  isShuttle?: boolean;
+  shuttleType?: ShuttleType | null;
 } {
   const errors: ValidationError[] = [];
   const rowNum = rowIndex + 1;
@@ -185,7 +188,14 @@ function validateScheduleRow(
   const title = row[3]?.trim();
   const scheduledTime = row[4]?.trim() || null;
   const scopeRaw = sanitizeText(row[5] ?? "");
-  const isShuttle = sanitizeText(row[6] ?? "") === "셔틀";
+  const shuttleRaw = sanitizeText(row[6] ?? "");
+  const shuttleType: ShuttleType | null =
+    shuttleRaw === "출발" ? "departure" : shuttleRaw === "귀가" ? "return" : null;
+
+  if (shuttleRaw && !shuttleType) {
+    errors.push({ sheet: "schedules", row: rowNum, field: "셔틀여부", message: "셔틀여부는 '출발' 또는 '귀가'만 가능해요" });
+    return { errors };
+  }
 
   if (isNaN(dayNumber) || dayNumber < MIN_DAY_NUMBER || dayNumber > MAX_DAY_NUMBER) {
     errors.push({ sheet: "schedules", row: rowNum, field: "일차", message: `일차는 ${MIN_DAY_NUMBER}~${MAX_DAY_NUMBER}만 가능해요` });
@@ -203,10 +213,10 @@ function validateScheduleRow(
     return { errors };
   }
 
-  return { errors, dayNumber, sortOrder: isNaN(sortOrder) ? rowIndex : sortOrder, location, title, scheduledTime, scope, isShuttle };
+  return { errors, dayNumber, sortOrder: isNaN(sortOrder) ? rowIndex : sortOrder, location, title, scheduledTime, scope, shuttleType };
 }
 
-// 참가자 시트 파싱 (7컬럼: 이름, 전화번호, 역할, 소속조, 배정차량, 배정버스, 선후발)
+// 참가자 시트 파싱 (8컬럼: 이름, 전화번호, 역할, 소속조, 배정차량, 출발셔틀버스, 귀가셔틀버스, 선후발)
 // 이메일은 이름 기반 자동 생성 (조장/관리자: name@도메인, 조원: nologin)
 // groups는 소속조 고유값에서 자동 추출, bus_name은 배정차량 열에서 매핑, party는 유저별
 export function parseUsersSheet(rows: string[][]): {
@@ -244,6 +254,7 @@ export function parseUsersSheet(rows: string[][]): {
       group_name: result.groupName,
       party: result.party ?? null,
       shuttle_bus: result.shuttleBus ?? null,
+      return_shuttle_bus: result.returnShuttleBus ?? null,
     });
   }
 
@@ -279,7 +290,7 @@ export function parseSchedulesSheet(rows: string[][]): {
       location: result.location ?? null,
       scheduled_time: result.scheduledTime ?? null,
       scope: result.scope,
-      is_shuttle: result.isShuttle ?? false,
+      shuttle_type: result.shuttleType ?? null,
     });
   }
 

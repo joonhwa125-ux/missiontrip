@@ -19,7 +19,7 @@ export default async function GroupPage() {
 
   const { data: currentUser } = await supabase
     .from("users")
-    .select("id, name, role, group_id, shuttle_bus")
+    .select("id, name, role, group_id, shuttle_bus, return_shuttle_bus")
     .eq("email", authUser.email ?? "")
     .single();
 
@@ -57,16 +57,23 @@ export default async function GroupPage() {
     supabase.from("users").select("id, group_id, party, name, role"),
   ]);
 
-  // 셔틀 버스 배정자인 경우 해당 버스 인원 추가 조회
+  // 출발/귀가 셔틀 버스 배정자인 경우 해당 버스 인원 추가 조회
   let shuttleMembers: GroupMember[] = [];
-  if (currentUser.shuttle_bus) {
-    const { data: sm } = await supabase
-      .from("users")
-      .select("id, name, party")
-      .eq("shuttle_bus", currentUser.shuttle_bus)
-      .order("name");
-    shuttleMembers = (sm ?? []).map((m) => ({ id: m.id, name: m.name, party: (m.party as GroupParty) ?? null }));
-  }
+  let returnShuttleMembers: GroupMember[] = [];
+  await Promise.all([
+    currentUser.shuttle_bus
+      ? supabase.from("users").select("id, name, party").eq("shuttle_bus", currentUser.shuttle_bus).order("name")
+          .then(({ data: sm }) => {
+            shuttleMembers = (sm ?? []).map((m) => ({ id: m.id, name: m.name, party: (m.party as GroupParty) ?? null }));
+          })
+      : Promise.resolve(),
+    currentUser.return_shuttle_bus
+      ? supabase.from("users").select("id, name, party").eq("return_shuttle_bus", currentUser.return_shuttle_bus).order("name")
+          .then(({ data: rm }) => {
+            returnShuttleMembers = (rm ?? []).map((m) => ({ id: m.id, name: m.name, party: (m.party as GroupParty) ?? null }));
+          })
+      : Promise.resolve(),
+  ]);
 
   let checkIns: CheckIn[] = [];
   let allCheckIns: { user_id: string; is_absent: boolean }[] = [];
@@ -96,14 +103,19 @@ export default async function GroupPage() {
     initialReported = allReports.some((r) => r.group_id === currentUser.group_id);
 
     // 셔틀 일정 + 배정 버스가 있을 때 shuttle_reports 조회
-    if (activeSchedule.is_shuttle && currentUser.shuttle_bus) {
+    const myShuttleBus = activeSchedule.shuttle_type === "departure"
+      ? currentUser.shuttle_bus
+      : activeSchedule.shuttle_type === "return"
+        ? currentUser.return_shuttle_bus
+        : null;
+    if (activeSchedule.shuttle_type && myShuttleBus) {
       const { data: sr } = await supabase
         .from("shuttle_reports")
         .select("*")
         .eq("schedule_id", activeSchedule.id);
       shuttleReports = (sr ?? []) as ShuttleReport[];
       // 셔틀 보고 완료 여부
-      initialReported = shuttleReports.some((r) => r.shuttle_bus === currentUser.shuttle_bus);
+      initialReported = shuttleReports.some((r) => r.shuttle_bus === myShuttleBus);
     }
   }
 
@@ -132,10 +144,11 @@ export default async function GroupPage() {
   return (
     <GroupView
       key={activeSchedule?.id ?? "no-schedule"}
-      currentUser={{ id: currentUser.id, group_id: currentUser.group_id, shuttle_bus: currentUser.shuttle_bus ?? null }}
+      currentUser={{ id: currentUser.id, group_id: currentUser.group_id, shuttle_bus: currentUser.shuttle_bus ?? null, return_shuttle_bus: currentUser.return_shuttle_bus ?? null }}
       groupName={group?.name ?? "내 조"}
       members={(members ?? []).map((m) => ({ ...m, party: (m.party as GroupParty) ?? null }))}
       shuttleMembers={shuttleMembers}
+      returnShuttleMembers={returnShuttleMembers}
       activeSchedule={activeSchedule ?? null}
       initialCheckIns={checkIns}
       schedules={(schedules as Schedule[]) ?? []}

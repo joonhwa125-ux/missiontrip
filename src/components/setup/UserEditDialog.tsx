@@ -19,6 +19,7 @@ type SetupUser = {
   group_id: string;
   party: GroupParty | null;
   shuttle_bus: string | null;
+  return_shuttle_bus: string | null;
 };
 
 type SetupGroup = { id: string; name: string };
@@ -33,6 +34,7 @@ interface Props {
     group_id: string;
     party: GroupParty | null;
     shuttle_bus: string | null;
+    return_shuttle_bus: string | null;
   }) => void;
   onClose: () => void;
 }
@@ -61,6 +63,7 @@ export default function UserEditDialog({ user, groups, onSave, onClose }: Props)
     group_id: user.group_id,
     party: user.party ?? ("" as GroupParty | ""),
     shuttle_bus: user.shuttle_bus ?? "",
+    return_shuttle_bus: user.return_shuttle_bus ?? "",
   });
 
   const set = useCallback(
@@ -78,6 +81,7 @@ export default function UserEditDialog({ user, groups, onSave, onClose }: Props)
       group_id: form.group_id,
       party: (form.party as GroupParty) || null,
       shuttle_bus: form.shuttle_bus.trim() || null,
+      return_shuttle_bus: form.return_shuttle_bus.trim() || null,
     });
   };
 
@@ -154,13 +158,23 @@ export default function UserEditDialog({ user, groups, onSave, onClose }: Props)
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">셔틀버스</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">출발 셔틀버스</label>
             <input
               value={form.shuttle_bus}
               onChange={(e) => set("shuttle_bus", e.target.value)}
-              placeholder="예: 판교 출발 1 (없으면 비워두세요)"
+              placeholder="예: 판교 오전1 (없으면 비워두세요)"
               className={INPUT_CLASS}
-              aria-label="배정버스"
+              aria-label="출발 셔틀버스"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">귀가 셔틀버스</label>
+            <input
+              value={form.return_shuttle_bus}
+              onChange={(e) => set("return_shuttle_bus", e.target.value)}
+              placeholder="예: 성수1 (없으면 비워두세요)"
+              className={INPUT_CLASS}
+              aria-label="귀가 셔틀버스"
             />
           </div>
           <DialogFooter className="pt-2">

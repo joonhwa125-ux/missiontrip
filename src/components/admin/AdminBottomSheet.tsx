@@ -54,7 +54,7 @@ export default function AdminBottomSheet({
   // 일정 변경 시 드릴다운 초기화 + 셔틀 보고 조회
   useEffect(() => {
     setDrillGroup(null);
-    if (!schedule?.is_shuttle) {
+    if (!schedule?.shuttle_type) {
       setShuttleReports([]);
       return;
     }
@@ -64,7 +64,7 @@ export default function AdminBottomSheet({
       .select("*")
       .eq("schedule_id", schedule.id)
       .then(({ data }) => setShuttleReports((data ?? []) as ShuttleReport[]));
-  }, [schedule?.id, schedule?.is_shuttle]);
+  }, [schedule?.id, schedule?.shuttle_type]);
 
   const checkedIds = useMemo(() => new Set(checkIns.map((c) => c.user_id)), [checkIns]);
   const absentIds = useMemo(
@@ -108,24 +108,27 @@ export default function AdminBottomSheet({
 
   // 셔틀 일정: 버스별 탑승 현황 집계
   const shuttleEntries = useMemo(() => {
-    if (!schedule?.is_shuttle) return null;
+    if (!schedule?.shuttle_type) return null;
+    const busField = schedule.shuttle_type === "departure" ? "shuttle_bus" : "return_shuttle_bus";
     const busMap = new Map<string, { busMembers: AdminMember[]; report?: ShuttleReport }>();
     for (const m of scopeMembers) {
-      if (!m.shuttle_bus) continue;
-      if (!busMap.has(m.shuttle_bus)) busMap.set(m.shuttle_bus, { busMembers: [] });
-      busMap.get(m.shuttle_bus)!.busMembers.push(m);
+      const busName = m[busField];
+      if (!busName) continue;
+      if (!busMap.has(busName)) busMap.set(busName, { busMembers: [] });
+      busMap.get(busName)!.busMembers.push(m);
     }
     for (const r of shuttleReports) {
       if (busMap.has(r.shuttle_bus)) busMap.get(r.shuttle_bus)!.report = r;
     }
     return Array.from(busMap.entries()).sort((a, b) => a[0].localeCompare(b[0], "ko"));
-  }, [schedule?.is_shuttle, scopeMembers, shuttleReports]);
+  }, [schedule?.shuttle_type, scopeMembers, shuttleReports]);
 
-  // 셔틀 일정: shuttle_bus 배정 인원만 집계 / 일반 일정: scope 필터 인원
-  const displayMembers = useMemo(
-    () => schedule?.is_shuttle ? scopeMembers.filter((m) => !!m.shuttle_bus) : scopeMembers,
-    [schedule?.is_shuttle, scopeMembers]
-  );
+  // 셔틀 일정: 해당 버스 배정 인원만 집계 / 일반 일정: scope 필터 인원
+  const displayMembers = useMemo(() => {
+    if (!schedule?.shuttle_type) return scopeMembers;
+    const busField = schedule.shuttle_type === "departure" ? "shuttle_bus" : "return_shuttle_bus";
+    return scopeMembers.filter((m) => !!m[busField]);
+  }, [schedule?.shuttle_type, scopeMembers]);
 
   const totalChecked = useMemo(
     () => displayMembers.filter((m) => checkedIds.has(m.id) && !absentIds.has(m.id)).length,

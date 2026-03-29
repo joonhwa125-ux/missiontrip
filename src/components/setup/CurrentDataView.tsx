@@ -27,6 +27,7 @@ type SetupUser = {
   group_id: string;
   party: GroupParty | null;
   shuttle_bus: string | null;
+  return_shuttle_bus: string | null;
 };
 
 type SetupGroup = { id: string; name: string; bus_name: string | null };
@@ -128,7 +129,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
                   <td className="px-3 py-2">{s.title}</td>
                   <td className="px-3 py-2 text-center text-xs">{s.scheduled_time ? formatTime(s.scheduled_time) : "-"}</td>
                   <td className="px-3 py-2 text-center text-xs">{SCOPE_LABEL[s.scope]}</td>
-                  <td className="px-3 py-2 text-center text-xs">{s.is_shuttle ? "셔틀" : "-"}</td>
+                  <td className="px-3 py-2 text-center text-xs">{s.shuttle_type === "departure" ? "출발" : s.shuttle_type === "return" ? "귀가" : "-"}</td>
                   <td className="px-3 py-2">
                     <div className="flex justify-start gap-1 whitespace-nowrap">
                       <button onClick={() => setEditSchedule(s)} className="min-h-11 rounded-lg bg-gray-100 px-3 text-xs font-medium focus-visible:ring-2 focus-visible:ring-main-action" aria-label={`${s.title} 수정`}>수정</button>
@@ -154,13 +155,14 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
                 <th className="min-w-[96px] px-3 py-2">조편성</th>
                 <th className="min-w-[96px] px-3 py-2">배정차량</th>
                 <th className="min-w-[64px] px-3 py-2">구분</th>
-                <th className="min-w-[140px] px-3 py-2">셔틀버스</th>
+                <th className="min-w-[140px] px-3 py-2">출발셔틀</th>
+                <th className="min-w-[140px] px-3 py-2">귀가셔틀</th>
                 <th className="min-w-[108px] px-3 py-2">편집</th>
               </tr>
             </thead>
             <tbody>
               {users.length === 0 && (
-                <tr><td colSpan={8} className="py-8 text-center text-sm text-muted-foreground">등록된 참가자가 없어요</td></tr>
+                <tr><td colSpan={9} className="py-8 text-center text-sm text-muted-foreground">등록된 참가자가 없어요</td></tr>
               )}
               {users.map((u) => (
                 <tr key={u.id} className="border-t border-gray-100">
@@ -171,6 +173,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
                   <td className="px-3 py-2 text-center text-xs">{groupBusMap.get(u.group_id) ?? "-"}</td>
                   <td className="px-3 py-2 text-center text-xs">{getPartyLabel(u.party)}</td>
                   <td className="px-3 py-2 text-center text-xs">{u.shuttle_bus ?? "-"}</td>
+                  <td className="px-3 py-2 text-center text-xs">{u.return_shuttle_bus ?? "-"}</td>
                   <td className="px-3 py-2">
                     <div className="flex justify-start gap-1 whitespace-nowrap">
                       <button onClick={() => setEditUser(u)} className="min-h-11 rounded-lg bg-gray-100 px-3 text-xs font-medium focus-visible:ring-2 focus-visible:ring-main-action" aria-label={`${u.name} 수정`}>수정</button>

@@ -14,10 +14,11 @@ import type { Schedule, CheckIn, Group, GroupMember, GroupMemberBrief } from "@/
 type Member = GroupMember;
 
 interface Props {
-  currentUser: { id: string; group_id: string; shuttle_bus: string | null };
+  currentUser: { id: string; group_id: string; shuttle_bus: string | null; return_shuttle_bus: string | null };
   groupName: string;
   members: Member[];
   shuttleMembers: Member[];
+  returnShuttleMembers: Member[];
   activeSchedule: Schedule | null;
   initialCheckIns: CheckIn[];
   schedules: Schedule[];
@@ -37,6 +38,7 @@ export default function GroupView({
   groupName,
   members,
   shuttleMembers,
+  returnShuttleMembers,
   activeSchedule,
   initialCheckIns,
   schedules: initialSchedules,
@@ -91,10 +93,15 @@ export default function GroupView({
 
   // Realtime 구독 — GroupView 레벨 (feed <-> checkin 전환 시에도 유지)
   useRealtime(currentUser.group_id, false, {
-    onScheduleActivated: ({ schedule_id, title, scope, location, day_number, scheduled_time, is_shuttle }) => {
+    onScheduleActivated: ({ schedule_id, title, scope, location, day_number, scheduled_time, shuttle_type }) => {
       if (viewRef.current === "checkin") {
-        // 셔틀 일정 활성화 + 버스 미배정 → 체크인 뷰에서 즉시 피드로 복귀
-        if (is_shuttle && !currentUser.shuttle_bus) {
+        // 셔틀 일정 활성화 + 해당 버스 미배정 → 체크인 뷰에서 즉시 피드로 복귀
+        const hasShuttle = shuttle_type === "departure"
+          ? !!currentUser.shuttle_bus
+          : shuttle_type === "return"
+            ? !!currentUser.return_shuttle_bus
+            : false;
+        if (shuttle_type && !hasShuttle) {
           showToast(`새로운 일정이 시작되었어요: ${title}`);
           setView("feed");
           history.replaceState(null, "");
@@ -111,7 +118,7 @@ export default function GroupView({
           scheduled_time: scheduled_time ?? prev?.scheduled_time ?? null,
           scope: scope ?? "all",
           is_active: true,
-          is_shuttle: is_shuttle ?? false,
+          shuttle_type: shuttle_type ?? null,
           activated_at: new Date().toISOString(),
           created_at: prev?.created_at ?? new Date().toISOString(),
         }));
@@ -206,9 +213,10 @@ export default function GroupView({
 
   // 셔틀 일정: 해당 버스 인원 / 일반 일정: 조 인원 scope 필터
   const effectiveMembers = useMemo(() => {
-    if (currentSchedule?.is_shuttle) return shuttleMembers;
+    if (currentSchedule?.shuttle_type === "departure") return shuttleMembers;
+    if (currentSchedule?.shuttle_type === "return") return returnShuttleMembers;
     return filterMembersByScope(members, currentSchedule?.scope ?? "all");
-  }, [currentSchedule?.is_shuttle, currentSchedule?.scope, members, shuttleMembers]);
+  }, [currentSchedule?.shuttle_type, currentSchedule?.scope, members, shuttleMembers, returnShuttleMembers]);
 
   // 체크인 취소 시 reported 자동 리셋 — 전원 미완료가 되면 보고 무효화
   const checkinComplete = useMemo(() => {
@@ -237,26 +245,26 @@ export default function GroupView({
   // 셔틀 일정은 group_id 기반 allReportsState 업데이트 불필요
   const handleReported = useCallback(() => {
     setReported(true);
-    if (!currentSchedule?.is_shuttle) {
+    if (!currentSchedule?.shuttle_type) {
       setAllReportsState((prev) =>
         prev.some((r) => r.group_id === currentUser.group_id)
           ? prev
           : [...prev, { group_id: currentUser.group_id }]
       );
     }
-  }, [currentUser.group_id, currentSchedule?.is_shuttle]);
+  }, [currentUser.group_id, currentSchedule?.shuttle_type]);
 
   // 보고 무효화 (체크인 취소 시) — reported + allReportsState + ref 일괄 처리
   const handleReportReset = useCallback(() => {
     setReported(false);
     reportInvalidatedRef.current = true;
-    if (!currentSchedule?.is_shuttle) {
+    if (!currentSchedule?.shuttle_type) {
       setAllReportsState((prev) => {
         const next = prev.filter((r) => r.group_id !== currentUser.group_id);
         return next.length === prev.length ? prev : next;
       });
     }
-  }, [currentUser.group_id, currentSchedule?.is_shuttle]);
+  }, [currentUser.group_id, currentSchedule?.shuttle_type]);
 
   // CR-010: 체크인 진입 시 히스토리 푸시
   const handleEnterCheckin = useCallback(() => {
@@ -278,6 +286,7 @@ export default function GroupView({
           activeSchedule={currentSchedule}
           members={members}
           shuttleBus={currentUser.shuttle_bus}
+          returnShuttleBus={currentUser.return_shuttle_bus}
           checkIns={checkIns}
           scheduleCounts={scheduleCounts}
           scheduleAbsentCounts={scheduleAbsentCounts}

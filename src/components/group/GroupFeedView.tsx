@@ -26,6 +26,7 @@ interface Props {
   activeSchedule: Schedule | null;
   members: Member[];
   shuttleBus?: string | null;
+  returnShuttleBus?: string | null;
   checkIns: CheckIn[];
   scheduleCounts: Record<string, number>;
   scheduleAbsentCounts: Record<string, number>;
@@ -42,6 +43,7 @@ export default function GroupFeedView({
   activeSchedule,
   members,
   shuttleBus,
+  returnShuttleBus,
   checkIns,
   scheduleCounts,
   scheduleAbsentCounts,
@@ -58,7 +60,8 @@ export default function GroupFeedView({
   const hasAdvance = members.some((m) => m.party === "advance");
   const hasRear = members.some((m) => m.party === "rear");
   const mySchedules = schedules.filter((s) => {
-    if (s.is_shuttle) return !!shuttleBus; // 셔틀: shuttle_bus 배정자만 표시
+    if (s.shuttle_type === "departure") return !!shuttleBus;
+    if (s.shuttle_type === "return") return !!returnShuttleBus;
     return (
       s.scope === "all" ||
       (s.scope === "advance" && hasAdvance) ||

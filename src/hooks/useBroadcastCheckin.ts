@@ -9,12 +9,13 @@ import {
   CHANNEL_GROUP_PREFIX,
   EVENT_CHECKIN_UPDATED,
 } from "@/lib/constants";
+import type { ShuttleType } from "@/lib/types";
 
 /** 체크인 변경 broadcast 훅
  *  - 일반 일정: global + group:{id} + admin 3채널
  *  - 셔틀 일정: global + admin 2채널 (같은 버스 여러 조장이 global로 수신)
  */
-export function useBroadcastCheckin(groupId: string, scheduleId: string | undefined, isShuttle = false) {
+export function useBroadcastCheckin(groupId: string, scheduleId: string | undefined, shuttleType: ShuttleType | null = null) {
   const { broadcast } = useBroadcast();
   const router = useRouter();
 
@@ -27,7 +28,7 @@ export function useBroadcastCheckin(groupId: string, scheduleId: string | undefi
         is_absent: isAbsent,
       };
       try {
-        if (isShuttle) {
+        if (shuttleType) {
           await Promise.all([
             broadcast(CHANNEL_GLOBAL, EVENT_CHECKIN_UPDATED, payload),
             broadcast(CHANNEL_ADMIN, EVENT_CHECKIN_UPDATED, payload),
@@ -44,6 +45,6 @@ export function useBroadcastCheckin(groupId: string, scheduleId: string | undefi
         router.refresh();
       }
     },
-    [groupId, scheduleId, isShuttle, broadcast, router]
+    [groupId, scheduleId, shuttleType, broadcast, router]
   );
 }

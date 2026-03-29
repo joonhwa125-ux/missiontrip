@@ -83,7 +83,7 @@ export default function AdminGroupDrillDown({
     const temp: CheckIn = { user_id: member.id, is_absent: false, checked_at: new Date().toISOString() };
     onCheckInsChange((prev) => [...prev.filter((c) => c.user_id !== member.id), temp]);
     startTransition(async () => {
-      const res = await createCheckin(member.id, activeSchedule.id);
+      const res = await createCheckin(member.id, activeSchedule.id, activeSchedule.shuttle_type ?? null);
       if (res.ok) {
         await broadcastCheckin(member.id, "insert");
       } else {
@@ -98,7 +98,7 @@ export default function AdminGroupDrillDown({
     const temp: CheckIn = { user_id: member.id, is_absent: true, checked_at: new Date().toISOString() };
     onCheckInsChange((prev) => [...prev.filter((c) => c.user_id !== member.id), temp]);
     startTransition(async () => {
-      const res = await markAbsent(member.id, activeSchedule.id);
+      const res = await markAbsent(member.id, activeSchedule.id, activeSchedule.shuttle_type ?? null);
       if (res.ok) {
         await broadcastCheckin(member.id, "insert", true);
       } else {
@@ -116,7 +116,7 @@ export default function AdminGroupDrillDown({
       return prev.filter((c) => c.user_id !== member.id);
     });
     startTransition(async () => {
-      const res = await deleteCheckin(member.id, activeSchedule.id);
+      const res = await deleteCheckin(member.id, activeSchedule.id, activeSchedule.shuttle_type ?? null);
       if (res.ok) {
         await broadcastCheckin(member.id, "delete");
         // M-5: 보고 무효화 broadcast (Server Action이 DB 삭제, 클라이언트 상태 동기화)
