@@ -154,7 +154,7 @@ export default function UserEditDialog({ user, groups, onSave, onClose }: Props)
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">배정버스 (셔틀)</label>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">셔틀버스</label>
             <input
               value={form.shuttle_bus}
               onChange={(e) => set("shuttle_bus", e.target.value)}

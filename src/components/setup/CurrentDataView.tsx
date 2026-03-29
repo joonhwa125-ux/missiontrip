@@ -154,7 +154,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
                 <th className="min-w-[96px] px-3 py-2">조편성</th>
                 <th className="min-w-[96px] px-3 py-2">배정차량</th>
                 <th className="min-w-[64px] px-3 py-2">구분</th>
-                <th className="min-w-[140px] px-3 py-2">배정버스</th>
+                <th className="min-w-[140px] px-3 py-2">셔틀버스</th>
                 <th className="min-w-[108px] px-3 py-2">편집</th>
               </tr>
             </thead>
