@@ -30,17 +30,20 @@ export default function ScheduleCard({
   // location 우선, 없으면 title
   const primaryText = schedule.location ?? schedule.title;
 
+  // 완료 상태면 배지도 stone 톤으로 dim
+  const isCompleted = status === "completed";
+
   // 후발 배지 (후발만 특수 케이스이므로 배지 표시)
   const scopeLabel = schedule.scope === "rear" ? SCOPE_LABEL[schedule.scope] : null;
   const scopeBadge = scopeLabel ? (
-    <span className="inline-block rounded bg-violet-100 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-violet-700">
+    <span className={`inline-block rounded px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight ${isCompleted ? "bg-stone-100 text-stone-400" : "bg-violet-100 text-violet-700"}`}>
       {scopeLabel}
     </span>
   ) : null;
 
   // 셔틀 배지
   const shuttleBadge = schedule.shuttle_type ? (
-    <span className="inline-block rounded-full bg-sky-100 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-sky-700">
+    <span className={`inline-block rounded-full px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight ${isCompleted ? "bg-stone-100 text-stone-400" : "bg-sky-100 text-sky-700"}`}>
       {schedule.shuttle_type === "departure" ? "출발 셔틀" : "귀가 셔틀"}
     </span>
   ) : null;
