@@ -46,9 +46,10 @@ export default function AdminScheduleCard({
   // location 우선, 없으면 title
   const primaryText = schedule.location ?? schedule.title;
 
-  // 후발 배지
+  // 후발 배지 (완료 시 stone 톤 dim)
+  const isCompleted = status === "completed";
   const scopeBadge = scopeLabel ? (
-    <span className="inline-block rounded bg-violet-100 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-violet-700">
+    <span className={`inline-block rounded px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight ${isCompleted ? "bg-stone-100 text-stone-400" : "bg-violet-100 text-violet-700"}`}>
       {scopeLabel}
     </span>
   ) : null;
