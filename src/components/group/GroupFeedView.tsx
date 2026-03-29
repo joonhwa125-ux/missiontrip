@@ -22,7 +22,6 @@ import {
 type Member = GroupMember;
 
 interface Props {
-  groupName: string;
   schedules: Schedule[];
   activeSchedule: Schedule | null;
   members: Member[];
@@ -39,7 +38,6 @@ interface Props {
 }
 
 export default function GroupFeedView({
-  groupName,
   schedules,
   activeSchedule,
   members,

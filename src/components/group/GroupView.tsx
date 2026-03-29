@@ -281,7 +281,6 @@ export default function GroupView({
     <div className="flex min-h-full flex-col">
       {view === "feed" ? (
         <GroupFeedView
-          groupName={groupName}
           schedules={schedules}
           activeSchedule={currentSchedule}
           members={members}

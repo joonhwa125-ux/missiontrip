@@ -59,6 +59,11 @@ export default async function AdminPage() {
   const reportsMap: Record<string, RpRow[]> = {};
 
   if (activatedIds.length > 0) {
+    // 모든 활성화 일정에 빈 배열을 미리 생성 (체크인 0건이어도 캐시 히트)
+    for (const id of activatedIds) {
+      checkInsMap[id] = [];
+      reportsMap[id] = [];
+    }
     const [{ data: allCi }, { data: allRp }] = await Promise.all([
       supabase
         .from("check_ins")
@@ -70,7 +75,7 @@ export default async function AdminPage() {
         .in("schedule_id", activatedIds),
     ]);
     for (const ci of allCi ?? []) {
-      (checkInsMap[ci.schedule_id] ??= []).push({
+      checkInsMap[ci.schedule_id].push({
         schedule_id: ci.schedule_id,
         user_id: ci.user_id,
         is_absent: ci.is_absent ?? false,
@@ -78,7 +83,7 @@ export default async function AdminPage() {
       });
     }
     for (const rp of allRp ?? []) {
-      (reportsMap[rp.schedule_id] ??= []).push(rp);
+      reportsMap[rp.schedule_id].push(rp);
     }
   }
 
