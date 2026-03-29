@@ -114,12 +114,11 @@ export default async function GroupPage() {
         .select("*")
         .eq("schedule_id", activeSchedule.id);
       shuttleReports = (sr ?? []) as ShuttleReport[];
-      // 셔틀 보고 완료 여부
       initialReported = shuttleReports.some((r) => r.shuttle_bus === myShuttleBus);
     }
   }
 
-  // 완료 일정별 체크인 카운트 (우리 조 기준)
+  // 완료 일정별 체크인 카운트 (우리 조 기준) — shuttle_reports와 병렬 불가 (activeSchedule 의존)
   const completedScheduleIds = (schedules ?? [])
     .filter((s: Schedule) => s.activated_at && !s.is_active)
     .map((s: Schedule) => s.id);
