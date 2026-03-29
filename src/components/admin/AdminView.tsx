@@ -25,7 +25,7 @@ import { UsersIcon, PlusIcon, DatabaseIcon } from "@/components/ui/icons";
 import type { Group, Schedule, AdminMember, AdminCheckIn, AdminReport, CheckIn } from "@/lib/types";
 
 interface Props {
-  currentUser: { id: string; group_id: string };
+  currentUser: { id: string; group_id: string; shuttle_bus: string | null };
   groups: Group[];
   members: AdminMember[];
   activeSchedule: Schedule | null;

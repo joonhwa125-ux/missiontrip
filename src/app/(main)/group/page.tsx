@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import GroupView from "@/components/group/GroupView";
-import type { CheckIn, Schedule, Group, GroupParty } from "@/lib/types";
+import type { CheckIn, Schedule, Group, GroupParty, GroupMember, ShuttleReport } from "@/lib/types";
 
 export const metadata: Metadata = { title: "조장" };
 
@@ -19,7 +19,7 @@ export default async function GroupPage() {
 
   const { data: currentUser } = await supabase
     .from("users")
-    .select("id, name, role, group_id")
+    .select("id, name, role, group_id, shuttle_bus")
     .eq("email", authUser.email ?? "")
     .single();
 
@@ -57,10 +57,22 @@ export default async function GroupPage() {
     supabase.from("users").select("id, group_id, party, name, role"),
   ]);
 
+  // 셔틀 버스 배정자인 경우 해당 버스 인원 추가 조회
+  let shuttleMembers: GroupMember[] = [];
+  if (currentUser.shuttle_bus) {
+    const { data: sm } = await supabase
+      .from("users")
+      .select("id, name, party")
+      .eq("shuttle_bus", currentUser.shuttle_bus)
+      .order("name");
+    shuttleMembers = (sm ?? []).map((m) => ({ id: m.id, name: m.name, party: (m.party as GroupParty) ?? null }));
+  }
+
   let checkIns: CheckIn[] = [];
   let allCheckIns: { user_id: string; is_absent: boolean }[] = [];
   let allReports: { group_id: string }[] = [];
   let initialReported = false;
+  let shuttleReports: ShuttleReport[] = [];
 
   if (activeSchedule) {
     const [{ data: allCi }, { data: allReportsData }] = await Promise.all([
@@ -82,6 +94,17 @@ export default async function GroupPage() {
 
     allReports = allReportsData ?? [];
     initialReported = allReports.some((r) => r.group_id === currentUser.group_id);
+
+    // 셔틀 일정 + 배정 버스가 있을 때 shuttle_reports 조회
+    if (activeSchedule.is_shuttle && currentUser.shuttle_bus) {
+      const { data: sr } = await supabase
+        .from("shuttle_reports")
+        .select("*")
+        .eq("schedule_id", activeSchedule.id);
+      shuttleReports = (sr ?? []) as ShuttleReport[];
+      // 셔틀 보고 완료 여부
+      initialReported = shuttleReports.some((r) => r.shuttle_bus === currentUser.shuttle_bus);
+    }
   }
 
   // 완료 일정별 체크인 카운트 (우리 조 기준)
@@ -109,10 +132,10 @@ export default async function GroupPage() {
   return (
     <GroupView
       key={activeSchedule?.id ?? "no-schedule"}
-      currentUser={{ id: currentUser.id, group_id: currentUser.group_id }}
+      currentUser={{ id: currentUser.id, group_id: currentUser.group_id, shuttle_bus: currentUser.shuttle_bus ?? null }}
       groupName={group?.name ?? "내 조"}
       members={(members ?? []).map((m) => ({ ...m, party: (m.party as GroupParty) ?? null }))}
-
+      shuttleMembers={shuttleMembers}
       activeSchedule={activeSchedule ?? null}
       initialCheckIns={checkIns}
       schedules={(schedules as Schedule[]) ?? []}

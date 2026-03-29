@@ -10,7 +10,7 @@ import {
   clearPendingReports,
 } from "@/utils/offline";
 import { syncOfflineCheckins } from "@/actions/checkin";
-import { submitReport } from "@/actions/report";
+import { submitReport, submitShuttleReport } from "@/actions/report";
 import { OFFLINE_PENDING_REPORTS_KEY } from "@/lib/constants";
 import type { OfflinePendingCheckin, OfflinePendingReport } from "@/lib/types";
 
@@ -36,7 +36,12 @@ export function useOfflineSync() {
     if (pendingReports.length > 0) {
       const failedReports: OfflinePendingReport[] = [];
       for (const report of pendingReports) {
-        const res = await submitReport(report.group_id, report.schedule_id, report.pending_count);
+        let res;
+        if (report.shuttle_bus) {
+          res = await submitShuttleReport(report.shuttle_bus, report.schedule_id, report.pending_count);
+        } else {
+          res = await submitReport(report.group_id ?? "", report.schedule_id, report.pending_count);
+        }
         if (!res.ok) failedReports.push(report);
       }
       clearPendingReports();

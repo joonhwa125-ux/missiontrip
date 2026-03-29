@@ -14,9 +14,10 @@ import type { Schedule, CheckIn, Group, GroupMember, GroupMemberBrief } from "@/
 type Member = GroupMember;
 
 interface Props {
-  currentUser: { id: string; group_id: string };
+  currentUser: { id: string; group_id: string; shuttle_bus: string | null };
   groupName: string;
   members: Member[];
+  shuttleMembers: Member[];
   activeSchedule: Schedule | null;
   initialCheckIns: CheckIn[];
   schedules: Schedule[];
@@ -35,6 +36,7 @@ export default function GroupView({
   currentUser,
   groupName,
   members,
+  shuttleMembers,
   activeSchedule,
   initialCheckIns,
   schedules: initialSchedules,
@@ -101,6 +103,7 @@ export default function GroupView({
           scheduled_time: scheduled_time ?? prev?.scheduled_time ?? null,
           scope: scope ?? "all",
           is_active: true,
+          is_shuttle: prev?.is_shuttle ?? false,
           activated_at: new Date().toISOString(),
           created_at: prev?.created_at ?? new Date().toISOString(),
         }));
@@ -193,15 +196,17 @@ export default function GroupView({
     });
   }, [checkIns, members]);
 
-  const checkinMembers = useMemo(() => {
+  // 셔틀 일정: 해당 버스 인원 / 일반 일정: 조 인원 scope 필터
+  const effectiveMembers = useMemo(() => {
+    if (currentSchedule?.is_shuttle) return shuttleMembers;
     return filterMembersByScope(members, currentSchedule?.scope ?? "all");
-  }, [members, currentSchedule?.scope]);
+  }, [currentSchedule?.is_shuttle, currentSchedule?.scope, members, shuttleMembers]);
 
   // 체크인 취소 시 reported 자동 리셋 — 전원 미완료가 되면 보고 무효화
   const checkinComplete = useMemo(() => {
     const ids = new Set(checkIns.map((c) => c.user_id));
-    return checkinMembers.length > 0 && checkinMembers.every((m) => ids.has(m.id));
-  }, [checkIns, checkinMembers]);
+    return effectiveMembers.length > 0 && effectiveMembers.every((m) => ids.has(m.id));
+  }, [checkIns, effectiveMembers]);
 
   useEffect(() => {
     const wasComplete = prevCheckinCompleteRef.current;
@@ -221,24 +226,29 @@ export default function GroupView({
   }, [checkinComplete, currentUser.group_id]);
 
   // 보고 완료 시 allReportsState에 즉시 반영 (self-echo 미도달 대응)
+  // 셔틀 일정은 group_id 기반 allReportsState 업데이트 불필요
   const handleReported = useCallback(() => {
     setReported(true);
-    setAllReportsState((prev) =>
-      prev.some((r) => r.group_id === currentUser.group_id)
-        ? prev
-        : [...prev, { group_id: currentUser.group_id }]
-    );
-  }, [currentUser.group_id]);
+    if (!currentSchedule?.is_shuttle) {
+      setAllReportsState((prev) =>
+        prev.some((r) => r.group_id === currentUser.group_id)
+          ? prev
+          : [...prev, { group_id: currentUser.group_id }]
+      );
+    }
+  }, [currentUser.group_id, currentSchedule?.is_shuttle]);
 
   // 보고 무효화 (체크인 취소 시) — reported + allReportsState + ref 일괄 처리
   const handleReportReset = useCallback(() => {
     setReported(false);
     reportInvalidatedRef.current = true;
-    setAllReportsState((prev) => {
-      const next = prev.filter((r) => r.group_id !== currentUser.group_id);
-      return next.length === prev.length ? prev : next;
-    });
-  }, [currentUser.group_id]);
+    if (!currentSchedule?.is_shuttle) {
+      setAllReportsState((prev) => {
+        const next = prev.filter((r) => r.group_id !== currentUser.group_id);
+        return next.length === prev.length ? prev : next;
+      });
+    }
+  }, [currentUser.group_id, currentSchedule?.is_shuttle]);
 
   // CR-010: 체크인 진입 시 히스토리 푸시
   const handleEnterCheckin = useCallback(() => {
@@ -259,6 +269,7 @@ export default function GroupView({
           schedules={schedules}
           activeSchedule={currentSchedule}
           members={members}
+          shuttleBus={currentUser.shuttle_bus}
           checkIns={checkIns}
           scheduleCounts={scheduleCounts}
           scheduleAbsentCounts={scheduleAbsentCounts}
@@ -272,7 +283,7 @@ export default function GroupView({
         <GroupCheckinView
           currentUser={currentUser}
           groupName={groupName}
-          members={checkinMembers}
+          members={effectiveMembers}
           activeSchedule={currentSchedule}
           checkIns={checkIns}
           setCheckIns={setCheckIns}

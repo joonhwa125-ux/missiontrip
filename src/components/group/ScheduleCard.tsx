@@ -38,6 +38,13 @@ export default function ScheduleCard({
     </span>
   ) : null;
 
+  // 셔틀 배지
+  const shuttleBadge = schedule.is_shuttle ? (
+    <span className="inline-block rounded-full bg-sky-100 px-1.5 py-0.5 text-[0.625rem] font-bold leading-tight text-sky-700">
+      셔틀
+    </span>
+  ) : null;
+
   if (status === "active") {
     const checked = checkIns.filter((c) => !c.is_absent).length;
     const absentCount = checkIns.filter((c) => c.is_absent).length;
@@ -62,6 +69,7 @@ export default function ScheduleCard({
               </span>
             )}
             {scopeBadge}
+            {shuttleBadge}
           </div>
           <p className="text-base font-semibold leading-snug">{primaryText}</p>
           {schedule.location && (

@@ -21,6 +21,7 @@ export interface User {
   role: UserRole;
   group_id: string;
   party: GroupParty | null;
+  shuttle_bus: string | null;
   created_at: string;
 }
 
@@ -48,6 +49,7 @@ export interface AdminMember {
   role: UserRole;
   group_id: string;
   party: GroupParty | null;
+  shuttle_bus?: string | null;
 }
 
 export interface Schedule {
@@ -59,6 +61,7 @@ export interface Schedule {
   scheduled_time: string | null;
   scope: ScheduleScope;
   is_active: boolean;
+  is_shuttle: boolean;
   activated_at: string | null;
   created_at: string;
 }
@@ -87,6 +90,15 @@ export interface AdminCheckIn {
 export interface GroupReport {
   id: string;
   group_id: string;
+  schedule_id: string;
+  reported_by: string;
+  pending_count: number;
+  reported_at: string;
+}
+
+export interface ShuttleReport {
+  id: string;
+  shuttle_bus: string;
   schedule_id: string;
   reported_by: string;
   pending_count: number;
@@ -127,7 +139,8 @@ export interface OfflinePendingCheckin {
 
 // 오프라인 대기 보고
 export interface OfflinePendingReport {
-  group_id: string;
+  group_id: string | null;     // 일반 일정용 (셔틀이면 null)
+  shuttle_bus?: string | null; // 셔틀 일정용 (일반이면 없음)
   schedule_id: string;
   pending_count: number;
 }
@@ -152,6 +165,7 @@ export interface ParsedUser {
   role: UserRole;
   group_name: string;
   party: GroupParty | null;
+  shuttle_bus?: string | null;
 }
 
 export interface ParsedSchedule {
@@ -161,6 +175,7 @@ export interface ParsedSchedule {
   location: string | null;
   scheduled_time: string | null;
   scope: ScheduleScope;
+  is_shuttle: boolean;
 }
 
 export interface SetupPreviewData {

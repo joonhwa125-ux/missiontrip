@@ -25,6 +25,7 @@ interface Props {
   schedules: Schedule[];
   activeSchedule: Schedule | null;
   members: Member[];
+  shuttleBus?: string | null;
   checkIns: CheckIn[];
   scheduleCounts: Record<string, number>;
   scheduleAbsentCounts: Record<string, number>;
@@ -40,6 +41,7 @@ export default function GroupFeedView({
   schedules,
   activeSchedule,
   members,
+  shuttleBus,
   checkIns,
   scheduleCounts,
   scheduleAbsentCounts,
@@ -52,15 +54,17 @@ export default function GroupFeedView({
   const { isOnline, pendingCount } = useOfflineSync();
   const [statusOpen, setStatusOpen] = useState(false);
 
-  // scope 필터: 조 내에 해당 party 멤버가 있는 일정만 표시
+  // scope 필터: 셔틀 일정은 버스 배정자만, 일반 일정은 조내 party 기준
   const hasAdvance = members.some((m) => m.party === "advance");
   const hasRear = members.some((m) => m.party === "rear");
-  const mySchedules = schedules.filter(
-    (s) =>
+  const mySchedules = schedules.filter((s) => {
+    if (s.is_shuttle) return !!shuttleBus; // 셔틀: shuttle_bus 배정자만 표시
+    return (
       s.scope === "all" ||
       (s.scope === "advance" && hasAdvance) ||
       (s.scope === "rear" && hasRear)
-  );
+    );
+  });
   const days = useMemo(
     () => Array.from(new Set(mySchedules.map((s) => s.day_number))).sort(),
     [mySchedules]

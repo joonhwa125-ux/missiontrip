@@ -93,6 +93,7 @@ export function parseCsv(csv: string): string[][] {
 }
 
 // 참가자 행 검증 — 이름/역할/소속조 필수값 + 역할 매핑
+// 컬럼 순서: 0=이름, 1=전화번호, 2=역할, 3=소속조, 4=배정차량, 5=배정버스(셔틀), 6=선후발
 function validateUserRow(
   row: string[],
   rowIndex: number,
@@ -104,6 +105,7 @@ function validateUserRow(
   role?: UserRole;
   groupName?: string;
   busName?: string | null;
+  shuttleBus?: string | null;
   party?: "advance" | "rear" | null;
   email?: string;
 } {
@@ -113,7 +115,8 @@ function validateUserRow(
   const roleRaw = sanitizeText(row[2] ?? "");
   const groupName = sanitizeText(row[3] ?? "");
   const busName = row[4]?.trim() || null;
-  const partyRaw = sanitizeText(row[5] ?? "");
+  const shuttleBus = row[5]?.trim() || null;    // 신규: col5 배정버스 (셔틀 탑승자만)
+  const partyRaw = sanitizeText(row[6] ?? "");  // 기존 col5 → col6으로 이동
   const rowNum = rowIndex + 1;
 
   if (!name) {
@@ -155,10 +158,11 @@ function validateUserRow(
     }
   }
 
-  return { errors, name, phone, role, groupName, busName, party, email };
+  return { errors, name, phone, role, groupName, busName, shuttleBus, party, email };
 }
 
 // 일정 행 검증 — 일차 범위 + 일정명 필수 + 대상 매핑
+// 컬럼 순서: 0=일차, 1=순서, 2=장소, 3=일정명, 4=예정시각, 5=대상, 6=셔틀여부
 function validateScheduleRow(
   row: string[],
   rowIndex: number
@@ -170,6 +174,7 @@ function validateScheduleRow(
   title?: string;
   scheduledTime?: string | null;
   scope?: "all" | "advance" | "rear";
+  isShuttle?: boolean;
 } {
   const errors: ValidationError[] = [];
   const rowNum = rowIndex + 1;
@@ -180,6 +185,7 @@ function validateScheduleRow(
   const title = row[3]?.trim();
   const scheduledTime = row[4]?.trim() || null;
   const scopeRaw = sanitizeText(row[5] ?? "");
+  const isShuttle = sanitizeText(row[6] ?? "") === "셔틀";
 
   if (isNaN(dayNumber) || dayNumber < MIN_DAY_NUMBER || dayNumber > MAX_DAY_NUMBER) {
     errors.push({ sheet: "schedules", row: rowNum, field: "일차", message: `일차는 ${MIN_DAY_NUMBER}~${MAX_DAY_NUMBER}만 가능해요` });
@@ -197,7 +203,7 @@ function validateScheduleRow(
     return { errors };
   }
 
-  return { errors, dayNumber, sortOrder: isNaN(sortOrder) ? rowIndex : sortOrder, location, title, scheduledTime, scope };
+  return { errors, dayNumber, sortOrder: isNaN(sortOrder) ? rowIndex : sortOrder, location, title, scheduledTime, scope, isShuttle };
 }
 
 // 참가자 시트 파싱 (6컬럼: 이름, 전화번호, 역할, 소속조, 배정차량, 선후발)
@@ -237,6 +243,7 @@ export function parseUsersSheet(rows: string[][]): {
       role: result.role,
       group_name: result.groupName,
       party: result.party ?? null,
+      shuttle_bus: result.shuttleBus ?? null,
     });
   }
 
@@ -272,6 +279,7 @@ export function parseSchedulesSheet(rows: string[][]): {
       location: result.location ?? null,
       scheduled_time: result.scheduledTime ?? null,
       scope: result.scope,
+      is_shuttle: result.isShuttle ?? false,
     });
   }
 

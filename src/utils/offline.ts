@@ -56,10 +56,15 @@ export function clearPendingCheckins(): void {
 export function savePendingReport(item: OfflinePendingReport): boolean {
   try {
     const existing = getPendingReports();
-    // 같은 조+일정 중복 방지 (최신으로 교체)
-    const filtered = existing.filter(
-      (e) => !(e.group_id === item.group_id && e.schedule_id === item.schedule_id)
-    );
+    // 같은 조/버스+일정 중복 방지 (최신으로 교체)
+    const filtered = existing.filter((e) => {
+      if (item.shuttle_bus) {
+        // 셔틀 보고: shuttle_bus + schedule_id 기준 dedup
+        return !(e.shuttle_bus === item.shuttle_bus && e.schedule_id === item.schedule_id);
+      }
+      // 일반 보고: group_id + schedule_id 기준 dedup
+      return !(e.group_id === item.group_id && e.schedule_id === item.schedule_id);
+    });
     localStorage.setItem(
       OFFLINE_PENDING_REPORTS_KEY,
       JSON.stringify([...filtered, item])
