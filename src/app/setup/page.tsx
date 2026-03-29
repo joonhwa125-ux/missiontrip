@@ -38,7 +38,7 @@ export default async function SetupPage() {
     service.from("schedules").select("*").order("day_number").order("sort_order"),
     service
       .from("users")
-      .select("id, name, email, phone, role, group_id, party")
+      .select("id, name, email, phone, role, group_id, party, shuttle_bus")
       .order("name"),
     service.from("groups").select("id, name, bus_name").order("name"),
   ]);
@@ -53,6 +53,7 @@ export default async function SetupPage() {
     role: UserRole;
     group_id: string;
     party: GroupParty | null;
+    shuttle_bus: string | null;
   }[];
 
   const hasData = schedules.length > 0 || setupUsers.length > 0;
