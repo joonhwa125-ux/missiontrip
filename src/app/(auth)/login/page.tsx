@@ -10,7 +10,7 @@ export default function LoginPage() {
         <div className="flex flex-col items-center text-center">
           <Image src="/login_final.png" alt="미션트립" width={120} height={120} priority className="-mb-3" />
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold">혼디모영</h1>
+            <h1 className="text-2xl font-bold">동행체크</h1>
             <p className="text-sm text-muted-foreground">
               링키지랩 10주년 미션트립
             </p>

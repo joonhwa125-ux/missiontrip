@@ -3,8 +3,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | 혼디모영",
-    default: "혼디모영",
+    template: "%s | 동행체크",
+    default: "동행체크",
   },
   description: "링키지랩 10주년 미션트립 인원관리 시스템",
 };
