@@ -33,7 +33,7 @@ export default function PageHeader({ title, titleNode, superTitle, subtitle, bac
             </div>
           ) : (
             <div className="flex min-w-0 items-center gap-2">
-              <h1 className="truncate text-lg font-bold">{titleNode ?? title}</h1>
+              <h1 className="truncate text-lg font-bold leading-none">{titleNode ?? title}</h1>
               {subtitle && <span className="flex-shrink-0 text-sm opacity-70">{subtitle}</span>}
             </div>
           )}
