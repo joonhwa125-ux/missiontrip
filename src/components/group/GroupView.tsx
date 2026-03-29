@@ -91,8 +91,16 @@ export default function GroupView({
 
   // Realtime 구독 — GroupView 레벨 (feed <-> checkin 전환 시에도 유지)
   useRealtime(currentUser.group_id, false, {
-    onScheduleActivated: ({ schedule_id, title, scope, location, day_number, scheduled_time }) => {
+    onScheduleActivated: ({ schedule_id, title, scope, location, day_number, scheduled_time, is_shuttle }) => {
       if (viewRef.current === "checkin") {
+        // 셔틀 일정 활성화 + 버스 미배정 → 체크인 뷰에서 즉시 피드로 복귀
+        if (is_shuttle && !currentUser.shuttle_bus) {
+          showToast(`새로운 일정이 시작되었어요: ${title}`);
+          setView("feed");
+          history.replaceState(null, "");
+          router.refresh();
+          return;
+        }
         showToast(`새로운 일정이 시작되었어요: ${title}`);
         setCurrentSchedule((prev) => ({
           id: schedule_id,
@@ -103,7 +111,7 @@ export default function GroupView({
           scheduled_time: scheduled_time ?? prev?.scheduled_time ?? null,
           scope: scope ?? "all",
           is_active: true,
-          is_shuttle: prev?.is_shuttle ?? false,
+          is_shuttle: is_shuttle ?? false,
           activated_at: new Date().toISOString(),
           created_at: prev?.created_at ?? new Date().toISOString(),
         }));

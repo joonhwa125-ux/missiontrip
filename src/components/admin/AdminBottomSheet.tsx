@@ -121,9 +121,15 @@ export default function AdminBottomSheet({
     return Array.from(busMap.entries()).sort((a, b) => a[0].localeCompare(b[0], "ko"));
   }, [schedule?.is_shuttle, members, shuttleReports]);
 
+  // 셔틀 일정: shuttle_bus 배정 인원만 집계 / 일반 일정: scope 필터 인원
+  const displayMembers = useMemo(
+    () => schedule?.is_shuttle ? members.filter((m) => !!m.shuttle_bus) : scopeMembers,
+    [schedule?.is_shuttle, members, scopeMembers]
+  );
+
   const totalChecked = useMemo(
-    () => scopeMembers.filter((m) => checkedIds.has(m.id) && !absentIds.has(m.id)).length,
-    [scopeMembers, checkedIds, absentIds]
+    () => displayMembers.filter((m) => checkedIds.has(m.id) && !absentIds.has(m.id)).length,
+    [displayMembers, checkedIds, absentIds]
   );
 
   function handleClose() {
@@ -188,7 +194,7 @@ export default function AdminBottomSheet({
               <DialogHeader>
                 <DialogTitle>{schedule?.location ?? schedule?.title} 현황</DialogTitle>
                 <DialogDescription aria-live="polite">
-                  {COPY.totalSummary(totalChecked, scopeMembers.length)}
+                  {COPY.totalSummary(totalChecked, displayMembers.length)}
                 </DialogDescription>
               </DialogHeader>
             </div>
