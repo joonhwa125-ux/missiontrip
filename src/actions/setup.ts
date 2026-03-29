@@ -216,6 +216,7 @@ export async function resetAllData(): Promise<ActionResult> {
   const tables = [
     "check_ins",
     "group_reports",
+    "shuttle_reports",
     "users",
     "schedules",
     "groups",

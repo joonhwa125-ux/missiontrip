@@ -182,6 +182,11 @@ export default function GroupCheckinView({
 
     const isShuttle = activeSchedule.is_shuttle;
 
+    if (isShuttle && !currentUser.shuttle_bus) {
+      showToast("셔틀 버스 배정 정보가 없어요");
+      return;
+    }
+
     if (!isOnline) {
       const saved = addPendingReport(
         isShuttle

@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS users (
   role        text        NOT NULL CHECK (role IN ('member', 'leader', 'admin', 'admin_leader')),
   group_id    uuid        NOT NULL REFERENCES groups(id),
   party       text,                                -- 선발/후발 구분 (advance | rear | null)
+  shuttle_bus text,                                -- 셔틀버스 배정 (예: 판교 출발 1)
   created_at  timestamptz DEFAULT now()
 );
 
@@ -29,6 +30,7 @@ CREATE TABLE IF NOT EXISTS schedules (
   sort_order      int         NOT NULL,
   scheduled_time  timestamptz,
   is_active       boolean     NOT NULL DEFAULT false,
+  is_shuttle      boolean     NOT NULL DEFAULT false,  -- 셔틀 일정 여부
   activated_at    timestamptz,
   scope           text        NOT NULL DEFAULT 'all',  -- 일정 대상 (all | advance | rear)
   created_at      timestamptz DEFAULT now()
@@ -61,13 +63,24 @@ CREATE TABLE IF NOT EXISTS group_reports (
   CONSTRAINT unique_group_report UNIQUE (group_id, schedule_id)
 );
 
+CREATE TABLE IF NOT EXISTS shuttle_reports (
+  id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  shuttle_bus   text        NOT NULL,
+  schedule_id   uuid        NOT NULL REFERENCES schedules(id),
+  reported_by   uuid        NOT NULL REFERENCES users(id),
+  pending_count int         NOT NULL DEFAULT 0,
+  reported_at   timestamptz DEFAULT now(),
+  CONSTRAINT unique_shuttle_report UNIQUE (shuttle_bus, schedule_id)
+);
+
 -- ===== 2. RLS 활성화 =====
 
-ALTER TABLE groups        ENABLE ROW LEVEL SECURITY;
-ALTER TABLE users         ENABLE ROW LEVEL SECURITY;
-ALTER TABLE schedules     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE check_ins     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE group_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE groups          ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE schedules       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE check_ins       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE group_reports   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE shuttle_reports ENABLE ROW LEVEL SECURITY;
 
 -- ===== 3. RLS 정책 =====
 
@@ -132,6 +145,22 @@ CREATE POLICY "reports_insert" ON group_reports
   );
 
 CREATE POLICY "reports_update" ON group_reports
+  FOR UPDATE TO authenticated USING (
+    EXISTS (SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email' AND role IN ('leader', 'admin', 'admin_leader'))
+  );
+
+-- Shuttle_reports: 조장/관리자 읽기, 쓰기
+CREATE POLICY "shuttle_reports_read" ON shuttle_reports
+  FOR SELECT TO authenticated USING (
+    EXISTS (SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email' AND role IN ('leader', 'admin', 'admin_leader'))
+  );
+
+CREATE POLICY "shuttle_reports_insert" ON shuttle_reports
+  FOR INSERT TO authenticated WITH CHECK (
+    EXISTS (SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email' AND role IN ('leader', 'admin', 'admin_leader'))
+  );
+
+CREATE POLICY "shuttle_reports_update" ON shuttle_reports
   FOR UPDATE TO authenticated USING (
     EXISTS (SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email' AND role IN ('leader', 'admin', 'admin_leader'))
   );

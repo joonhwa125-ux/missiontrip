@@ -206,7 +206,7 @@ function validateScheduleRow(
   return { errors, dayNumber, sortOrder: isNaN(sortOrder) ? rowIndex : sortOrder, location, title, scheduledTime, scope, isShuttle };
 }
 
-// 참가자 시트 파싱 (6컬럼: 이름, 전화번호, 역할, 소속조, 배정차량, 선후발)
+// 참가자 시트 파싱 (7컬럼: 이름, 전화번호, 역할, 소속조, 배정차량, 배정버스, 선후발)
 // 이메일은 이름 기반 자동 생성 (조장/관리자: name@도메인, 조원: nologin)
 // groups는 소속조 고유값에서 자동 추출, bus_name은 배정차량 열에서 매핑, party는 유저별
 export function parseUsersSheet(rows: string[][]): {
@@ -255,7 +255,7 @@ export function parseUsersSheet(rows: string[][]): {
   return { users, groups, errors };
 }
 
-// 일정 시트 파싱 (6컬럼: 일차, 순서, 장소, 일정명, 예정시각, 대상)
+// 일정 시트 파싱 (7컬럼: 일차, 순서, 장소, 일정명, 예정시각, 대상, 셔틀여부)
 export function parseSchedulesSheet(rows: string[][]): {
   schedules: ParsedSchedule[];
   errors: ValidationError[];
