@@ -104,17 +104,17 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
       {/* 일정 테이블 */}
       {tab === "schedules" && (
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          <table className="min-w-[720px] w-full text-sm">
+          <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr className="text-center text-xs text-muted-foreground whitespace-nowrap">
-                <th className="px-3 py-2">일차</th>
-                <th className="px-3 py-2">순서</th>
-                <th className="min-w-[100px] px-3 py-2">장소</th>
-                <th className="min-w-[120px] px-3 py-2">집결지</th>
-                <th className="px-3 py-2">시간</th>
-                <th className="px-3 py-2">구분</th>
-                <th className="px-3 py-2">셔틀</th>
-                <th className="min-w-[108px] px-3 py-2">편집</th>
+                <th className="px-2 py-2">일차</th>
+                <th className="px-2 py-2">순서</th>
+                <th className="px-2 py-2">장소</th>
+                <th className="px-2 py-2">집결지</th>
+                <th className="px-2 py-2">시간</th>
+                <th className="px-2 py-2">구분</th>
+                <th className="px-2 py-2">셔틀</th>
+                <th className="px-2 py-2">편집</th>
               </tr>
             </thead>
             <tbody>
@@ -123,17 +123,17 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
               )}
               {schedules.map((s) => (
                 <tr key={s.id} className="border-t border-gray-100">
-                  <td className="px-3 py-2 text-center">{s.day_number}일</td>
-                  <td className="px-3 py-2 text-center">{s.sort_order}</td>
-                  <td className="px-3 py-2 text-muted-foreground">{s.location ?? "-"}</td>
-                  <td className="px-3 py-2">{s.title}</td>
-                  <td className="px-3 py-2 text-center text-xs">{s.scheduled_time ? formatTime(s.scheduled_time) : "-"}</td>
-                  <td className="px-3 py-2 text-center text-xs">{SCOPE_LABEL[s.scope]}</td>
-                  <td className="px-3 py-2 text-center text-xs">{s.shuttle_type === "departure" ? "출발" : s.shuttle_type === "return" ? "귀가" : "-"}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-2 text-center">{s.day_number}일</td>
+                  <td className="px-2 py-2 text-center">{s.sort_order}</td>
+                  <td className="px-2 py-2 text-muted-foreground">{s.location ?? "-"}</td>
+                  <td className="px-2 py-2">{s.title}</td>
+                  <td className="px-2 py-2 text-center text-xs">{s.scheduled_time ? formatTime(s.scheduled_time) : "-"}</td>
+                  <td className="px-2 py-2 text-center text-xs">{SCOPE_LABEL[s.scope]}</td>
+                  <td className="px-2 py-2 text-center text-xs">{s.shuttle_type === "departure" ? "출발" : s.shuttle_type === "return" ? "귀가" : "-"}</td>
+                  <td className="px-2 py-2">
                     <div className="flex justify-start gap-1 whitespace-nowrap">
-                      <button onClick={() => setEditSchedule(s)} className="min-h-11 rounded-lg bg-gray-100 px-3 text-xs font-medium focus-visible:ring-2 focus-visible:ring-main-action" aria-label={`${s.title} 수정`}>수정</button>
-                      <button onClick={() => setDeleteScheduleTarget(s)} disabled={s.is_active} className="min-h-11 rounded-lg bg-red-50 px-3 text-xs font-medium text-red-600 focus-visible:ring-2 focus-visible:ring-red-400 disabled:opacity-40" aria-label={s.is_active ? `${s.title} 진행중 — 삭제 불가` : `${s.title} 삭제`}>삭제</button>
+                      <button onClick={() => setEditSchedule(s)} className="min-h-11 rounded-lg bg-gray-100 px-2 text-xs font-medium focus-visible:ring-2 focus-visible:ring-main-action" aria-label={`${s.title} 수정`}>수정</button>
+                      <button onClick={() => setDeleteScheduleTarget(s)} disabled={s.is_active} className="min-h-11 rounded-lg bg-red-50 px-2 text-xs font-medium text-red-600 focus-visible:ring-2 focus-visible:ring-red-400 disabled:opacity-40" aria-label={s.is_active ? `${s.title} 진행중 — 삭제 불가` : `${s.title} 삭제`}>삭제</button>
                     </div>
                   </td>
                 </tr>
@@ -146,18 +146,18 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
       {/* 참가자 테이블 */}
       {tab === "users" && (
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          <table className="min-w-[960px] w-full text-sm">
+          <table className="w-full text-sm">
             <thead className="bg-gray-50">
               <tr className="text-center text-xs text-muted-foreground whitespace-nowrap">
-                <th className="sticky left-0 z-10 min-w-[80px] bg-gray-50 px-3 py-2">이름</th>
-                <th className="min-w-[100px] px-3 py-2">전화번호</th>
-                <th className="min-w-[56px] px-3 py-2">역할</th>
-                <th className="min-w-[80px] px-3 py-2">조편성</th>
-                <th className="min-w-[80px] px-3 py-2">배정차량</th>
-                <th className="min-w-[48px] px-3 py-2">구분</th>
-                <th className="min-w-[100px] px-3 py-2">출발셔틀</th>
-                <th className="min-w-[100px] px-3 py-2">귀가셔틀</th>
-                <th className="min-w-[108px] px-3 py-2">편집</th>
+                <th className="px-2 py-2">이름</th>
+                <th className="px-2 py-2">전화번호</th>
+                <th className="px-2 py-2">역할</th>
+                <th className="px-2 py-2">조편성</th>
+                <th className="px-2 py-2">배정차량</th>
+                <th className="px-2 py-2">구분</th>
+                <th className="px-2 py-2">출발셔틀</th>
+                <th className="px-2 py-2">귀가셔틀</th>
+                <th className="px-2 py-2">편집</th>
               </tr>
             </thead>
             <tbody>
@@ -166,18 +166,18 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
               )}
               {users.map((u) => (
                 <tr key={u.id} className="border-t border-gray-100">
-                  <td className="sticky left-0 z-10 bg-white px-3 py-2 font-medium shadow-[1px_0_0_0_#e5e7eb]">{u.name}</td>
-                  <td className="px-3 py-2 text-xs">{u.phone ?? "-"}</td>
-                  <td className="px-3 py-2 text-center text-xs">{ROLE_LABEL[u.role]}</td>
-                  <td className="px-3 py-2 text-center text-xs">{groupMap.get(u.group_id) ?? "-"}</td>
-                  <td className="px-3 py-2 text-center text-xs">{groupBusMap.get(u.group_id) ?? "-"}</td>
-                  <td className="px-3 py-2 text-center text-xs">{getPartyLabel(u.party)}</td>
-                  <td className="px-3 py-2 text-center text-xs">{u.shuttle_bus ?? "-"}</td>
-                  <td className="px-3 py-2 text-center text-xs">{u.return_shuttle_bus ?? "-"}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-2 py-2 font-medium">{u.name}</td>
+                  <td className="px-2 py-2 text-xs">{u.phone ?? "-"}</td>
+                  <td className="px-2 py-2 text-center text-xs">{ROLE_LABEL[u.role]}</td>
+                  <td className="px-2 py-2 text-center text-xs">{groupMap.get(u.group_id) ?? "-"}</td>
+                  <td className="px-2 py-2 text-center text-xs">{groupBusMap.get(u.group_id) ?? "-"}</td>
+                  <td className="px-2 py-2 text-center text-xs">{getPartyLabel(u.party)}</td>
+                  <td className="px-2 py-2 text-center text-xs">{u.shuttle_bus ?? "-"}</td>
+                  <td className="px-2 py-2 text-center text-xs">{u.return_shuttle_bus ?? "-"}</td>
+                  <td className="px-2 py-2">
                     <div className="flex justify-start gap-1 whitespace-nowrap">
-                      <button onClick={() => setEditUser(u)} className="min-h-11 rounded-lg bg-gray-100 px-3 text-xs font-medium focus-visible:ring-2 focus-visible:ring-main-action" aria-label={`${u.name} 수정`}>수정</button>
-                      <button onClick={() => setDeleteUserTarget(u)} disabled={u.id === currentUserId} className="min-h-11 rounded-lg bg-red-50 px-3 text-xs font-medium text-red-600 focus-visible:ring-2 focus-visible:ring-red-400 disabled:opacity-40" aria-label={u.id === currentUserId ? "본인 계정 — 삭제 불가" : `${u.name} 삭제`}>삭제</button>
+                      <button onClick={() => setEditUser(u)} className="min-h-11 rounded-lg bg-gray-100 px-2 text-xs font-medium focus-visible:ring-2 focus-visible:ring-main-action" aria-label={`${u.name} 수정`}>수정</button>
+                      <button onClick={() => setDeleteUserTarget(u)} disabled={u.id === currentUserId} className="min-h-11 rounded-lg bg-red-50 px-2 text-xs font-medium text-red-600 focus-visible:ring-2 focus-visible:ring-red-400 disabled:opacity-40" aria-label={u.id === currentUserId ? "본인 계정 — 삭제 불가" : `${u.name} 삭제`}>삭제</button>
                     </div>
                   </td>
                 </tr>
