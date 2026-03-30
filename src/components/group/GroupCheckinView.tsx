@@ -200,7 +200,7 @@ export default function GroupCheckinView({
       );
       if (saved) {
         onReported();
-        showToast(COPY.reportButtonDone);
+        showToast(COPY.reportButtonDone(checkedCount + absentIds.size, members.length));
       } else {
         showToast("저장 공간이 부족해요. 기기 저장소를 확인해주세요.");
       }
@@ -214,7 +214,7 @@ export default function GroupCheckinView({
           : await submitReport(currentUser.group_id, activeSchedule.id, unchecked);
         if (res.ok) {
           onReported();
-          showToast(COPY.reportButtonDone);
+          showToast(COPY.reportButtonDone(checkedCount + absentIds.size, members.length));
           if (!shuttleType) {
             const reportPayload = {
               group_id: currentUser.group_id,
@@ -266,14 +266,7 @@ export default function GroupCheckinView({
               <h1 className="text-lg font-bold">
                 {activeSchedule?.location ?? activeSchedule?.title ?? "대기 중"}
               </h1>
-              <div className="flex items-center justify-center gap-2">
-                <p className="text-sm text-muted-foreground">{groupName}</p>
-                {members.length > 0 && (
-                  <span className="flex-shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-                    {checkedCount + absentIds.size}/{members.length}명 완료
-                  </span>
-                )}
-              </div>
+              <p className="text-sm text-muted-foreground">{groupName}</p>
             </div>
             <button
               onClick={onBack}
@@ -297,14 +290,7 @@ export default function GroupCheckinView({
               <h1 className="text-lg font-bold">
                 {activeSchedule?.location ?? activeSchedule?.title ?? "대기 중"}
               </h1>
-              <div className="flex items-center gap-2">
-                <p className="text-sm text-muted-foreground">{groupName}</p>
-                {members.length > 0 && (
-                  <span className="flex-shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-                    {checkedCount + absentIds.size}/{members.length}명 완료
-                  </span>
-                )}
-              </div>
+              <p className="text-sm text-muted-foreground">{groupName}</p>
             </div>
           </div>
         )}
@@ -369,7 +355,7 @@ export default function GroupCheckinView({
             <Image src={reported ? "/running-horse.png" : "/standing-horse.png"} alt="" width={120} height={120} priority />
           </div>
           <h2 className="mb-2 text-2xl font-bold">
-            {reported ? COPY.allCompleteReported : COPY.allComplete}
+            {reported ? COPY.allCompleteReported(checkedCount + absentIds.size, members.length) : COPY.allComplete}
           </h2>
           <p className="whitespace-pre-line text-lg font-medium text-stone-600">
             {reported ? COPY.celebrationReported : COPY.celebrationSubtitle}
@@ -414,7 +400,7 @@ export default function GroupCheckinView({
             className="flex w-full items-center justify-center gap-2 min-h-11 rounded-xl border border-[#EBE8E3] bg-app-bg py-4 text-base font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2"
           >
             <CheckIcon className="h-5 w-5 text-complete-check" aria-hidden />
-            {COPY.reportButtonDone}
+            {COPY.reportButtonDone(checkedCount + absentIds.size, members.length)}
           </button>
         ) : (
           <button
