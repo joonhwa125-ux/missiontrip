@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo, useCallback } from "react";
+import { useState, useTransition, useMemo, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -49,6 +49,8 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
   const [deleteUserTarget, setDeleteUserTarget] = useState<SetupUser | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  useEffect(() => () => clearTimeout(successTimerRef.current), []);
 
   const groupMap = useMemo(() => new Map(groups.map((g) => [g.id, g.name])), [groups]);
   const groupBusMap = useMemo(() => new Map(groups.map((g) => [g.id, g.bus_name])), [groups]);
@@ -59,7 +61,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
         const result = await action();
         if (!result.ok) { setErrorMsg(result.error ?? "오류가 발생했어요"); return; }
         setErrorMsg(null);
-        if (successText) { setSuccessMsg(successText); setTimeout(() => setSuccessMsg(null), 3000); }
+        if (successText) { setSuccessMsg(successText); clearTimeout(successTimerRef.current); successTimerRef.current = setTimeout(() => setSuccessMsg(null), 3000); }
         onSuccess();
         router.refresh();
       });
