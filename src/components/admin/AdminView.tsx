@@ -93,11 +93,20 @@ export default function AdminView({
 
   if (prevCheckInsRef.current !== initialCheckInsMap) {
     prevCheckInsRef.current = initialCheckInsMap;
-    setCheckInsMap(initialCheckInsMap);
+    // 재연결 시 서버 prop이 빈 맵이면 클라이언트 데이터 유지 (0-flash 방지)
+    const newKeys = Object.keys(initialCheckInsMap).length;
+    const curKeys = Object.keys(checkInsMap).length;
+    if (newKeys > 0 || curKeys === 0) {
+      setCheckInsMap(initialCheckInsMap);
+    }
   }
   if (prevReportsRef.current !== initialReportsMap) {
     prevReportsRef.current = initialReportsMap;
-    setReportsMap(initialReportsMap);
+    const newKeys = Object.keys(initialReportsMap).length;
+    const curKeys = Object.keys(reportsMap).length;
+    if (newKeys > 0 || curKeys === 0) {
+      setReportsMap(initialReportsMap);
+    }
   }
   if (prevSchedulesRef.current !== initialSchedules) {
     prevSchedulesRef.current = initialSchedules;
