@@ -48,15 +48,18 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
   const [deleteScheduleTarget, setDeleteScheduleTarget] = useState<Schedule | null>(null);
   const [deleteUserTarget, setDeleteUserTarget] = useState<SetupUser | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const groupMap = useMemo(() => new Map(groups.map((g) => [g.id, g.name])), [groups]);
   const groupBusMap = useMemo(() => new Map(groups.map((g) => [g.id, g.bus_name])), [groups]);
 
   const run = useCallback(
-    (action: () => Promise<{ ok: boolean; error?: string }>, onSuccess: () => void) => {
+    (action: () => Promise<{ ok: boolean; error?: string }>, onSuccess: () => void, successText?: string) => {
       startTransition(async () => {
         const result = await action();
         if (!result.ok) { setErrorMsg(result.error ?? "오류가 발생했어요"); return; }
+        setErrorMsg(null);
+        if (successText) { setSuccessMsg(successText); setTimeout(() => setSuccessMsg(null), 3000); }
         onSuccess();
         router.refresh();
       });
@@ -78,6 +81,12 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
           >
             ✕
           </button>
+        </div>
+      )}
+      {/* 성공 배너 */}
+      {successMsg && (
+        <div role="status" aria-live="polite" className="mb-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+          {successMsg}
         </div>
       )}
 
@@ -191,7 +200,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
       {editSchedule && (
         <ScheduleEditDialog
           schedule={editSchedule}
-          onSave={(data) => run(() => updateSchedule(editSchedule.id, data), () => setEditSchedule(null))}
+          onSave={(data) => run(() => updateSchedule(editSchedule.id, data), () => setEditSchedule(null), "수정이 완료됐어요")}
           onClose={() => setEditSchedule(null)}
         />
       )}
@@ -201,7 +210,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
         <UserEditDialog
           user={editUser}
           groups={groups}
-          onSave={(data) => run(() => updateUser(editUser.id, data), () => setEditUser(null))}
+          onSave={(data) => run(() => updateUser(editUser.id, data), () => setEditUser(null), "수정이 완료됐어요")}
           onClose={() => setEditUser(null)}
         />
       )}
@@ -220,7 +229,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
               <button className="min-h-11 rounded-xl bg-gray-100 px-4 text-sm font-medium focus-visible:ring-2 focus-visible:ring-main-action">취소</button>
             </DialogClose>
             <button
-              onClick={() => run(() => deleteSchedule(deleteScheduleTarget!.id), () => setDeleteScheduleTarget(null))}
+              onClick={() => run(() => deleteSchedule(deleteScheduleTarget!.id), () => setDeleteScheduleTarget(null), "삭제가 완료됐어요")}
               className="min-h-11 rounded-xl bg-red-500 px-4 text-sm font-bold text-white focus-visible:ring-2 focus-visible:ring-red-400"
             >
               삭제
@@ -243,7 +252,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
               <button className="min-h-11 rounded-xl bg-gray-100 px-4 text-sm font-medium focus-visible:ring-2 focus-visible:ring-main-action">취소</button>
             </DialogClose>
             <button
-              onClick={() => run(() => deleteUser(deleteUserTarget!.id), () => setDeleteUserTarget(null))}
+              onClick={() => run(() => deleteUser(deleteUserTarget!.id), () => setDeleteUserTarget(null), "삭제가 완료됐어요")}
               className="min-h-11 rounded-xl bg-red-500 px-4 text-sm font-bold text-white focus-visible:ring-2 focus-visible:ring-red-400"
             >
               삭제
