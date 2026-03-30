@@ -80,64 +80,72 @@ export default async function GroupPage() {
   let allReports: { group_id: string }[] = [];
   let initialReported = false;
   let shuttleReports: ShuttleReport[] = [];
+  const scheduleCounts: Record<string, number> = {};
+  const scheduleAbsentCounts: Record<string, number> = {};
 
-  if (activeSchedule) {
-    const [{ data: allCi }, { data: allReportsData }] = await Promise.all([
-      supabase
-        .from("check_ins")
-        .select("*")
-        .eq("schedule_id", activeSchedule.id),
-      supabase
-        .from("group_reports")
-        .select("group_id")
-        .eq("schedule_id", activeSchedule.id),
-    ]);
-
-    const allData = allCi ?? [];
-    allCheckIns = allData.map((ci) => ({ user_id: ci.user_id, is_absent: ci.is_absent }));
-
-    const memberIds = new Set(members?.map((m) => m.id) ?? []);
-    checkIns = allData.filter((ci) => memberIds.has(ci.user_id)) as CheckIn[];
-
-    allReports = allReportsData ?? [];
-    initialReported = allReports.some((r) => r.group_id === currentUser.group_id);
-
-    // 셔틀 일정 + 배정 버스가 있을 때 shuttle_reports 조회
-    const myShuttleBus = activeSchedule.shuttle_type === "departure"
-      ? currentUser.shuttle_bus
-      : activeSchedule.shuttle_type === "return"
-        ? currentUser.return_shuttle_bus
-        : null;
-    if (activeSchedule.shuttle_type && myShuttleBus) {
-      const { data: sr } = await supabase
-        .from("shuttle_reports")
-        .select("*")
-        .eq("schedule_id", activeSchedule.id);
-      shuttleReports = (sr ?? []) as ShuttleReport[];
-      initialReported = shuttleReports.some((r) => r.shuttle_bus === myShuttleBus);
-    }
-  }
-
-  // 완료 일정별 체크인 카운트 (우리 조 기준) — shuttle_reports와 병렬 불가 (activeSchedule 의존)
+  // 완료 일정 ID 추출 (병렬 쿼리에 사용)
   const completedScheduleIds = (schedules ?? [])
     .filter((s: Schedule) => s.activated_at && !s.is_active)
     .map((s: Schedule) => s.id);
 
-  const scheduleCounts: Record<string, number> = {};
-  const scheduleAbsentCounts: Record<string, number> = {};
-  if (completedScheduleIds.length > 0 && members?.length) {
-    const { data: counts } = await supabase
-      .from("check_ins")
-      .select("schedule_id, is_absent")
-      .in("schedule_id", completedScheduleIds)
-      .in("user_id", members.map((m) => m.id));
-    for (const c of counts ?? []) {
-      if (c.is_absent) {
-        scheduleAbsentCounts[c.schedule_id] = (scheduleAbsentCounts[c.schedule_id] ?? 0) + 1;
-      } else {
-        scheduleCounts[c.schedule_id] = (scheduleCounts[c.schedule_id] ?? 0) + 1;
-      }
+  // 셔틀 버스명 미리 계산
+  const myShuttleBus = activeSchedule
+    ? (activeSchedule.shuttle_type === "departure" ? currentUser.shuttle_bus
+      : activeSchedule.shuttle_type === "return" ? currentUser.return_shuttle_bus
+      : null)
+    : null;
+
+  // 활성 일정 체크인 + 보고 + 셔틀 보고 + 완료 일정 카운트 — 전부 병렬
+  if (activeSchedule || (completedScheduleIds.length > 0 && members?.length)) {
+    const queries: Promise<void>[] = [];
+
+    // (1) 활성 일정 체크인 + 보고
+    if (activeSchedule) {
+      queries.push(
+        Promise.all([
+          supabase.from("check_ins").select("*").eq("schedule_id", activeSchedule.id),
+          supabase.from("group_reports").select("group_id").eq("schedule_id", activeSchedule.id),
+        ]).then(([{ data: allCi }, { data: allReportsData }]) => {
+          const allData = allCi ?? [];
+          allCheckIns = allData.map((ci) => ({ user_id: ci.user_id, is_absent: ci.is_absent }));
+          const memberIds = new Set(members?.map((m) => m.id) ?? []);
+          checkIns = allData.filter((ci) => memberIds.has(ci.user_id)) as CheckIn[];
+          allReports = allReportsData ?? [];
+          initialReported = allReports.some((r) => r.group_id === currentUser.group_id);
+        })
+      );
     }
+
+    // (2) 셔틀 보고 (활성 일정이 셔틀이고 배정 버스 있을 때)
+    if (activeSchedule?.shuttle_type && myShuttleBus) {
+      queries.push(
+        supabase.from("shuttle_reports").select("*").eq("schedule_id", activeSchedule.id)
+          .then(({ data: sr }) => {
+            shuttleReports = (sr ?? []) as ShuttleReport[];
+            initialReported = shuttleReports.some((r) => r.shuttle_bus === myShuttleBus);
+          }) as Promise<void>
+      );
+    }
+
+    // (3) 완료 일정 카운트
+    if (completedScheduleIds.length > 0 && members?.length) {
+      queries.push(
+        supabase.from("check_ins").select("schedule_id, is_absent")
+          .in("schedule_id", completedScheduleIds)
+          .in("user_id", members.map((m) => m.id))
+          .then(({ data: counts }) => {
+            for (const c of counts ?? []) {
+              if (c.is_absent) {
+                scheduleAbsentCounts[c.schedule_id] = (scheduleAbsentCounts[c.schedule_id] ?? 0) + 1;
+              } else {
+                scheduleCounts[c.schedule_id] = (scheduleCounts[c.schedule_id] ?? 0) + 1;
+              }
+            }
+          }) as Promise<void>
+      );
+    }
+
+    await Promise.all(queries);
   }
 
   return (
