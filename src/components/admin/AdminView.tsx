@@ -37,6 +37,8 @@ interface Props {
 /** 클라이언트에서 직접 체크인/보고 데이터 조회 (RLS email 기반 권한 통제) */
 async function fetchCheckInsClient(scheduleId: string) {
   const supabase = createClient();
+  // 탭 복귀 시 auth 세션 복원 보장 (RLS 쿼리 전 필수)
+  await supabase.auth.getSession();
   const [ciResult, rpResult] = await Promise.all([
     supabase
       .from("check_ins")
@@ -143,8 +145,19 @@ export default function AdminView({
     if (!activeSchedule) return;
     fetchCheckInsClient(activeSchedule.id)
       .then(({ checkIns, reports }) => {
-        setCheckInsMap((prev) => ({ ...prev, [activeSchedule.id]: checkIns }));
-        setReportsMap((prev) => ({ ...prev, [activeSchedule.id]: reports }));
+        // 빈 결과이고 기존 데이터가 있으면 덮어쓰지 않기 (auth 미복원 방어)
+        setCheckInsMap((prev) => {
+          const cur = prev[activeSchedule.id] ?? [];
+          return checkIns.length > 0 || cur.length === 0
+            ? { ...prev, [activeSchedule.id]: checkIns }
+            : prev;
+        });
+        setReportsMap((prev) => {
+          const cur = prev[activeSchedule.id] ?? [];
+          return reports.length > 0 || cur.length === 0
+            ? { ...prev, [activeSchedule.id]: reports }
+            : prev;
+        });
       })
       .catch(() => {}); // 실패 시 기존 캐시 유지 — 별도 알림 불필요
   }, [activeSchedule]);

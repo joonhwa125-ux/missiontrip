@@ -93,15 +93,19 @@ export default function GroupView({
   const fetchLatestCheckIns = useCallback(async () => {
     if (!currentSchedule) return;
     const supabase = createClient();
+    // 탭 복귀 시 auth 세션 복원 보장 (RLS 쿼리 전 필수)
+    await supabase.auth.getSession();
     const { data } = await supabase
       .from("check_ins")
-      .select("*")
+      .select("id, user_id, schedule_id, checked_at, checked_by, checked_by_user_id, offline_pending, is_absent")
       .eq("schedule_id", currentSchedule.id);
     if (!data) return;
+    // 빈 결과이고 기존 데이터가 있으면 덮어쓰지 않기 (auth 미복원 방어)
+    if (data.length === 0 && checkIns.length > 0) return;
     const memberIdSet = new Set(members.map((m) => m.id));
     setCheckIns(data.filter((ci) => memberIdSet.has(ci.user_id)) as CheckIn[]);
     setAllCheckInsState(data.map((ci) => ({ user_id: ci.user_id, is_absent: ci.is_absent })));
-  }, [currentSchedule, members]);
+  }, [currentSchedule, members, checkIns.length]);
 
   // 백그라운드 복귀 시 타겟 fetch (router.refresh() 대신 — 0-flash 방지)
   useVisibilityRefresh(fetchLatestCheckIns);
