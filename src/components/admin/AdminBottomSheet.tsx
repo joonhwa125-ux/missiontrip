@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { cn, getGroupBadgeStatus, filterMembersByScope } from "@/lib/utils";
 import { COPY, GROUP_BADGE_STYLE, isLeaderRole } from "@/lib/constants";
@@ -50,9 +50,12 @@ export default function AdminBottomSheet({
 }: Props) {
   const [drillGroup, setDrillGroup] = useState<Group | null>(null);
   const [shuttleReports, setShuttleReports] = useState<ShuttleReport[]>([]);
+  const [closing, setClosing] = useState(false);
+  const closingRef = useRef(false);
 
   // 일정 변경 시 드릴다운 초기화 + 셔틀 보고 조회
   useEffect(() => {
+    if (closingRef.current) return; // 닫힘 애니메이션 중 상태 변경 방지
     setDrillGroup(null);
     if (!schedule?.shuttle_type) {
       setShuttleReports([]);
@@ -137,21 +140,33 @@ export default function AdminBottomSheet({
     [displayMembers, checkedIds, absentIds]
   );
 
+  function deferClose() {
+    closingRef.current = true;
+    setClosing(true);
+    // 애니메이션(200ms) 완료 후 상태 초기화 + 닫기
+    setTimeout(() => {
+      setDrillGroup(null);
+      setShuttleReports([]);
+      closingRef.current = false;
+      setClosing(false);
+      onClose();
+    }, 200);
+  }
+
   function handleClose() {
-    setDrillGroup(null);
-    onClose();
+    deferClose();
   }
 
   return (
     <Dialog
-      open={schedule !== null}
+      open={schedule !== null && !closing}
       onOpenChange={(o) => {
         if (!o) {
           // 스택 네비게이션: 드릴다운 → 그리드 → 닫기
           if (drillGroup) {
             setDrillGroup(null);
           } else {
-            onClose();
+            deferClose();
           }
         }
       }}
