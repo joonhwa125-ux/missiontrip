@@ -159,7 +159,7 @@ export default function AdminGroupDrillDown({
               {checkedCount}/{groupMembers.length}명 확인{absentCount > 0 && ` (불참 ${absentCount})`}
             </DialogDescription>
           </div>
-          <span className="flex-shrink-0 text-sm" aria-live="polite">
+          <span className="flex-shrink-0 pr-3 text-sm" aria-live="polite">
             <span className="font-bold text-gray-900">{checkedCount + absentCount}</span>
             <span className="font-normal text-gray-400">/</span>
             <span className="font-medium text-gray-900">{groupMembers.length}명</span>
