@@ -156,3 +156,9 @@ export const COPY = {
   deactivateConfirm: "정말 종료할까요?",
   allReported: "모든 조가 보고했어요",
 } as const;
+
+/** 보고완료 배지 동적 라벨 (관리자 현황) */
+export function getReportedLabel(reportedCount: number, totalGroups: number): string {
+  if (totalGroups > 0 && reportedCount >= totalGroups) return `${totalGroups}/${totalGroups}조 보고완료`;
+  return `${reportedCount}/${totalGroups}조 보고완료`;
+}

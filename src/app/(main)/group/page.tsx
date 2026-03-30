@@ -53,7 +53,7 @@ export default async function GroupPage() {
       .select("*")
       .order("day_number")
       .order("sort_order"),
-    supabase.from("groups").select("*").order("name"),
+    supabase.from("groups").select("id, name, bus_name").order("name"),
     supabase.from("users").select("id, group_id, party, name, role"),
   ]);
 

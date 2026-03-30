@@ -140,11 +140,18 @@ export default function AdminBottomSheet({
     [displayMembers, checkedIds, absentIds]
   );
 
+  const contentRef = useRef<HTMLDivElement>(null);
+
   function deferClose() {
+    // 현재 높이 고정 — 애니메이션 중 레이아웃 재계산 방지
+    if (contentRef.current) {
+      contentRef.current.style.height = `${contentRef.current.offsetHeight}px`;
+    }
     closingRef.current = true;
     setClosing(true);
     // 애니메이션(200ms) 완료 후 상태 초기화 + 닫기
     setTimeout(() => {
+      if (contentRef.current) contentRef.current.style.height = "";
       setDrillGroup(null);
       setShuttleReports([]);
       closingRef.current = false;
@@ -172,6 +179,7 @@ export default function AdminBottomSheet({
       }}
     >
       <DialogContent
+        ref={contentRef}
         hideClose
         className="flex max-h-[85vh] flex-col overflow-hidden p-0"
         onEscapeKeyDown={(e) => {

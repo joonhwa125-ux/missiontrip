@@ -2,7 +2,7 @@
 
 import { formatTime, getScheduleStatus, filterMembersByScope } from "@/lib/utils";
 import { CheckIcon } from "@/components/ui/icons";
-import { SCOPE_LABEL, COPY } from "@/lib/constants";
+import { SCOPE_LABEL, getReportedLabel } from "@/lib/constants";
 import type { Schedule, AdminCheckIn, AdminMember, AdminReport } from "@/lib/types";
 
 interface Props {
@@ -142,7 +142,7 @@ export default function AdminScheduleCard({
           {allReported && (
             <div className="flex items-center rounded-xl bg-[#EAF3DE] px-3 py-2">
               <span className="text-xs font-medium text-[#27500A]">
-                {COPY.allReported}
+                {getReportedLabel(reportedCount, totalGroups)}
               </span>
             </div>
           )}

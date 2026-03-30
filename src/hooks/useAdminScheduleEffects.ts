@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { filterMembersByScope } from "@/lib/utils";
-import { COPY } from "@/lib/constants";
+import { getReportedLabel } from "@/lib/constants";
 import type { Schedule, AdminCheckIn, AdminMember, AdminReport } from "@/lib/types";
 
 /** 현재 활성 일정 기준 미확인 인원 수 계산 */
@@ -40,7 +40,7 @@ export function useAllReportedNotification(
     const allReported = totalGroups > 0 && reportedCount >= totalGroups;
     if (allReported && notifiedRef.current !== activeSchedule.id) {
       notifiedRef.current = activeSchedule.id;
-      onToast(COPY.allReported);
+      onToast(getReportedLabel(reportedCount, totalGroups));
     }
   }, [reportsMap, activeSchedule, members, onToast]);
 }
