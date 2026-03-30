@@ -35,7 +35,7 @@ export default async function SetupPage() {
   // 현재 DB 데이터 조회 (서비스 클라이언트 — RLS 우회)
   const service = createServiceClient();
   const [schedulesRes, usersRes, groupsRes] = await Promise.all([
-    service.from("schedules").select("*").order("day_number").order("sort_order"),
+    service.from("schedules").select("id, title, location, day_number, sort_order, scheduled_time, scope, is_active, shuttle_type, activated_at, created_at").order("day_number").order("sort_order"),
     service
       .from("users")
       .select("id, name, email, phone, role, group_id, party, shuttle_bus, return_shuttle_bus")

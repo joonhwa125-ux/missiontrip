@@ -38,10 +38,10 @@ export default async function AdminPage() {
   ] = await Promise.all([
     supabase.from("groups").select("id, name, bus_name").order("name"),
     supabase.from("users").select("id, name, phone, role, group_id, party, shuttle_bus, return_shuttle_bus").order("name"),
-    supabase.from("schedules").select("*").eq("is_active", true).maybeSingle(),
+    supabase.from("schedules").select("id, title, location, day_number, sort_order, scheduled_time, scope, is_active, shuttle_type, activated_at, created_at").eq("is_active", true).maybeSingle(),
     supabase
       .from("schedules")
-      .select("*")
+      .select("id, title, location, day_number, sort_order, scheduled_time, scope, is_active, shuttle_type, activated_at, created_at")
       .order("day_number")
       .order("sort_order"),
   ]);

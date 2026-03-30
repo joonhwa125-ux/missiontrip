@@ -45,12 +45,12 @@ export default async function GroupPage() {
       .order("name"),
     supabase
       .from("schedules")
-      .select("*")
+      .select("id, title, location, day_number, sort_order, scheduled_time, scope, is_active, shuttle_type, activated_at, created_at")
       .eq("is_active", true)
       .maybeSingle(),
     supabase
       .from("schedules")
-      .select("*")
+      .select("id, title, location, day_number, sort_order, scheduled_time, scope, is_active, shuttle_type, activated_at, created_at")
       .order("day_number")
       .order("sort_order"),
     supabase.from("groups").select("id, name, bus_name").order("name"),
@@ -103,7 +103,7 @@ export default async function GroupPage() {
     if (activeSchedule) {
       queries.push(
         Promise.all([
-          supabase.from("check_ins").select("*").eq("schedule_id", activeSchedule.id),
+          supabase.from("check_ins").select("id, user_id, schedule_id, checked_at, checked_by, checked_by_user_id, offline_pending, is_absent").eq("schedule_id", activeSchedule.id),
           supabase.from("group_reports").select("group_id").eq("schedule_id", activeSchedule.id),
         ]).then(([{ data: allCi }, { data: allReportsData }]) => {
           const allData = allCi ?? [];
@@ -119,7 +119,7 @@ export default async function GroupPage() {
     // (2) 셔틀 보고 (활성 일정이 셔틀이고 배정 버스 있을 때)
     if (activeSchedule?.shuttle_type && myShuttleBus) {
       queries.push(
-        supabase.from("shuttle_reports").select("*").eq("schedule_id", activeSchedule.id)
+        supabase.from("shuttle_reports").select("id, shuttle_bus, schedule_id, reported_by, pending_count, reported_at").eq("schedule_id", activeSchedule.id)
           .then(({ data: sr }) => {
             shuttleReports = (sr ?? []) as ShuttleReport[];
             initialReported = shuttleReports.some((r) => r.shuttle_bus === myShuttleBus);

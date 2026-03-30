@@ -64,7 +64,7 @@ export default function AdminBottomSheet({
     const supabase = createClient();
     supabase
       .from("shuttle_reports")
-      .select("*")
+      .select("id, shuttle_bus, schedule_id, reported_by, pending_count, reported_at")
       .eq("schedule_id", schedule.id)
       .then(({ data, error }) => {
         if (!error) setShuttleReports((data ?? []) as ShuttleReport[]);

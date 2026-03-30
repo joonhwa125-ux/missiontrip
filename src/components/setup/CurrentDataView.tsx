@@ -212,7 +212,13 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
         <UserEditDialog
           user={editUser}
           groups={groups}
-          onSave={(data) => run(() => updateUser(editUser.id, data), () => setEditUser(null), "수정이 완료됐어요")}
+          onSave={(data) => {
+            const roleChanged = data.role !== editUser.role;
+            const msg = roleChanged
+              ? `${editUser.name}님의 역할이 ${ROLE_LABEL[data.role]}(으)로 변경되었어요`
+              : "수정이 완료됐어요";
+            run(() => updateUser(editUser.id, data), () => setEditUser(null), msg);
+          }}
           onClose={() => setEditUser(null)}
         />
       )}

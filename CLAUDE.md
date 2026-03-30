@@ -556,7 +556,7 @@ NEXT_PUBLIC_TIMEZONE=Asia/Seoul               # 모든 시각 표시 KST 기준
 - **조 카드 드릴다운:** 조 카드 탭 → 해당 조 전체 인원 목록 (이름 + 역할 + 전화 아이콘 + 체크인 상태). 전원 완료 시 '전원 확인 완료' 표시
 - **체크인 대행:** 드릴다운 내 미탑승 인원 옆 [탔어요!] 버튼. 조장 부재 시 TF장이 직접 체크인 처리 가능 (`checked_by='admin'`)
 - **불참 처리:** 드릴다운 내 미탑승 인원 옆 [불참] 버튼. 탭 → '불참 처리할까요?' 확인 모달 → `check_ins` INSERT (`is_absent=true, checked_by='admin'`). 불참 인원은 탑승 카운트에서 제외하되 전원 완료를 차단하지 않음
-- **조장 권한 부여/회수:** 드릴다운 내 조원 이름 옆 [조장 지정] / [조장 해제] 버튼. 탭 → 확인 모달 → Users 테이블 `role` UPDATE
+- **조장 권한 부여/회수:** `/setup` 데이터관리 화면의 참가자 수정(UserEditDialog)에서 역할 변경. 현장 드릴다운에서는 오탭 방지를 위해 미노출 (1회성 서비스, 현장 조장 교체 극히 드묾)
 - **시간 수정:** 바텀시트 상단에 현재 예정시각 표시 + 수정 아이콘. 탭 → 시:분 picker → DB 업데이트 → `schedule_updated` broadcast → '일정 시간이 변경되었어요' 토스트
 
 | 상태 | 배지 | 배경 | 텍스트 | 조건 |
@@ -716,7 +716,7 @@ src/actions/
 | setup.ts | `previewFromCsv(usersCsv, schedulesCsv)` | admin | CSV 2개 직접 업로드 → 파싱 → 검증 → 미리보기 |
 | setup.ts | `importToDatabase(data)` | admin | 미리보기 데이터 → Groups/Users/Schedules UPSERT |
 | checkin.ts | `markAbsent(userId, scheduleId)` | leader, admin | 불참 처리 INSERT (`is_absent=true`) + broadcast. 조장은 자기 조원만 |
-| setup.ts | `updateUserRole(userId, newRole)` | admin | 조원↔조장 역할 변경. Users 테이블 `role` UPDATE |
+| setup.ts | `updateUserRole(userId, newRole)` | admin | 조원↔조장 역할 변경 (`/setup` 데이터관리 전용). Users 테이블 `role` UPDATE |
 | setup.ts | `resetAllData()` | admin | 전체 데이터 초기화 (FK 역순 삭제) |
 
 ### 9.2 핵심 구현 지시
@@ -755,7 +755,7 @@ src/actions/
 | **Phase 1** | OAuth + 도메인 차단 + 역할 라우팅 | 최고 |
 | **Phase 1** | 조장 체크인 (탭탭탭 + 이니셜 + 완료카드) | 최고 |
 | **Phase 1** | 보고 (group_reports 영속화) | 최고 |
-| **Phase 1** | 관리자 2탭 (현황/일정) + 조장 권한 부여/회수 + 체크인 대행 | 최고 |
+| **Phase 1** | 관리자 2탭 (현황/일정) + 체크인 대행 | 최고 |
 | **Phase 1** | 일정 자동 활성화 + 수동 조정 + 즉흥 추가 | 최고 |
 | **Phase 1** | Realtime 동기화 | 최고 |
 | **Phase 1** | 오프라인 대응 | 최고 |

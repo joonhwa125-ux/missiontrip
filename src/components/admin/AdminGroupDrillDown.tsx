@@ -143,16 +143,16 @@ export default function AdminGroupDrillDown({
     <>
       {/* 헤더: 뒤로 + 조 이름 + 카운트 */}
       <div className="flex-shrink-0 px-4 pt-2">
-        <div className="flex items-center gap-1">
-          <button
-            onClick={onBack}
-            className="-ml-2 flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center rounded-lg text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action"
-            aria-label="현황 목록으로 돌아가기"
-          >
-            <ChevronLeftIcon className="h-5 w-5" />
-          </button>
-          <div className="flex-1 min-w-0">
-            <DialogTitle className="text-left text-base font-semibold">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1 min-w-0">
+            <button
+              onClick={onBack}
+              className="-ml-2 flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center rounded-lg text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action"
+              aria-label="현황 목록으로 돌아가기"
+            >
+              <ChevronLeftIcon className="h-5 w-5" />
+            </button>
+            <DialogTitle className="min-w-0 truncate text-left text-base font-semibold">
               {group.name}
             </DialogTitle>
             <DialogDescription className="sr-only">

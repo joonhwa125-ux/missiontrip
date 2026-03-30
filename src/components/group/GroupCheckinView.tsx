@@ -268,6 +268,13 @@ export default function GroupCheckinView({
               </h1>
               <p className="text-sm text-muted-foreground">{groupName}</p>
             </div>
+            {members.length > 0 && (
+              <span className="absolute right-12 flex-shrink-0 text-sm" aria-live="polite">
+                <span className="font-bold text-[#1A1A1A]">{checkedCount + absentIds.size}</span>
+                <span className="text-[#888780]">/</span>
+                <span className="font-medium text-[#1A1A1A]">{members.length}명</span>
+              </span>
+            )}
             <button
               onClick={onBack}
               className="absolute right-0 flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-main-action"
@@ -277,7 +284,7 @@ export default function GroupCheckinView({
             </button>
           </div>
         ) : (
-          /* 조장 뷰: 뒤로(<) 좌측, 타이틀 좌측 정렬 */
+          /* 조장 뷰: 뒤로(<) 좌측, 타이틀 좌측 정렬, 배지 우측 */
           <div className="flex items-start gap-2">
             <button
               onClick={onBack}
@@ -292,6 +299,13 @@ export default function GroupCheckinView({
               </h1>
               <p className="text-sm text-muted-foreground">{groupName}</p>
             </div>
+            {members.length > 0 && (
+              <span className="flex-shrink-0 text-sm" aria-live="polite">
+                <span className="font-bold text-[#1A1A1A]">{checkedCount + absentIds.size}</span>
+                <span className="text-[#888780]">/</span>
+                <span className="font-medium text-[#1A1A1A]">{members.length}명</span>
+              </span>
+            )}
           </div>
         )}
       </header>
