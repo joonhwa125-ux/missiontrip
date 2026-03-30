@@ -7,6 +7,7 @@ import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
 import { useToast } from "@/hooks/useToast";
 import { COPY } from "@/lib/constants";
 import { filterMembersByScope } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 import GroupFeedView from "./GroupFeedView";
 import GroupCheckinView from "./GroupCheckinView";
 import type { Schedule, CheckIn, Group, GroupMember, GroupMemberBrief } from "@/lib/types";
@@ -88,8 +89,36 @@ export default function GroupView({
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  // 백그라운드 복귀 시 서버 데이터 갱신 (탭 전환 후 stale 방지)
-  useVisibilityRefresh();
+  // 타겟 fetch: 현재 일정의 체크인만 클라이언트에서 직접 조회 (router.refresh() 대신)
+  const fetchLatestCheckIns = useCallback(async () => {
+    if (!currentSchedule) return;
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("check_ins")
+      .select("*")
+      .eq("schedule_id", currentSchedule.id);
+    if (!data) return;
+    const memberIdSet = new Set(members.map((m) => m.id));
+    setCheckIns(data.filter((ci) => memberIdSet.has(ci.user_id)) as CheckIn[]);
+    setAllCheckInsState(data.map((ci) => ({ user_id: ci.user_id, is_absent: ci.is_absent })));
+  }, [currentSchedule, members]);
+
+  // 백그라운드 복귀 시 타겟 fetch (router.refresh() 대신 — 0-flash 방지)
+  useVisibilityRefresh(fetchLatestCheckIns);
+
+  // 일정 전환 시 체크인 상태 리셋 + 최신 데이터 fetch (key prop 제거 대응)
+  const prevScheduleIdRef = useRef(currentSchedule?.id);
+  useEffect(() => {
+    if (prevScheduleIdRef.current === currentSchedule?.id) return;
+    prevScheduleIdRef.current = currentSchedule?.id;
+    // 즉시 리셋 (이전 일정 데이터 잔류 방지)
+    setCheckIns([]);
+    setAllCheckInsState([]);
+    setAllReportsState([]);
+    setReported(false);
+    // 새 일정 데이터 fetch
+    fetchLatestCheckIns();
+  }, [currentSchedule?.id, fetchLatestCheckIns]);
 
   // Realtime 구독 — GroupView 레벨 (feed <-> checkin 전환 시에도 유지)
   useRealtime(currentUser.group_id, false, {
@@ -195,7 +224,7 @@ export default function GroupView({
       });
     },
     onReconnected: () => {
-      router.refresh();
+      fetchLatestCheckIns();
       showToast("연결이 복구되었어요");
     },
   });

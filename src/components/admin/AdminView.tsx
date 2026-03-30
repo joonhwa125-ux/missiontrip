@@ -322,7 +322,7 @@ export default function AdminView({
       });
     },
     onReconnected: () => {
-      router.refresh();
+      fetchOnVisible();
       showToast("연결이 복구되었어요");
     },
   });

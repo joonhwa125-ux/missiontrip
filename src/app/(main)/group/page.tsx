@@ -150,7 +150,6 @@ export default async function GroupPage() {
 
   return (
     <GroupView
-      key={activeSchedule?.id ?? "no-schedule"}
       currentUser={{ id: currentUser.id, group_id: currentUser.group_id, shuttle_bus: currentUser.shuttle_bus ?? null, return_shuttle_bus: currentUser.return_shuttle_bus ?? null }}
       groupName={group?.name ?? "내 조"}
       members={(members ?? []).map((m) => ({ ...m, party: (m.party as GroupParty) ?? null }))}
