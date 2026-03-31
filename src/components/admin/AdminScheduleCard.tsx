@@ -2,7 +2,7 @@
 
 import { formatTime, getScheduleStatus, filterMembersByScope } from "@/lib/utils";
 import { CheckIcon } from "@/components/ui/icons";
-import { SCOPE_LABEL, getReportedLabel } from "@/lib/constants";
+import { SCOPE_LABEL } from "@/lib/constants";
 import type { Schedule, AdminCheckIn, AdminMember, AdminReport, AdminShuttleReport, Group } from "@/lib/types";
 
 interface Props {
@@ -71,7 +71,6 @@ export default function AdminScheduleCard({
 
   const unit = "차량";
   const progressPct = totalUnits > 0 ? Math.round((reportedCount / totalUnits) * 100) : 0;
-  const allReported = totalUnits > 0 && reportedCount >= totalUnits;
 
   // location 우선, 없으면 title
   const primaryText = schedule.location ?? schedule.title;
@@ -165,17 +164,6 @@ export default function AdminScheduleCard({
             className="h-full rounded-full bg-progress-bar transition-all"
             style={{ width: `${progressPct}%` }}
           />
-        </div>
-
-        {/* 전 단위 보고완료 배너 — 항상 렌더링, 내용만 조건부 (aria-live 마운트 타이밍) */}
-        <div role="status" aria-live="polite" aria-atomic="true" className="mt-2">
-          {allReported && (
-            <div className="flex items-center rounded-xl bg-[#EAF3DE] px-3 py-2">
-              <span className="text-xs font-medium text-[#27500A]">
-                {getReportedLabel(reportedCount, totalUnits, unit)}
-              </span>
-            </div>
-          )}
         </div>
 
         <button
