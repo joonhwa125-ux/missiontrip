@@ -38,9 +38,7 @@ export const MEMBER_CARD_MIN_HEIGHT = 72; // px — 조원 카드 최소 높이
 export const EXPECTED_TOTAL_MEMBERS = 200;
 export const EXPECTED_LEADER_COUNT = 18;
 
-// 이메일 자동 생성 (setup 파싱용)
-export const NO_LOGIN_EMAIL_DOMAIN = "@nologin.internal";
-export const MEMBER_EMAIL_PREFIX = "_member";
+// 이메일 자동 생성: 전원 {이름}@linkagelab.co.kr (역할 무관)
 
 // 일차 범위
 export const MIN_DAY_NUMBER = 1;
@@ -158,7 +156,11 @@ export const COPY = {
 } as const;
 
 /** 보고완료 배지 동적 라벨 (관리자 현황) */
-export function getReportedLabel(reportedCount: number, totalGroups: number): string {
-  if (totalGroups > 0 && reportedCount >= totalGroups) return `${totalGroups}/${totalGroups}조 보고완료`;
-  return `${reportedCount}/${totalGroups}조 보고완료`;
+export function getReportedLabel(
+  reportedCount: number,
+  total: number,
+  unit: "조" | "차량" = "조"
+): string {
+  if (total > 0 && reportedCount >= total) return `${total}/${total}${unit} 보고완료`;
+  return `${reportedCount}/${total}${unit} 보고완료`;
 }

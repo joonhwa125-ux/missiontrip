@@ -11,6 +11,7 @@ interface Props {
   scheduleAbsentCounts: Record<string, number>;
   onEnterCheckin: () => void;
   onStatusOpen: () => void;
+  reportInfo?: { reported: number; total: number; unit: "조" | "차량" };
 }
 
 export default function ScheduleCard({
@@ -21,6 +22,7 @@ export default function ScheduleCard({
   scheduleAbsentCounts,
   onEnterCheckin,
   onStatusOpen,
+  reportInfo,
 }: Props) {
   const status = getScheduleStatus(schedule);
   const timeDisplay = schedule.scheduled_time ? formatTime(schedule.scheduled_time) : null;
@@ -90,6 +92,11 @@ export default function ScheduleCard({
               style={{ width: effectiveTotal > 0 ? `${pct}%` : "0%" }}
             />
           </div>
+          {reportInfo && (
+            <p className="mt-1 text-xs text-muted-foreground" aria-live="polite">
+              {reportInfo.reported}/{reportInfo.total}{reportInfo.unit} 보고완료
+            </p>
+          )}
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onStatusOpen(); }}

@@ -3,12 +3,13 @@
 import { formatTime, getScheduleStatus, filterMembersByScope } from "@/lib/utils";
 import { CheckIcon } from "@/components/ui/icons";
 import { SCOPE_LABEL, getReportedLabel } from "@/lib/constants";
-import type { Schedule, AdminCheckIn, AdminMember, AdminReport } from "@/lib/types";
+import type { Schedule, AdminCheckIn, AdminMember, AdminReport, AdminShuttleReport } from "@/lib/types";
 
 interface Props {
   schedule: Schedule;
   checkIns: AdminCheckIn[];
   reports: AdminReport[];
+  shuttleReports: AdminShuttleReport[];
   members: AdminMember[];
   onSummaryTap: () => void;
   onActivate: () => void;
@@ -17,31 +18,52 @@ interface Props {
 }
 
 export default function AdminScheduleCard({
-  schedule, checkIns, reports, members,
+  schedule, checkIns, reports, shuttleReports, members,
   onSummaryTap, onActivate, onDeactivate, onTimeEdit,
 }: Props) {
   const status = getScheduleStatus(schedule);
   const timeDisplay = schedule.scheduled_time ? formatTime(schedule.scheduled_time) : null;
   const scopeLabel = schedule.scope === "rear" ? SCOPE_LABEL[schedule.scope] : null;
 
+  const isShuttle = !!schedule.shuttle_type;
+  const unit = isShuttle ? "차량" : "조";
   const scopeMembers = filterMembersByScope(members, schedule.scope);
-  const scopeGroupIds = new Set(scopeMembers.map((m) => m.group_id));
-  const totalGroups = scopeGroupIds.size;
-
-  const reportMap = new Set(reports.map((r) => r.group_id));
   const checkedIds = new Set(checkIns.filter((c) => !c.is_absent).map((c) => c.user_id));
   const absentIds = new Set(checkIns.filter((c) => c.is_absent).map((c) => c.user_id));
-  const reportedCount = Array.from(scopeGroupIds).filter((gid) => {
-    if (!reportMap.has(gid)) return false;
-    const gMembers = scopeMembers.filter((m) => m.group_id === gid);
-    const gAbsent = gMembers.filter((m) => absentIds.has(m.id)).length;
-    const gChecked = gMembers.filter((m) => checkedIds.has(m.id)).length;
-    const gTotal = gMembers.length - gAbsent;
-    return gTotal === 0 || gChecked >= gTotal;
-  }).length;
 
-  const progressPct = totalGroups > 0 ? Math.round((reportedCount / totalGroups) * 100) : 0;
-  const allReported = totalGroups > 0 && reportedCount >= totalGroups;
+  let totalUnits: number;
+  let reportedCount: number;
+
+  if (isShuttle) {
+    const busField = schedule.shuttle_type === "departure" ? "shuttle_bus" : "return_shuttle_bus";
+    const allBuses = new Set(
+      scopeMembers.map((m) => m[busField]).filter((b): b is string => !!b)
+    );
+    totalUnits = allBuses.size;
+    const reportedBuses = new Set(shuttleReports.map((r) => r.shuttle_bus));
+    reportedCount = Array.from(allBuses).filter((bus) => {
+      if (!reportedBuses.has(bus)) return false;
+      const bm = scopeMembers.filter((m) => m[busField] === bus);
+      const bAbs = bm.filter((m) => absentIds.has(m.id)).length;
+      const bChk = bm.filter((m) => checkedIds.has(m.id)).length;
+      return (bm.length - bAbs) === 0 || bChk >= (bm.length - bAbs);
+    }).length;
+  } else {
+    const scopeGroupIds = new Set(scopeMembers.map((m) => m.group_id));
+    totalUnits = scopeGroupIds.size;
+    const reportMap = new Set(reports.map((r) => r.group_id));
+    reportedCount = Array.from(scopeGroupIds).filter((gid) => {
+      if (!reportMap.has(gid)) return false;
+      const gMembers = scopeMembers.filter((m) => m.group_id === gid);
+      const gAbsent = gMembers.filter((m) => absentIds.has(m.id)).length;
+      const gChecked = gMembers.filter((m) => checkedIds.has(m.id)).length;
+      const gTotal = gMembers.length - gAbsent;
+      return gTotal === 0 || gChecked >= gTotal;
+    }).length;
+  }
+
+  const progressPct = totalUnits > 0 ? Math.round((reportedCount / totalUnits) * 100) : 0;
+  const allReported = totalUnits > 0 && reportedCount >= totalUnits;
 
   // location 우선, 없으면 title
   const primaryText = schedule.location ?? schedule.title;
@@ -114,11 +136,11 @@ export default function AdminScheduleCard({
           </button>
         </div>
 
-        {/* 진행률 + 조 수 */}
+        {/* 진행률 + 단위 수 */}
         <div className="mt-3 flex items-baseline justify-between">
           <p className="text-xs text-muted-foreground">전체 진행률 {progressPct}%</p>
           <p className="text-xs font-medium text-gray-700" aria-live="polite">
-            {reportedCount}/{totalGroups}조
+            {reportedCount}/{totalUnits}{unit}
           </p>
         </div>
 
@@ -129,7 +151,7 @@ export default function AdminScheduleCard({
           aria-valuenow={progressPct}
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-label={`조 보고 진행률 ${progressPct}%`}
+          aria-label={`${unit} 보고 진행률 ${progressPct}%`}
         >
           <div
             className="h-full rounded-full bg-progress-bar transition-all"
@@ -137,12 +159,12 @@ export default function AdminScheduleCard({
           />
         </div>
 
-        {/* 전 조 보고완료 배너 — 항상 렌더링, 내용만 조건부 (aria-live 마운트 타이밍) */}
+        {/* 전 단위 보고완료 배너 — 항상 렌더링, 내용만 조건부 (aria-live 마운트 타이밍) */}
         <div role="status" aria-live="polite" aria-atomic="true" className="mt-2">
           {allReported && (
             <div className="flex items-center rounded-xl bg-[#EAF3DE] px-3 py-2">
               <span className="text-xs font-medium text-[#27500A]">
-                {getReportedLabel(reportedCount, totalGroups)}
+                {getReportedLabel(reportedCount, totalUnits, unit)}
               </span>
             </div>
           )}
@@ -238,13 +260,13 @@ export default function AdminScheduleCard({
             <p className="text-sm text-muted-foreground">{schedule.title}</p>
             <p className="flex-shrink-0 flex items-center gap-1 text-xs text-muted-foreground" aria-live="polite">
               <CheckIcon className="h-3 w-3 text-stone-400" aria-hidden />
-              {reportedCount}/{totalGroups}조
+              {reportedCount}/{totalUnits}{unit}
             </p>
           </div>
         ) : (
           <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground" aria-live="polite">
             <CheckIcon className="h-3 w-3 text-stone-400" aria-hidden />
-            {reportedCount}/{totalGroups}조
+            {reportedCount}/{totalUnits}{unit}
           </p>
         )}
       </div>

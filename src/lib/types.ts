@@ -108,6 +108,13 @@ export interface ShuttleReport {
   reported_at: string;
 }
 
+/** 관리자 일정 카드 집계 전용 (id·schedule_id·reported_by 제외) */
+export interface AdminShuttleReport {
+  shuttle_bus: string;
+  pending_count: number;
+  reported_at: string;
+}
+
 // 체크인 + 사용자 조인 뷰
 export interface MemberCheckinStatus {
   user: User;

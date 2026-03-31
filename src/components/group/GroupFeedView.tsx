@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Image from "next/image";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
-import { sortSchedulesByStatus, getDefaultDay } from "@/lib/utils";
+import { sortSchedulesByStatus, getDefaultDay, filterMembersByScope } from "@/lib/utils";
 import PageHeader from "@/components/common/PageHeader";
 import SettingsDropdown from "@/components/common/SettingsDropdown";
 import DayTabs from "@/components/common/DayTabs";
@@ -54,6 +54,16 @@ export default function GroupFeedView({
 }: Props) {
   const { isOnline, pendingCount } = useOfflineSync();
   const [statusOpen, setStatusOpen] = useState(false);
+
+  // 진행중 일반 일정의 조 보고 현황 (셔틀 일정은 제외)
+  const reportInfo = useMemo(() => {
+    if (!activeSchedule || activeSchedule.shuttle_type) return undefined;
+    const scopeGroupIds = new Set(
+      filterMembersByScope(allMembers, activeSchedule.scope).map((m) => m.group_id)
+    );
+    const reportedCount = allReports.filter((r) => scopeGroupIds.has(r.group_id)).length;
+    return { reported: reportedCount, total: scopeGroupIds.size, unit: "조" as const };
+  }, [activeSchedule, allMembers, allReports]);
 
   // scope 필터: 셔틀 일정은 버스 배정자만, 일반 일정은 조내 party 기준
   const hasAdvance = members.some((m) => m.party === "advance");
@@ -109,6 +119,7 @@ export default function GroupFeedView({
               scheduleAbsentCounts={scheduleAbsentCounts}
               onEnterCheckin={onEnterCheckin}
               onStatusOpen={() => setStatusOpen(true)}
+              reportInfo={s.is_active ? reportInfo : undefined}
             />
           ))}
           {daySchedules.length === 0 && (

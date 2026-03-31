@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { UsersIcon, PlusIcon } from "@/components/ui/icons";
 import SettingsDropdown from "@/components/common/SettingsDropdown";
-import type { Group, Schedule, AdminMember, AdminCheckIn, AdminReport, CheckIn } from "@/lib/types";
+import type { Group, Schedule, AdminMember, AdminCheckIn, AdminReport, AdminShuttleReport, CheckIn } from "@/lib/types";
 
 interface Props {
   currentUser: { id: string; group_id: string; shuttle_bus: string | null; return_shuttle_bus: string | null };
@@ -32,6 +32,7 @@ interface Props {
   schedules: Schedule[];
   initialCheckInsMap: Record<string, AdminCheckIn[]>;
   initialReportsMap: Record<string, AdminReport[]>;
+  initialShuttleReportsMap: Record<string, AdminShuttleReport[]>;
 }
 
 /** 클라이언트에서 직접 체크인/보고 데이터 조회 (RLS email 기반 권한 통제) */
@@ -39,7 +40,7 @@ async function fetchCheckInsClient(scheduleId: string) {
   const supabase = createClient();
   // 탭 복귀 시 auth 세션 복원 보장 (RLS 쿼리 전 필수)
   await supabase.auth.getSession();
-  const [ciResult, rpResult] = await Promise.all([
+  const [ciResult, rpResult, shResult] = await Promise.all([
     supabase
       .from("check_ins")
       .select("user_id, is_absent, checked_at")
@@ -47,6 +48,10 @@ async function fetchCheckInsClient(scheduleId: string) {
     supabase
       .from("group_reports")
       .select("group_id, pending_count, reported_at")
+      .eq("schedule_id", scheduleId),
+    supabase
+      .from("shuttle_reports")
+      .select("shuttle_bus, pending_count, reported_at")
       .eq("schedule_id", scheduleId),
   ]);
   // F-1: Supabase error 시 throw → 호출자의 .catch()에서 기존 데이터 유지
@@ -60,6 +65,7 @@ async function fetchCheckInsClient(scheduleId: string) {
       checked_at: ci.checked_at,
     })),
     reports: rpResult.data,
+    shuttleReports: (shResult.data ?? []) as AdminShuttleReport[],
   };
 }
 
@@ -71,12 +77,14 @@ export default function AdminView({
   schedules: initialSchedules,
   initialCheckInsMap,
   initialReportsMap,
+  initialShuttleReportsMap,
 }: Props) {
   const router = useRouter();
   const [schedules, setSchedules] = useState(initialSchedules);
   const [members, setMembers] = useState(initialMembers);
   const [checkInsMap, setCheckInsMap] = useState(initialCheckInsMap);
   const [reportsMap, setReportsMap] = useState(initialReportsMap);
+  const [shuttleReportsMap, setShuttleReportsMap] = useState(initialShuttleReportsMap);
   const { toast, showToast } = useToast();
 
   // 캐시 판별용 ref (useCallback 의존성 없이 최신 값 참조)
@@ -90,6 +98,7 @@ export default function AdminView({
   // useState는 초기값만 사용하므로, prop이 바뀌면 수동으로 state를 갱신해야 한다.
   const prevCheckInsRef = useRef(initialCheckInsMap);
   const prevReportsRef = useRef(initialReportsMap);
+  const prevShuttleReportsRef = useRef(initialShuttleReportsMap);
   const prevSchedulesRef = useRef(initialSchedules);
   const prevMembersRef = useRef(initialMembers);
 
@@ -110,6 +119,14 @@ export default function AdminView({
       setReportsMap(initialReportsMap);
     }
   }
+  if (prevShuttleReportsRef.current !== initialShuttleReportsMap) {
+    prevShuttleReportsRef.current = initialShuttleReportsMap;
+    const newKeys = Object.keys(initialShuttleReportsMap).length;
+    const curKeys = Object.keys(shuttleReportsMap).length;
+    if (newKeys > 0 || curKeys === 0) {
+      setShuttleReportsMap(initialShuttleReportsMap);
+    }
+  }
   if (prevSchedulesRef.current !== initialSchedules) {
     prevSchedulesRef.current = initialSchedules;
     setSchedules(initialSchedules);
@@ -124,7 +141,7 @@ export default function AdminView({
     if (!activeSchedule) return;
     let cancelled = false;
     fetchCheckInsClient(activeSchedule.id)
-      .then(({ checkIns, reports: freshRp }) => {
+      .then(({ checkIns, reports: freshRp, shuttleReports: freshSr }) => {
         if (cancelled) return;
         setCheckInsMap((prev) => ({ ...prev, [activeSchedule.id]: checkIns }));
         // Realtime으로 먼저 도착한 보고가 fetch 결과에 없을 수 있음 — 병합
@@ -134,6 +151,7 @@ export default function AdminView({
           const realtimeOnly = existing.filter((r) => !freshIds.has(r.group_id));
           return { ...prev, [activeSchedule.id]: [...freshRp, ...realtimeOnly] };
         });
+        setShuttleReportsMap((prev) => ({ ...prev, [activeSchedule.id]: freshSr }));
       })
       .catch(() => {}); // 실패 시 SSR/Realtime 데이터로 fallback — 별도 알림 불필요
     return () => { cancelled = true; };
@@ -144,7 +162,7 @@ export default function AdminView({
   const fetchOnVisible = useCallback(() => {
     if (!activeSchedule) return;
     fetchCheckInsClient(activeSchedule.id)
-      .then(({ checkIns, reports }) => {
+      .then(({ checkIns, reports, shuttleReports }) => {
         // 빈 결과이고 기존 데이터가 있으면 덮어쓰지 않기 (auth 미복원 방어)
         setCheckInsMap((prev) => {
           const cur = prev[activeSchedule.id] ?? [];
@@ -156,6 +174,12 @@ export default function AdminView({
           const cur = prev[activeSchedule.id] ?? [];
           return reports.length > 0 || cur.length === 0
             ? { ...prev, [activeSchedule.id]: reports }
+            : prev;
+        });
+        setShuttleReportsMap((prev) => {
+          const cur = prev[activeSchedule.id] ?? [];
+          return shuttleReports.length > 0 || cur.length === 0
+            ? { ...prev, [activeSchedule.id]: shuttleReports }
             : prev;
         });
       })
@@ -190,7 +214,7 @@ export default function AdminView({
     setBottomSheetLoading(!hasCache);
 
     fetchCheckInsClient(targetId)
-      .then(({ checkIns: freshCi, reports: freshRp }) => {
+      .then(({ checkIns: freshCi, reports: freshRp, shuttleReports: freshSr }) => {
         setCheckInsMap((prev) => ({ ...prev, [targetId]: freshCi }));
         // Realtime으로 먼저 도착한 보고가 fetch 결과에 없을 수 있음 — 병합
         setReportsMap((prev) => {
@@ -199,6 +223,7 @@ export default function AdminView({
           const realtimeOnly = existing.filter((r) => !freshIds.has(r.group_id));
           return { ...prev, [targetId]: [...freshRp, ...realtimeOnly] };
         });
+        setShuttleReportsMap((prev) => ({ ...prev, [targetId]: freshSr }));
       })
       .catch(() => {}) // 실패 시 캐시 데이터 유지 — 별도 알림 불필요
       .finally(() => {
@@ -484,6 +509,7 @@ export default function AdminView({
               allSchedules={schedules}
               checkInsMap={checkInsMap}
               reportsMap={reportsMap}
+              shuttleReportsMap={shuttleReportsMap}
               members={members}
               activeSchedule={activeSchedule}
               onBottomSheet={openBottomSheet}

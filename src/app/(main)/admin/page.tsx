@@ -54,17 +54,20 @@ export default async function AdminPage() {
 
   type CiRow = { schedule_id: string; user_id: string; is_absent: boolean; checked_at: string };
   type RpRow = { schedule_id: string; group_id: string; pending_count: number; reported_at: string };
+  type ShRpRow = { schedule_id: string; shuttle_bus: string; pending_count: number; reported_at: string };
 
   const checkInsMap: Record<string, CiRow[]> = {};
   const reportsMap: Record<string, RpRow[]> = {};
+  const shuttleReportsMap: Record<string, ShRpRow[]> = {};
 
   if (activatedIds.length > 0) {
     // 모든 활성화 일정에 빈 배열을 미리 생성 (체크인 0건이어도 캐시 히트)
     for (const id of activatedIds) {
       checkInsMap[id] = [];
       reportsMap[id] = [];
+      shuttleReportsMap[id] = [];
     }
-    const [{ data: allCi }, { data: allRp }] = await Promise.all([
+    const [{ data: allCi }, { data: allRp }, { data: allShRp }] = await Promise.all([
       supabase
         .from("check_ins")
         .select("schedule_id, user_id, is_absent, checked_at")
@@ -72,6 +75,10 @@ export default async function AdminPage() {
       supabase
         .from("group_reports")
         .select("schedule_id, group_id, pending_count, reported_at")
+        .in("schedule_id", activatedIds),
+      supabase
+        .from("shuttle_reports")
+        .select("schedule_id, shuttle_bus, pending_count, reported_at")
         .in("schedule_id", activatedIds),
     ]);
     for (const ci of allCi ?? []) {
@@ -85,6 +92,9 @@ export default async function AdminPage() {
     for (const rp of allRp ?? []) {
       reportsMap[rp.schedule_id].push(rp);
     }
+    for (const sr of allShRp ?? []) {
+      shuttleReportsMap[sr.schedule_id].push(sr);
+    }
   }
 
   return (
@@ -96,6 +106,7 @@ export default async function AdminPage() {
       schedules={(schedules as Schedule[]) ?? []}
       initialCheckInsMap={checkInsMap}
       initialReportsMap={reportsMap}
+      initialShuttleReportsMap={shuttleReportsMap}
     />
   );
 }

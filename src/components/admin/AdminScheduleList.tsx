@@ -11,7 +11,7 @@ import {
   CHANNEL_GLOBAL, COPY,
   EVENT_SCHEDULE_ACTIVATED, EVENT_SCHEDULE_DEACTIVATED,
 } from "@/lib/constants";
-import type { Schedule, AdminCheckIn, AdminMember, AdminReport } from "@/lib/types";
+import type { Schedule, AdminCheckIn, AdminMember, AdminReport, AdminShuttleReport } from "@/lib/types";
 import AdminScheduleCard from "@/components/admin/AdminScheduleCard";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -23,6 +23,7 @@ interface Props {
   allSchedules: Schedule[];
   checkInsMap: Record<string, AdminCheckIn[]>;
   reportsMap: Record<string, AdminReport[]>;
+  shuttleReportsMap: Record<string, AdminShuttleReport[]>;
   members: AdminMember[];
   activeSchedule: Schedule | null;
   onBottomSheet: (s: Schedule) => void;
@@ -31,7 +32,7 @@ interface Props {
 }
 
 export default function AdminScheduleList({
-  schedules, allSchedules, checkInsMap, reportsMap, members,
+  schedules, allSchedules, checkInsMap, reportsMap, shuttleReportsMap, members,
   activeSchedule, onBottomSheet, onTimeEdit, onToast,
 }: Props) {
   const [, startTransition] = useTransition();
@@ -107,6 +108,7 @@ export default function AdminScheduleList({
             schedule={s}
             checkIns={checkInsMap[s.id] ?? []}
             reports={reportsMap[s.id] ?? []}
+            shuttleReports={shuttleReportsMap[s.id] ?? []}
             members={members}
             onSummaryTap={() => onBottomSheet(s)}
             onActivate={() => handleActivateClick(s)}
