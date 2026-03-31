@@ -3,7 +3,7 @@
 import { formatTime, getScheduleStatus, filterMembersByScope } from "@/lib/utils";
 import { CheckIcon } from "@/components/ui/icons";
 import { SCOPE_LABEL, getReportedLabel } from "@/lib/constants";
-import type { Schedule, AdminCheckIn, AdminMember, AdminReport, AdminShuttleReport } from "@/lib/types";
+import type { Schedule, AdminCheckIn, AdminMember, AdminReport, AdminShuttleReport, Group } from "@/lib/types";
 
 interface Props {
   schedule: Schedule;
@@ -11,6 +11,7 @@ interface Props {
   reports: AdminReport[];
   shuttleReports: AdminShuttleReport[];
   members: AdminMember[];
+  groups: Group[];
   onSummaryTap: () => void;
   onActivate: () => void;
   onDeactivate: () => void;
@@ -18,7 +19,7 @@ interface Props {
 }
 
 export default function AdminScheduleCard({
-  schedule, checkIns, reports, shuttleReports, members,
+  schedule, checkIns, reports, shuttleReports, members, groups,
   onSummaryTap, onActivate, onDeactivate, onTimeEdit,
 }: Props) {
   const status = getScheduleStatus(schedule);
@@ -26,7 +27,6 @@ export default function AdminScheduleCard({
   const scopeLabel = schedule.scope === "rear" ? SCOPE_LABEL[schedule.scope] : null;
 
   const isShuttle = !!schedule.shuttle_type;
-  const unit = isShuttle ? "차량" : "조";
   const scopeMembers = filterMembersByScope(members, schedule.scope);
   const checkedIds = new Set(checkIns.filter((c) => !c.is_absent).map((c) => c.user_id));
   const absentIds = new Set(checkIns.filter((c) => c.is_absent).map((c) => c.user_id));
@@ -49,19 +49,26 @@ export default function AdminScheduleCard({
       return (bm.length - bAbs) === 0 || bChk >= (bm.length - bAbs);
     }).length;
   } else {
+    // 일반 일정: 차량(bus_name) 단위 집계
     const scopeGroupIds = new Set(scopeMembers.map((m) => m.group_id));
-    totalUnits = scopeGroupIds.size;
-    const reportMap = new Set(reports.map((r) => r.group_id));
-    reportedCount = Array.from(scopeGroupIds).filter((gid) => {
-      if (!reportMap.has(gid)) return false;
-      const gMembers = scopeMembers.filter((m) => m.group_id === gid);
-      const gAbsent = gMembers.filter((m) => absentIds.has(m.id)).length;
-      const gChecked = gMembers.filter((m) => checkedIds.has(m.id)).length;
-      const gTotal = gMembers.length - gAbsent;
-      return gTotal === 0 || gChecked >= gTotal;
+    const scopeGroups = groups.filter((g) => scopeGroupIds.has(g.id));
+    const allBuses = new Set(scopeGroups.map((g) => g.bus_name ?? g.name));
+    totalUnits = allBuses.size;
+    const reportedGroupIds = new Set(reports.map((r) => r.group_id));
+    reportedCount = Array.from(allBuses).filter((busName) => {
+      const busGroups = scopeGroups.filter((g) => (g.bus_name ?? g.name) === busName);
+      return busGroups.every((g) => {
+        if (!reportedGroupIds.has(g.id)) return false;
+        const gMembers = scopeMembers.filter((m) => m.group_id === g.id);
+        const gAbsent = gMembers.filter((m) => absentIds.has(m.id)).length;
+        const gChecked = gMembers.filter((m) => checkedIds.has(m.id)).length;
+        const gTotal = gMembers.length - gAbsent;
+        return gTotal === 0 || gChecked >= gTotal;
+      });
     }).length;
   }
 
+  const unit = "차량";
   const progressPct = totalUnits > 0 ? Math.round((reportedCount / totalUnits) * 100) : 0;
   const allReported = totalUnits > 0 && reportedCount >= totalUnits;
 

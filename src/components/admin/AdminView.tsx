@@ -511,6 +511,7 @@ export default function AdminView({
               reportsMap={reportsMap}
               shuttleReportsMap={shuttleReportsMap}
               members={members}
+              groups={groups}
               activeSchedule={activeSchedule}
               onBottomSheet={openBottomSheet}
               onTimeEdit={setTimeEditTarget}
