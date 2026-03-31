@@ -55,8 +55,8 @@ async function fetchCheckInsClient(scheduleId: string) {
       .eq("schedule_id", scheduleId),
   ]);
   // F-1: Supabase error 시 throw → 호출자의 .catch()에서 기존 데이터 유지
-  if (ciResult.error || rpResult.error) {
-    throw new Error(ciResult.error?.message ?? rpResult.error?.message ?? "fetch failed");
+  if (ciResult.error || rpResult.error || shResult.error) {
+    throw new Error(ciResult.error?.message ?? rpResult.error?.message ?? shResult.error?.message ?? "fetch failed");
   }
   return {
     checkIns: ciResult.data.map((ci) => ({

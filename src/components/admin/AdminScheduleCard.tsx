@@ -46,6 +46,7 @@ export default function AdminScheduleCard({
       const bm = scopeMembers.filter((m) => m[busField] === bus);
       const bAbs = bm.filter((m) => absentIds.has(m.id)).length;
       const bChk = bm.filter((m) => checkedIds.has(m.id)).length;
+      // 전원 불참 차량도 확인 완료로 처리 (일반 일정과 동일 정책)
       return (bm.length - bAbs) === 0 || bChk >= (bm.length - bAbs);
     }).length;
   } else {

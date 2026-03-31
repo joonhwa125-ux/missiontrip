@@ -55,7 +55,8 @@ export default function GroupFeedView({
   const { isOnline, pendingCount } = useOfflineSync();
   const [statusOpen, setStatusOpen] = useState(false);
 
-  // 진행중 일반 일정의 조 보고 현황 (셔틀 일정은 제외)
+  // 진행중 일반 일정의 조 보고 현황 (셔틀 일정 제외)
+  // 관리자 카드는 차량(bus_name) 단위, 조장 카드는 조(group) 단위 — 의도적 차이
   const reportInfo = useMemo(() => {
     if (!activeSchedule || activeSchedule.shuttle_type) return undefined;
     const scopeGroupIds = new Set(
