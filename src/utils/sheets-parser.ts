@@ -8,8 +8,6 @@ import type {
 } from "@/lib/types";
 import {
   ALLOWED_EMAIL_DOMAIN,
-  NO_LOGIN_EMAIL_DOMAIN,
-  MEMBER_EMAIL_PREFIX,
   MIN_DAY_NUMBER,
   MAX_DAY_NUMBER,
   PARTY_MAP,
@@ -141,10 +139,7 @@ function validateUserRow(
     return { errors };
   }
 
-  const needsLogin = role !== "member";
-  const email = needsLogin
-    ? `${name.toLowerCase()}${ALLOWED_EMAIL_DOMAIN}`
-    : `${MEMBER_EMAIL_PREFIX}.${name}.${rowIndex}${NO_LOGIN_EMAIL_DOMAIN}`;
+  const email = `${name.toLowerCase()}${ALLOWED_EMAIL_DOMAIN}`;
 
   if (emailSet.has(email)) {
     errors.push({ sheet: "users", row: rowNum, field: "이름", message: `${name} 이름이 중복되어 있어요 (이메일 충돌)` });
