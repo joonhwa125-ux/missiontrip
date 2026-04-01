@@ -11,7 +11,7 @@ interface Props {
   scheduleAbsentCounts: Record<string, number>;
   onEnterCheckin: () => void;
   onStatusOpen: () => void;
-  reportInfo?: { reported: number; total: number; unit: "조" | "차량" };
+  reportInfo?: { reported: number; total: number; unit: "조" | "차량" | "대" };
 }
 
 export default function ScheduleCard({
@@ -53,7 +53,7 @@ export default function ScheduleCard({
       <div className="rounded-2xl bg-white ring-2 ring-main-action shadow-sm p-4">
         <button
           onClick={onEnterCheckin}
-          className="w-full text-left min-h-11 focus-visible:ring-2 focus-visible:ring-main-action rounded-lg"
+          className="w-full text-left min-h-11 rounded-lg"
           aria-label={`${schedule.title} 체크인 화면으로 이동`}
         >
           {/* 헤더: 진행중 pill + 집결시간 배지 + 후발 배지 */}
@@ -100,7 +100,7 @@ export default function ScheduleCard({
         </button>
         <button
           onClick={(e) => { e.stopPropagation(); onStatusOpen(); }}
-          className="mt-2 w-full min-h-11 rounded-xl border border-stone-200 bg-gray-50 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
+          className="mt-2 w-full min-h-11 rounded-xl border border-stone-200 bg-gray-50 text-xs font-medium text-gray-700"
           aria-label="현황 보기"
         >
           현황 보기 &gt;

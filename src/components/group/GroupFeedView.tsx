@@ -55,16 +55,26 @@ export default function GroupFeedView({
   const { isOnline, pendingCount } = useOfflineSync();
   const [statusOpen, setStatusOpen] = useState(false);
 
-  // 진행중 일반 일정의 조 보고 현황 (셔틀 일정 제외)
-  // 관리자 카드는 차량(bus_name) 단위, 조장 카드는 조(group) 단위 — 의도적 차이
+  // 진행중 일반 일정의 차량 보고 현황 (셔틀 일정 제외)
+  // 차량(bus_name) 단위: 같은 bus_name의 조 중 1개라도 보고하면 해당 차량 보고 완료
   const reportInfo = useMemo(() => {
     if (!activeSchedule || activeSchedule.shuttle_type) return undefined;
     const scopeGroupIds = new Set(
       filterMembersByScope(allMembers, activeSchedule.scope).map((m) => m.group_id)
     );
-    const reportedCount = allReports.filter((r) => scopeGroupIds.has(r.group_id)).length;
-    return { reported: reportedCount, total: scopeGroupIds.size, unit: "조" as const };
-  }, [activeSchedule, allMembers, allReports]);
+    const reportedGroupIds = new Set(
+      allReports.filter((r) => scopeGroupIds.has(r.group_id)).map((r) => r.group_id)
+    );
+    // bus_name 기준 고유 차량 집합
+    const scopeBusNames = new Set(
+      allGroups.filter((g) => scopeGroupIds.has(g.id)).map((g) => g.bus_name ?? g.name)
+    );
+    // 보고된 조가 속한 차량 집합
+    const reportedBusNames = new Set(
+      allGroups.filter((g) => reportedGroupIds.has(g.id)).map((g) => g.bus_name ?? g.name)
+    );
+    return { reported: reportedBusNames.size, total: scopeBusNames.size, unit: "대" as const };
+  }, [activeSchedule, allMembers, allReports, allGroups]);
 
   // scope 필터: 셔틀 일정은 버스 배정자만, 일반 일정은 조내 party 기준
   const hasAdvance = members.some((m) => m.party === "advance");
