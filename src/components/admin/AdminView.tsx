@@ -94,8 +94,6 @@ export default function AdminView({
 
   // 레이스 컨디션 방어용 ref (현재 열린 바텀시트의 schedule id 추적)
   const bottomSheetIdRef = useRef<string | null>(null);
-  // 멤버 변경 후 캐시 무효화 플래그 — router.refresh() 완료 시 리셋
-  const cacheStaleRef = useRef(false);
 
   // 서버 prop → state 동기화 (router.refresh() / 페이지 재진입 시)
   // useState는 초기값만 사용하므로, prop이 바뀌면 수동으로 state를 갱신해야 한다.
@@ -107,7 +105,6 @@ export default function AdminView({
 
   if (prevCheckInsRef.current !== initialCheckInsMap) {
     prevCheckInsRef.current = initialCheckInsMap;
-    cacheStaleRef.current = false; // 서버 데이터 도착 → 캐시 신뢰 가능
     // 재연결 시 서버 prop이 빈 맵이면 클라이언트 데이터 유지 (0-flash 방지)
     const newKeys = Object.keys(initialCheckInsMap).length;
     const curKeys = Object.keys(checkInsMap).length;
@@ -203,7 +200,7 @@ export default function AdminView({
   const [bottomSheetSchedule, setBottomSheetSchedule] = useState<Schedule | null>(null);
   const [bottomSheetLoading, setBottomSheetLoading] = useState(false);
 
-  // 바텀시트 즉시 열기: 캐시 데이터 있으면 스피너 없이, 없으면 스피너 표시
+  // 바텀시트 열기: 항상 fetch 우선 — stale cache flash 방지
   const openBottomSheet = useCallback((schedule: Schedule | null) => {
     if (!schedule) {
       setBottomSheetSchedule(null);
@@ -213,9 +210,7 @@ export default function AdminView({
     const targetId = schedule.id;
     bottomSheetIdRef.current = targetId;
     setBottomSheetSchedule(schedule);
-
-    const hasCache = targetId in checkInsMapRef.current && !cacheStaleRef.current;
-    setBottomSheetLoading(!hasCache);
+    setBottomSheetLoading(true);
 
     fetchCheckInsClient(targetId)
       .then(({ checkIns: freshCi, reports: freshRp, shuttleReports: freshSr }) => {
@@ -325,8 +320,6 @@ export default function AdminView({
     onScheduleActivated: () => router.refresh(),
     onScheduleDeactivated: () => router.refresh(),
     onMemberUpdated: () => {
-      // 멤버 변경 시 캐시 무효화 — router.refresh() 완료 전까지 바텀시트 로딩 스피너 표시
-      cacheStaleRef.current = true;
       const doRefresh = () => router.refresh();
       if (activeSchedule) {
         fetchCheckInsClient(activeSchedule.id)
