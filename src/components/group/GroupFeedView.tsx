@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Image from "next/image";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
-import { sortSchedulesByStatus, getDefaultDay, filterMembersByScope } from "@/lib/utils";
+import { sortSchedulesByStatus, getDefaultDay } from "@/lib/utils";
 import PageHeader from "@/components/common/PageHeader";
 import SettingsDropdown from "@/components/common/SettingsDropdown";
 import DayTabs from "@/components/common/DayTabs";
@@ -54,41 +54,6 @@ export default function GroupFeedView({
 }: Props) {
   const { isOnline, pendingCount } = useOfflineSync();
   const [statusOpen, setStatusOpen] = useState(false);
-
-  // 진행중 일반 일정의 차량 보고 현황 (셔틀 일정 제외)
-  // 차량(bus_name) 단위: 같은 bus_name의 조 중 1개라도 보고하면 해당 차량 보고 완료
-  const reportInfo = useMemo(() => {
-    if (!activeSchedule || activeSchedule.shuttle_type) return undefined;
-    const scopeGroupIds = new Set(
-      filterMembersByScope(allMembers, activeSchedule.scope).map((m) => m.group_id)
-    );
-    const reportedGroupIds = new Set(
-      allReports.filter((r) => scopeGroupIds.has(r.group_id)).map((r) => r.group_id)
-    );
-    const checkedIds = new Set(allCheckIns.filter((c) => !c.is_absent).map((c) => c.user_id));
-    const absentIds = new Set(allCheckIns.filter((c) => c.is_absent).map((c) => c.user_id));
-    // bus_name 기준 차량별 소속 조 그룹핑
-    const scopeGroups = allGroups.filter((g) => scopeGroupIds.has(g.id));
-    const busGroupMap = new Map<string, typeof scopeGroups>();
-    scopeGroups.forEach((g) => {
-      const bus = g.bus_name ?? g.name;
-      busGroupMap.set(bus, [...(busGroupMap.get(bus) ?? []), g]);
-    });
-    // 관리자 뷰와 동일: 차량 내 모든 조가 전원 탑승확인 + 보고해야 완료
-    let reportedBusCount = 0;
-    busGroupMap.forEach((busGroups) => {
-      const allDone = busGroups.every((g) => {
-        if (!reportedGroupIds.has(g.id)) return false;
-        const gMembers = allMembers.filter((m) => m.group_id === g.id);
-        const gAbsent = gMembers.filter((m) => absentIds.has(m.id)).length;
-        const gChecked = gMembers.filter((m) => checkedIds.has(m.id)).length;
-        const gTotal = gMembers.length - gAbsent;
-        return gTotal === 0 || gChecked >= gTotal;
-      });
-      if (allDone) reportedBusCount++;
-    });
-    return { reported: reportedBusCount, total: busGroupMap.size, unit: "차량" as const };
-  }, [activeSchedule, allMembers, allReports, allGroups, allCheckIns]);
 
   // scope 필터: 셔틀 일정은 버스 배정자만, 일반 일정은 조내 party 기준
   const hasAdvance = members.some((m) => m.party === "advance");
@@ -144,7 +109,6 @@ export default function GroupFeedView({
               scheduleAbsentCounts={scheduleAbsentCounts}
               onEnterCheckin={onEnterCheckin}
               onStatusOpen={() => setStatusOpen(true)}
-              reportInfo={s.is_active ? reportInfo : undefined}
             />
           ))}
           {daySchedules.length === 0 && (
