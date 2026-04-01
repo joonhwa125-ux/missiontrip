@@ -200,7 +200,7 @@ export default function AdminView({
   const [bottomSheetSchedule, setBottomSheetSchedule] = useState<Schedule | null>(null);
   const [bottomSheetLoading, setBottomSheetLoading] = useState(false);
 
-  // 바텀시트 열기: 항상 fetch 우선 — stale cache flash 방지
+  // 바텀시트 즉시 열기: 캐시 데이터 있으면 스피너 없이, 없으면 스피너 표시
   const openBottomSheet = useCallback((schedule: Schedule | null) => {
     if (!schedule) {
       setBottomSheetSchedule(null);
@@ -210,7 +210,9 @@ export default function AdminView({
     const targetId = schedule.id;
     bottomSheetIdRef.current = targetId;
     setBottomSheetSchedule(schedule);
-    setBottomSheetLoading(true);
+
+    const hasCache = targetId in checkInsMapRef.current;
+    setBottomSheetLoading(!hasCache);
 
     fetchCheckInsClient(targetId)
       .then(({ checkIns: freshCi, reports: freshRp, shuttleReports: freshSr }) => {
@@ -320,7 +322,8 @@ export default function AdminView({
     onScheduleActivated: () => router.refresh(),
     onScheduleDeactivated: () => router.refresh(),
     onMemberUpdated: () => {
-      const doRefresh = () => router.refresh();
+      // members 갱신을 최우선 — router.refresh()와 fetch를 병렬 실행
+      router.refresh();
       if (activeSchedule) {
         fetchCheckInsClient(activeSchedule.id)
           .then(({ checkIns, reports, shuttleReports }) => {
@@ -328,10 +331,7 @@ export default function AdminView({
             setReportsMap((prev) => ({ ...prev, [activeSchedule.id]: reports }));
             setShuttleReportsMap((prev) => ({ ...prev, [activeSchedule.id]: shuttleReports }));
           })
-          .catch(() => {})
-          .finally(doRefresh);
-      } else {
-        doRefresh();
+          .catch(() => {});
       }
     },
     onScheduleUpdated: ({ schedule_id, scheduled_time }) => {
