@@ -313,7 +313,7 @@ export default function GroupCheckinView({
               <p className="text-sm text-muted-foreground">{groupName}</p>
             </div>
             {members.length > 0 && (
-              <span className="flex-shrink-0 text-sm" aria-live="polite">
+              <span className="flex-shrink-0 pr-4 text-sm" aria-live="polite">
                 <span className="font-bold text-[#1A1A1A]">{checkedCount + absentIds.size}</span>
                 <span className="text-[#888780]">/</span>
                 <span className="font-medium text-[#1A1A1A]">{members.length}명</span>
