@@ -92,11 +92,11 @@ export default function AdminScheduleCard({
     <p className="mt-0.5 text-sm text-muted-foreground">{schedule.title}</p>
   ) : null;
 
-  // 공통 시간 배지 — 집결 시간 (active 카드 우측)
+  // 공통 시간 배지 — 집결 시간 (관리자 전용, 탭하여 수정)
   const timeBadge = timeDisplay ? (
     <button
       onClick={onTimeEdit}
-      className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700"
+      className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700"
       aria-label={`집결 시간 ${timeDisplay} — 탭하여 수정`}
     >
       집결 {timeDisplay}
@@ -104,7 +104,7 @@ export default function AdminScheduleCard({
   ) : (
     <button
       onClick={onTimeEdit}
-      className="rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-400"
+      className="rounded-full border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-400"
       aria-label="집결 시간 추가"
     >
       + 시간 추가
@@ -189,23 +189,7 @@ export default function AdminScheduleCard({
           <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
             예정
           </span>
-          {timeDisplay ? (
-            <button
-              onClick={onTimeEdit}
-              className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700"
-              aria-label={`집결 시간 ${timeDisplay} — 탭하여 수정`}
-            >
-              집결 {timeDisplay}
-            </button>
-          ) : (
-            <button
-              onClick={onTimeEdit}
-              className="rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-400"
-              aria-label="집결 시간 추가"
-            >
-              + 시간
-            </button>
-          )}
+          {timeBadge}
           {scopeBadge}
         </div>
 

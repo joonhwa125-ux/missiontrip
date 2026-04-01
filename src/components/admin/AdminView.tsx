@@ -321,7 +321,22 @@ export default function AdminView({
   useRealtime(null, true, {
     onScheduleActivated: () => router.refresh(),
     onScheduleDeactivated: () => router.refresh(),
-    onMemberUpdated: () => router.refresh(),
+    onMemberUpdated: () => {
+      // 멤버 변경 시 활성 일정 캐시 즉시 갱신 → 완료 후 서버 prop 동기화
+      const doRefresh = () => router.refresh();
+      if (activeSchedule) {
+        fetchCheckInsClient(activeSchedule.id)
+          .then(({ checkIns, reports, shuttleReports }) => {
+            setCheckInsMap((prev) => ({ ...prev, [activeSchedule.id]: checkIns }));
+            setReportsMap((prev) => ({ ...prev, [activeSchedule.id]: reports }));
+            setShuttleReportsMap((prev) => ({ ...prev, [activeSchedule.id]: shuttleReports }));
+          })
+          .catch(() => {})
+          .finally(doRefresh);
+      } else {
+        doRefresh();
+      }
+    },
     onScheduleUpdated: ({ schedule_id, scheduled_time }) => {
       setSchedules((prev) =>
         prev.map((s) => (s.id === schedule_id ? { ...s, scheduled_time } : s))
