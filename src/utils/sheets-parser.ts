@@ -251,7 +251,6 @@ export function parseUsersSheet(rows: string[][]): {
 
     if (!result.name || !result.role || !result.groupName || !result.email) continue;
     // 선후발 에러가 있어도 유저 자체는 추가 (에러는 경고 성격)
-    if (result.errors.length > 0 && !result.role) continue;
 
     emailSet.add(result.email);
 
