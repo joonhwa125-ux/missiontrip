@@ -65,15 +65,19 @@ export default function GroupFeedView({
     const reportedGroupIds = new Set(
       allReports.filter((r) => scopeGroupIds.has(r.group_id)).map((r) => r.group_id)
     );
-    // bus_name 기준 고유 차량 집합
-    const scopeBusNames = new Set(
-      allGroups.filter((g) => scopeGroupIds.has(g.id)).map((g) => g.bus_name ?? g.name)
-    );
-    // 보고된 조가 속한 차량 집합
-    const reportedBusNames = new Set(
-      allGroups.filter((g) => reportedGroupIds.has(g.id)).map((g) => g.bus_name ?? g.name)
-    );
-    return { reported: reportedBusNames.size, total: scopeBusNames.size, unit: "대" as const };
+    // bus_name 기준 차량별 소속 조 그룹핑
+    const busGroupMap = new Map<string, string[]>();
+    allGroups.filter((g) => scopeGroupIds.has(g.id)).forEach((g) => {
+      const bus = g.bus_name ?? g.name;
+      const existing = busGroupMap.get(bus) ?? [];
+      busGroupMap.set(bus, [...existing, g.id]);
+    });
+    // 차량 내 모든 조가 보고해야 해당 차량 보고 완료
+    let reportedBusCount = 0;
+    busGroupMap.forEach((groupIds) => {
+      if (groupIds.every((id) => reportedGroupIds.has(id))) reportedBusCount++;
+    });
+    return { reported: reportedBusCount, total: busGroupMap.size, unit: "대" as const };
   }, [activeSchedule, allMembers, allReports, allGroups]);
 
   // scope 필터: 셔틀 일정은 버스 배정자만, 일반 일정은 조내 party 기준
