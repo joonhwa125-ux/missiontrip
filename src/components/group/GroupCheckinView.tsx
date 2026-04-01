@@ -280,7 +280,7 @@ export default function GroupCheckinView({
               </h1>
               <div className="flex items-center justify-center gap-2">
                 <p className="text-sm text-muted-foreground">{groupName}</p>
-                {members.length > 0 && (
+                {members.length > 0 && !allComplete && (
                   <span className="text-sm" aria-live="polite">
                     <span className="font-bold text-[#1A1A1A]">{checkedCount + absentIds.size}</span>
                     <span className="text-[#888780]">/</span>
@@ -313,7 +313,7 @@ export default function GroupCheckinView({
               </h1>
               <p className="text-sm text-muted-foreground">{groupName}</p>
             </div>
-            {members.length > 0 && (
+            {members.length > 0 && !allComplete && (
               <span className="flex-shrink-0 pr-4 text-sm" aria-live="polite">
                 <span className="font-bold text-[#1A1A1A]">{checkedCount + absentIds.size}</span>
                 <span className="text-[#888780]">/</span>
