@@ -355,17 +355,16 @@ export async function updateUser(
 
   const supabase = createServiceClient();
 
-  // 조 변경 시 활성 일정 체크인 삭제 — 새 조에서 다시 확인 필요 (안전 우선)
+  // 조 변경 감지: 체크인 삭제를 UPDATE 전에 수행 (안전 우선 — 삭제 실패 시 업데이트 차단)
   const { data: prevUser } = await supabase
     .from("users")
     .select("group_id")
     .eq("id", userId)
     .single();
 
-  const { error } = await supabase.from("users").update(data).eq("id", userId);
-  if (error) return { ok: false, error: "참가자 수정 중 오류가 발생했어요" };
+  const groupChanged = prevUser && prevUser.group_id !== data.group_id;
 
-  if (prevUser && prevUser.group_id !== data.group_id) {
+  if (groupChanged) {
     const { data: activeSchedule } = await supabase
       .from("schedules")
       .select("id")
@@ -373,13 +372,20 @@ export async function updateUser(
       .maybeSingle();
 
     if (activeSchedule) {
-      await supabase
+      const { error: deleteError } = await supabase
         .from("check_ins")
         .delete()
         .eq("user_id", userId)
         .eq("schedule_id", activeSchedule.id);
+
+      if (deleteError) {
+        return { ok: false, error: "체크인 초기화에 실패했어요. 다시 시도해주세요" };
+      }
     }
   }
+
+  const { error } = await supabase.from("users").update(data).eq("id", userId);
+  if (error) return { ok: false, error: "참가자 수정 중 오류가 발생했어요" };
 
   revalidateAllPaths();
   return { ok: true };
