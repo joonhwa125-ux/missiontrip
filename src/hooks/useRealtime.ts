@@ -13,6 +13,7 @@ import {
   EVENT_GROUP_REPORTED,
   EVENT_SHUTTLE_REPORTED,
   EVENT_REPORT_INVALIDATED,
+  EVENT_MEMBER_UPDATED,
   BROADCAST_SUBSCRIBE_TIMEOUT_MS,
 } from "@/lib/constants";
 import type { RealtimeChannel } from "@supabase/supabase-js";
@@ -43,6 +44,7 @@ interface RealtimeCallbacks {
   onGroupReported?: (payload: { group_id: string; schedule_id: string; pending_count: number }) => void;
   onShuttleReported?: (payload: { shuttle_bus: string; schedule_id: string; pending_count: number }) => void;
   onReportInvalidated?: (payload: { group_id: string; schedule_id: string }) => void;
+  onMemberUpdated?: () => void;
   onReconnected?: () => void;  // 네트워크 재연결 시 호출 (WiFi↔LTE 전환 등)
 }
 
@@ -115,6 +117,9 @@ export function useRealtime(
       })
       .on("broadcast", { event: EVENT_REPORT_INVALIDATED }, ({ payload }) => {
         callbacksRef.current.onReportInvalidated?.(payload);
+      })
+      .on("broadcast", { event: EVENT_MEMBER_UPDATED }, () => {
+        callbacksRef.current.onMemberUpdated?.();
       })
       .subscribe(makeStatusHandler(CHANNEL_GLOBAL));
 

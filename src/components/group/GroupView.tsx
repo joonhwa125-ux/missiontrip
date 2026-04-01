@@ -168,6 +168,7 @@ export default function GroupView({
       }
       router.refresh();
     },
+    onMemberUpdated: () => router.refresh(),
     onScheduleUpdated: ({ schedule_id, scheduled_time }) => {
       setSchedules((prev) =>
         prev.map((s) => (s.id === schedule_id ? { ...s, scheduled_time } : s))

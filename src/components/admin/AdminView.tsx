@@ -321,6 +321,7 @@ export default function AdminView({
   useRealtime(null, true, {
     onScheduleActivated: () => router.refresh(),
     onScheduleDeactivated: () => router.refresh(),
+    onMemberUpdated: () => router.refresh(),
     onScheduleUpdated: ({ schedule_id, scheduled_time }) => {
       setSchedules((prev) =>
         prev.map((s) => (s.id === schedule_id ? { ...s, scheduled_time } : s))

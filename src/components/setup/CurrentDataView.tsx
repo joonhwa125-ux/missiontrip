@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/dialog";
 import { updateSchedule, deleteSchedule, updateUser, deleteUser } from "@/actions/setup";
 import { formatTime, cn } from "@/lib/utils";
-import { SCOPE_LABEL, ROLE_LABEL, getPartyLabel } from "@/lib/constants";
+import { SCOPE_LABEL, ROLE_LABEL, getPartyLabel, CHANNEL_GLOBAL, EVENT_MEMBER_UPDATED } from "@/lib/constants";
+import { useBroadcast } from "@/hooks/useRealtime";
 import ScheduleEditDialog from "./ScheduleEditDialog";
 import UserEditDialog from "./UserEditDialog";
 import type { Schedule, UserRole, GroupParty } from "@/lib/types";
@@ -42,6 +43,7 @@ interface Props {
 export default function CurrentDataView({ schedules, users, groups, currentUserId }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
+  const { broadcast } = useBroadcast();
   const [tab, setTab] = useState<"schedules" | "users">("schedules");
   const [editSchedule, setEditSchedule] = useState<Schedule | null>(null);
   const [editUser, setEditUser] = useState<SetupUser | null>(null);
@@ -67,6 +69,22 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
       });
     },
     [router]
+  );
+
+  // 참가자 편집/삭제 후 admin/leader 뷰에 멤버 변경 알림
+  const runUser = useCallback(
+    (action: () => Promise<{ ok: boolean; error?: string }>, onSuccess: () => void, successText?: string) => {
+      startTransition(async () => {
+        const result = await action();
+        if (!result.ok) { setErrorMsg(result.error ?? "오류가 발생했어요"); return; }
+        setErrorMsg(null);
+        if (successText) { setSuccessMsg(successText); clearTimeout(successTimerRef.current); successTimerRef.current = setTimeout(() => setSuccessMsg(null), 3000); }
+        onSuccess();
+        router.refresh();
+        await broadcast(CHANNEL_GLOBAL, EVENT_MEMBER_UPDATED, {});
+      });
+    },
+    [router, broadcast]
   );
 
 
@@ -217,7 +235,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
             const msg = roleChanged
               ? `${editUser.name}님의 역할이 ${ROLE_LABEL[data.role]}(으)로 변경되었어요`
               : "수정이 완료됐어요";
-            run(() => updateUser(editUser.id, data), () => setEditUser(null), msg);
+            runUser(() => updateUser(editUser.id, data), () => setEditUser(null), msg);
           }}
           onClose={() => setEditUser(null)}
         />
@@ -260,7 +278,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
               <button className="min-h-11 rounded-xl bg-gray-100 px-4 text-sm font-medium">취소</button>
             </DialogClose>
             <button
-              onClick={() => run(() => deleteUser(deleteUserTarget!.id), () => setDeleteUserTarget(null), "삭제가 완료됐어요")}
+              onClick={() => runUser(() => deleteUser(deleteUserTarget!.id), () => setDeleteUserTarget(null), "삭제가 완료됐어요")}
               className="min-h-11 rounded-xl bg-red-500 px-4 text-sm font-bold text-white"
             >
               삭제
