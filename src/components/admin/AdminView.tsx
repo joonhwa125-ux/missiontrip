@@ -196,12 +196,36 @@ export default function AdminView({
   );
   const [selectedDay, setSelectedDay] = useState(() => getDefaultDay(schedules));
 
-  // 바텀시트 대상 일정 — 조장 뷰와 동일한 단일 소스 패턴 (state 직접 표시, 별도 fetch 없음)
+  // 바텀시트 대상 일정 — 열 때마다 DB에서 최신 데이터 fetch (로딩 스피너 → 표시)
   const [bottomSheetSchedule, setBottomSheetSchedule] = useState<Schedule | null>(null);
+  const [bottomSheetLoading, setBottomSheetLoading] = useState(false);
 
   const openBottomSheet = useCallback((schedule: Schedule | null) => {
+    if (!schedule) {
+      setBottomSheetSchedule(null);
+      bottomSheetIdRef.current = null;
+      return;
+    }
+    const targetId = schedule.id;
+    bottomSheetIdRef.current = targetId;
     setBottomSheetSchedule(schedule);
-    bottomSheetIdRef.current = schedule?.id ?? null;
+    setBottomSheetLoading(true);
+
+    fetchCheckInsClient(targetId)
+      .then(({ checkIns: freshCi, reports: freshRp, shuttleReports: freshSr }) => {
+        setCheckInsMap((prev) => ({ ...prev, [targetId]: freshCi }));
+        setReportsMap((prev) => {
+          const existing = prev[targetId] ?? [];
+          const freshIds = new Set(freshRp.map((r) => r.group_id));
+          const realtimeOnly = existing.filter((r) => !freshIds.has(r.group_id));
+          return { ...prev, [targetId]: [...freshRp, ...realtimeOnly] };
+        });
+        setShuttleReportsMap((prev) => ({ ...prev, [targetId]: freshSr }));
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (bottomSheetIdRef.current === targetId) setBottomSheetLoading(false);
+      });
   }, []);
 
   // 다이얼로그
@@ -525,7 +549,7 @@ export default function AdminView({
         checkIns={bottomSheetSchedule ? (checkInsMap[bottomSheetSchedule.id] ?? []) : []}
         reports={bottomSheetSchedule ? (reportsMap[bottomSheetSchedule.id] ?? []) : []}
         isReadOnly={isBottomSheetReadOnly}
-        loading={false}
+        loading={bottomSheetLoading}
         onClose={() => { setBottomSheetSchedule(null); bottomSheetIdRef.current = null; }}
         onCheckInsChange={handleBottomSheetCheckInsChange}
         showToast={showToast}
