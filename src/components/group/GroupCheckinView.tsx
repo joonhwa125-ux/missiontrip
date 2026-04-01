@@ -383,7 +383,7 @@ export default function GroupCheckinView({
             <Image src={reported ? "/running-horse.png" : "/standing-horse.png"} alt="" width={120} height={120} priority />
           </div>
           <h2 className="mb-2 text-2xl font-bold">
-            {reported ? COPY.allCompleteReported(checkedCount + absentIds.size, members.length) : COPY.allComplete}
+            {reported ? COPY.allCompleteReported : COPY.allComplete}
           </h2>
           <p className="whitespace-pre-line text-lg font-medium text-stone-600">
             {reported ? COPY.celebrationReported : COPY.celebrationSubtitle}

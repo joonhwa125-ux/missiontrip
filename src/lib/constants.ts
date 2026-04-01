@@ -140,7 +140,7 @@ export const COPY = {
   totalCount: (checked: number, total: number) => `${checked} / ${total}명 탑승 완료`,
   allComplete: "전원 확인 끝!",
   celebrationSubtitle: "보고하기를 눌러주세요.",
-  allCompleteReported: (checked: number, total: number) => `${checked}/${total}명 보고 완료!`,
+  allCompleteReported: "보고 완료!",
   celebrationReported: "폭싹 속았수다!",
   reportButtonComplete: "우리 조 다 왔수다! 보고하기",
   reportButtonDone: (checked: number, total: number) => `${checked}/${total}명 보고 완료!`,
