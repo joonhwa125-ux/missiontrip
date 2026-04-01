@@ -354,9 +354,32 @@ export async function updateUser(
   if (!admin) return { ok: false, error: "관리자 권한이 필요해요" };
 
   const supabase = createServiceClient();
-  const { error } = await supabase.from("users").update(data).eq("id", userId);
 
+  // 조 변경 시 활성 일정 체크인 삭제 — 새 조에서 다시 확인 필요 (안전 우선)
+  const { data: prevUser } = await supabase
+    .from("users")
+    .select("group_id")
+    .eq("id", userId)
+    .single();
+
+  const { error } = await supabase.from("users").update(data).eq("id", userId);
   if (error) return { ok: false, error: "참가자 수정 중 오류가 발생했어요" };
+
+  if (prevUser && prevUser.group_id !== data.group_id) {
+    const { data: activeSchedule } = await supabase
+      .from("schedules")
+      .select("id")
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (activeSchedule) {
+      await supabase
+        .from("check_ins")
+        .delete()
+        .eq("user_id", userId)
+        .eq("schedule_id", activeSchedule.id);
+    }
+  }
 
   revalidateAllPaths();
   return { ok: true };
