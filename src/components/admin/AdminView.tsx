@@ -94,6 +94,8 @@ export default function AdminView({
 
   // 레이스 컨디션 방어용 ref (현재 열린 바텀시트의 schedule id 추적)
   const bottomSheetIdRef = useRef<string | null>(null);
+  // 멤버 변경 → router.refresh() 완료 구간에서만 캐시 무효화
+  const cacheStaleRef = useRef(false);
 
   // 서버 prop → state 동기화 (router.refresh() / 페이지 재진입 시)
   // useState는 초기값만 사용하므로, prop이 바뀌면 수동으로 state를 갱신해야 한다.
@@ -105,6 +107,7 @@ export default function AdminView({
 
   if (prevCheckInsRef.current !== initialCheckInsMap) {
     prevCheckInsRef.current = initialCheckInsMap;
+    cacheStaleRef.current = false; // 서버 데이터 도착 → 캐시 신뢰 복원
     // 재연결 시 서버 prop이 빈 맵이면 클라이언트 데이터 유지 (0-flash 방지)
     const newKeys = Object.keys(initialCheckInsMap).length;
     const curKeys = Object.keys(checkInsMap).length;
@@ -211,7 +214,7 @@ export default function AdminView({
     bottomSheetIdRef.current = targetId;
     setBottomSheetSchedule(schedule);
 
-    const hasCache = targetId in checkInsMapRef.current;
+    const hasCache = targetId in checkInsMapRef.current && !cacheStaleRef.current;
     setBottomSheetLoading(!hasCache);
 
     fetchCheckInsClient(targetId)
@@ -322,7 +325,8 @@ export default function AdminView({
     onScheduleActivated: () => router.refresh(),
     onScheduleDeactivated: () => router.refresh(),
     onMemberUpdated: () => {
-      // members 갱신을 최우선 — router.refresh()와 fetch를 병렬 실행
+      // 멤버 변경~서버 갱신 완료 구간: 바텀시트 캐시 무효화 (stale flash 방지)
+      cacheStaleRef.current = true;
       router.refresh();
       if (activeSchedule) {
         fetchCheckInsClient(activeSchedule.id)
