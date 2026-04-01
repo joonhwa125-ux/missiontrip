@@ -11,7 +11,7 @@ interface Props {
   scheduleAbsentCounts: Record<string, number>;
   onEnterCheckin: () => void;
   onStatusOpen: () => void;
-  reportInfo?: { reported: number; total: number; unit: "조" | "차량" | "대" };
+  reportInfo?: { reported: number; total: number; unit: "조" | "차량" };
 }
 
 export default function ScheduleCard({
@@ -94,7 +94,7 @@ export default function ScheduleCard({
           </div>
           {reportInfo && (
             <p className="mt-1 text-xs text-muted-foreground" aria-live="polite">
-              {reportInfo.reported}/{reportInfo.total}{reportInfo.unit} 보고완료
+              {reportInfo.unit} {reportInfo.reported}/{reportInfo.total} 보고완료
             </p>
           )}
         </button>

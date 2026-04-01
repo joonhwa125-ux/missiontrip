@@ -85,7 +85,7 @@ export default function AdminScheduleCard({
 
   // 일정 상태 전환 버튼 공통 스타일
   const statusBtnClass =
-    "flex-shrink-0 min-h-11 min-w-11 rounded-xl border border-gray-300 px-4 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-ring";
+    "flex-shrink-0 min-h-11 min-w-11 rounded-xl border border-gray-300 px-4 text-xs font-medium text-gray-700";
 
   // 부제목: location이 있을 때 title을 보조로 (시간 제거 — 헤더 배지로 이동)
   const subtitle = schedule.location ? (
@@ -96,7 +96,7 @@ export default function AdminScheduleCard({
   const timeBadge = timeDisplay ? (
     <button
       onClick={onTimeEdit}
-      className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 focus-visible:ring-2 focus-visible:ring-main-action"
+      className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700"
       aria-label={`집결 시간 ${timeDisplay} — 탭하여 수정`}
     >
       집결 {timeDisplay}
@@ -104,7 +104,7 @@ export default function AdminScheduleCard({
   ) : (
     <button
       onClick={onTimeEdit}
-      className="rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-400 focus-visible:ring-2 focus-visible:ring-main-action"
+      className="rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-400"
       aria-label="집결 시간 추가"
     >
       + 시간 추가
@@ -136,7 +136,7 @@ export default function AdminScheduleCard({
           </div>
           <button
             onClick={onDeactivate}
-            className="flex-shrink-0 min-h-11 min-w-11 rounded-xl border border-rose-300 px-4 text-xs font-medium text-rose-500 focus-visible:ring-2 focus-visible:ring-rose-300"
+            className="flex-shrink-0 min-h-11 min-w-11 rounded-xl border border-rose-300 px-4 text-xs font-medium text-rose-500"
             aria-label={`${schedule.title} 일정 종료`}
           >
             종료
@@ -147,7 +147,7 @@ export default function AdminScheduleCard({
         <div className="mt-3 flex items-baseline justify-between">
           <p className="text-xs text-muted-foreground">전체 진행률 {progressPct}%</p>
           <p className="text-xs font-medium text-gray-700" aria-live="polite">
-            {reportedCount}/{totalUnits}{unit}
+            {unit} {reportedCount}/{totalUnits}
           </p>
         </div>
 
@@ -168,7 +168,7 @@ export default function AdminScheduleCard({
 
         <button
           onClick={onSummaryTap}
-          className="mt-2 w-full min-h-11 rounded-xl border border-stone-200 bg-gray-50 px-4 text-xs font-medium text-gray-700 focus-visible:ring-2 focus-visible:ring-main-action"
+          className="mt-2 w-full min-h-11 rounded-xl border border-stone-200 bg-gray-50 px-4 text-xs font-medium text-gray-700"
           aria-label="현황 보기"
         >
           현황 보기 &gt;
@@ -192,7 +192,7 @@ export default function AdminScheduleCard({
           {timeDisplay ? (
             <button
               onClick={onTimeEdit}
-              className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700 focus-visible:ring-2 focus-visible:ring-main-action"
+              className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700"
               aria-label={`집결 시간 ${timeDisplay} — 탭하여 수정`}
             >
               집결 {timeDisplay}
@@ -200,7 +200,7 @@ export default function AdminScheduleCard({
           ) : (
             <button
               onClick={onTimeEdit}
-              className="rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-400 focus-visible:ring-2 focus-visible:ring-main-action"
+              className="rounded-full bg-gray-50 px-2 py-0.5 text-xs font-medium text-gray-400"
               aria-label="집결 시간 추가"
             >
               + 시간
@@ -256,20 +256,20 @@ export default function AdminScheduleCard({
             <p className="text-sm text-muted-foreground">{schedule.title}</p>
             <p className="flex-shrink-0 flex items-center gap-1 text-xs text-muted-foreground" aria-live="polite">
               <CheckIcon className="h-3 w-3 text-stone-400" aria-hidden />
-              {reportedCount}/{totalUnits}{unit}
+              {unit} {reportedCount}/{totalUnits}
             </p>
           </div>
         ) : (
           <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground" aria-live="polite">
             <CheckIcon className="h-3 w-3 text-stone-400" aria-hidden />
-            {reportedCount}/{totalUnits}{unit}
+            {unit} {reportedCount}/{totalUnits}
           </p>
         )}
       </div>
 
       <button
         onClick={onSummaryTap}
-        className="mt-2 w-full min-h-11 rounded-xl border border-stone-200 bg-gray-50 px-4 text-xs font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action"
+        className="mt-2 w-full min-h-11 rounded-xl border border-stone-200 bg-gray-50 px-4 text-xs font-medium text-muted-foreground"
         aria-label="완료 일정 현황 보기"
       >
         현황 보기 &gt;

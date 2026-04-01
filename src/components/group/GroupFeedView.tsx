@@ -65,19 +65,29 @@ export default function GroupFeedView({
     const reportedGroupIds = new Set(
       allReports.filter((r) => scopeGroupIds.has(r.group_id)).map((r) => r.group_id)
     );
+    const checkedIds = new Set(allCheckIns.filter((c) => !c.is_absent).map((c) => c.user_id));
+    const absentIds = new Set(allCheckIns.filter((c) => c.is_absent).map((c) => c.user_id));
     // bus_name 기준 차량별 소속 조 그룹핑
-    const busGroupMap = new Map<string, string[]>();
-    allGroups.filter((g) => scopeGroupIds.has(g.id)).forEach((g) => {
+    const scopeGroups = allGroups.filter((g) => scopeGroupIds.has(g.id));
+    const busGroupMap = new Map<string, typeof scopeGroups>();
+    scopeGroups.forEach((g) => {
       const bus = g.bus_name ?? g.name;
-      const existing = busGroupMap.get(bus) ?? [];
-      busGroupMap.set(bus, [...existing, g.id]);
+      busGroupMap.set(bus, [...(busGroupMap.get(bus) ?? []), g]);
     });
-    // 차량 내 모든 조가 보고해야 해당 차량 보고 완료
+    // 관리자 뷰와 동일: 차량 내 모든 조가 전원 탑승확인 + 보고해야 완료
     let reportedBusCount = 0;
-    busGroupMap.forEach((groupIds) => {
-      if (groupIds.every((id) => reportedGroupIds.has(id))) reportedBusCount++;
+    busGroupMap.forEach((busGroups) => {
+      const allDone = busGroups.every((g) => {
+        if (!reportedGroupIds.has(g.id)) return false;
+        const gMembers = allMembers.filter((m) => m.group_id === g.id);
+        const gAbsent = gMembers.filter((m) => absentIds.has(m.id)).length;
+        const gChecked = gMembers.filter((m) => checkedIds.has(m.id)).length;
+        const gTotal = gMembers.length - gAbsent;
+        return gTotal === 0 || gChecked >= gTotal;
+      });
+      if (allDone) reportedBusCount++;
     });
-    return { reported: reportedBusCount, total: busGroupMap.size, unit: "대" as const };
+    return { reported: reportedBusCount, total: busGroupMap.size, unit: "차량" as const };
   }, [activeSchedule, allMembers, allReports, allGroups]);
 
   // scope 필터: 셔틀 일정은 버스 배정자만, 일반 일정은 조내 party 기준
