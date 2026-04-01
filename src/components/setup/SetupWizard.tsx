@@ -159,7 +159,7 @@ export default function SetupWizard() {
       )}
 
       <div className="mt-12 border-t pt-6">
-        <ResetDataButton />
+        <ResetDataButton onSuccess={handleReset} />
       </div>
     </div>
   );

@@ -15,7 +15,15 @@ interface Props {
 type SourceTab = "sheets" | "csv";
 
 export default function DataSourceStep({ onPreviewReady }: Props) {
-  const [tab, setTab] = useState<SourceTab>("sheets");
+  const [tab, setTab] = useState<SourceTab>(() => {
+    if (typeof window === "undefined") return "sheets";
+    try {
+      const saved = localStorage.getItem(SETUP_SOURCE_KEY);
+      if (!saved) return "sheets";
+      const s = JSON.parse(saved);
+      return s.type === "csv" ? "csv" : "sheets";
+    } catch { return "sheets"; }
+  });
   const [usersUrl, setUsersUrl] = useState(() => {
     if (typeof window === "undefined") return "";
     try {
@@ -38,8 +46,24 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
   const [isPending, startTransition] = useTransition();
   const userFileRef = useRef<HTMLInputElement>(null);
   const scheduleFileRef = useRef<HTMLInputElement>(null);
-  const [userFileName, setUserFileName] = useState<string | null>(null);
-  const [scheduleFileName, setScheduleFileName] = useState<string | null>(null);
+  const [userFileName, setUserFileName] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const saved = localStorage.getItem(SETUP_SOURCE_KEY);
+      if (!saved) return null;
+      const s = JSON.parse(saved);
+      return s.type === "csv" ? (s.userFileName as string) ?? null : null;
+    } catch { return null; }
+  });
+  const [scheduleFileName, setScheduleFileName] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const saved = localStorage.getItem(SETUP_SOURCE_KEY);
+      if (!saved) return null;
+      const s = JSON.parse(saved);
+      return s.type === "csv" ? (s.scheduleFileName as string) ?? null : null;
+    } catch { return null; }
+  });
 
   const handleGoogleSheet = () => {
     const sheetId1 = extractSheetId(usersUrl);
@@ -94,6 +118,11 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
       ]);
       const res = await previewFromCsv(usersCsv, schedulesCsv);
       if (res.ok && res.data) {
+        localStorage.setItem(SETUP_SOURCE_KEY, JSON.stringify({
+          type: "csv",
+          userFileName: userFile.name,
+          scheduleFileName: scheduleFile.name,
+        }));
         onPreviewReady(res.data);
       } else {
         setError(res.error ?? "알 수 없는 오류");

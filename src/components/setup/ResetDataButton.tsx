@@ -13,7 +13,11 @@ import {
 
 const CONFIRM_WORD = "초기화";
 
-export default function ResetDataButton() {
+interface Props {
+  onSuccess?: () => void;
+}
+
+export default function ResetDataButton({ onSuccess }: Props) {
   const [step, setStep] = useState<1 | 2 | null>(null);
   const [inputValue, setInputValue] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -26,7 +30,12 @@ export default function ResetDataButton() {
     closeDialog();
     startTransition(async () => {
       const res = await resetAllData();
-      setResult(res.ok ? "전체 데이터가 초기화되었어요" : res.error ?? "초기화 실패");
+      if (res.ok) {
+        setResult("전체 데이터가 초기화되었어요");
+        onSuccess?.();
+      } else {
+        setResult(res.error ?? "초기화 실패");
+      }
     });
   };
 
