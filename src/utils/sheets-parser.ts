@@ -139,8 +139,18 @@ function validateUserRow(
     return { errors };
   }
 
-  const email = `${name.toLowerCase()}${ALLOWED_EMAIL_DOMAIN}`;
-
+  // 중복 시 전화번호 뒷4자리 → 행 인덱스 순으로 대안 이메일 생성
+  const baseEmail = `${name.toLowerCase()}${ALLOWED_EMAIL_DOMAIN}`;
+  let email = baseEmail;
+  if (emailSet.has(email)) {
+    const phoneSuffix = phone ? phone.replace(/\D/g, "").slice(-4) : "";
+    const candidate = phoneSuffix ? `${name.toLowerCase()}${phoneSuffix}${ALLOWED_EMAIL_DOMAIN}` : "";
+    if (candidate && !emailSet.has(candidate)) {
+      email = candidate;
+    } else {
+      email = `${name.toLowerCase()}${rowNum}${ALLOWED_EMAIL_DOMAIN}`;
+    }
+  }
   if (emailSet.has(email)) {
     errors.push({ sheet: "users", row: rowNum, field: "이름", message: `${name} 이름이 중복되어 있어요 (이메일 충돌)` });
     return { errors };
@@ -184,10 +194,18 @@ function validateScheduleRow(
   const scheduledTime = row[4]?.trim() || null;
   const scopeRaw = sanitizeText(row[5] ?? "");
   const shuttleRaw = sanitizeText(row[6] ?? "");
-  const shuttleType: ShuttleType | null =
-    shuttleRaw === "출발" ? "departure" : shuttleRaw === "귀가" ? "return" : null;
+  const shuttleNorm = shuttleRaw.toLowerCase();
+  let shuttleType: ShuttleType | null = null;
+  let shuttleInvalid = false;
+  if (["출발", "o", "y", "1", "yes"].includes(shuttleNorm)) {
+    shuttleType = "departure";
+  } else if (["귀가", "귀"].includes(shuttleNorm)) {
+    shuttleType = "return";
+  } else if (!["", "-", "n", "0", "no", "x"].includes(shuttleNorm)) {
+    shuttleInvalid = true;
+  }
 
-  if (shuttleRaw && !shuttleType) {
+  if (shuttleInvalid) {
     errors.push({ sheet: "schedules", row: rowNum, field: "셔틀여부", message: "셔틀여부는 '출발' 또는 '귀가'만 가능해요" });
     return { errors };
   }
