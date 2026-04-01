@@ -297,7 +297,7 @@ export default function GroupCheckinView({
             </button>
           </div>
         ) : (
-          /* 조장 뷰: 뒤로(<) 좌측, 타이틀 좌측 정렬, N/M명은 조이름 옆 */
+          /* 조장 뷰: 뒤로(<) 좌측, 타이틀 좌측 정렬, N/M명 우측 끝 정렬 */
           <div className="flex items-start gap-2">
             <button
               onClick={onBack}
@@ -310,17 +310,15 @@ export default function GroupCheckinView({
               <h1 className="text-lg font-bold">
                 {activeSchedule?.location ?? activeSchedule?.title ?? "대기 중"}
               </h1>
-              <div className="flex items-center gap-2">
-                <p className="text-sm text-muted-foreground">{groupName}</p>
-                {members.length > 0 && (
-                  <span className="text-sm" aria-live="polite">
-                    <span className="font-bold text-[#1A1A1A]">{checkedCount + absentIds.size}</span>
-                    <span className="text-[#888780]">/</span>
-                    <span className="font-medium text-[#1A1A1A]">{members.length}명</span>
-                  </span>
-                )}
-              </div>
+              <p className="text-sm text-muted-foreground">{groupName}</p>
             </div>
+            {members.length > 0 && (
+              <span className="flex-shrink-0 text-sm" aria-live="polite">
+                <span className="font-bold text-[#1A1A1A]">{checkedCount + absentIds.size}</span>
+                <span className="text-[#888780]">/</span>
+                <span className="font-medium text-[#1A1A1A]">{members.length}명</span>
+              </span>
+            )}
           </div>
         )}
       </header>
