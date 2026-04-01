@@ -94,8 +94,6 @@ export default function AdminView({
 
   // 레이스 컨디션 방어용 ref (현재 열린 바텀시트의 schedule id 추적)
   const bottomSheetIdRef = useRef<string | null>(null);
-  // 멤버 변경 → router.refresh() 완료 구간에서만 캐시 무효화
-  const cacheStaleRef = useRef(false);
 
   // 서버 prop → state 동기화 (router.refresh() / 페이지 재진입 시)
   // useState는 초기값만 사용하므로, prop이 바뀌면 수동으로 state를 갱신해야 한다.
@@ -107,7 +105,6 @@ export default function AdminView({
 
   if (prevCheckInsRef.current !== initialCheckInsMap) {
     prevCheckInsRef.current = initialCheckInsMap;
-    cacheStaleRef.current = false; // 서버 데이터 도착 → 캐시 신뢰 복원
     // 재연결 시 서버 prop이 빈 맵이면 클라이언트 데이터 유지 (0-flash 방지)
     const newKeys = Object.keys(initialCheckInsMap).length;
     const curKeys = Object.keys(checkInsMap).length;
@@ -199,41 +196,12 @@ export default function AdminView({
   );
   const [selectedDay, setSelectedDay] = useState(() => getDefaultDay(schedules));
 
-  // 바텀시트 대상 일정
+  // 바텀시트 대상 일정 — 조장 뷰와 동일한 단일 소스 패턴 (state 직접 표시, 별도 fetch 없음)
   const [bottomSheetSchedule, setBottomSheetSchedule] = useState<Schedule | null>(null);
-  const [bottomSheetLoading, setBottomSheetLoading] = useState(false);
 
-  // 바텀시트 즉시 열기: 캐시 데이터 있으면 스피너 없이, 없으면 스피너 표시
   const openBottomSheet = useCallback((schedule: Schedule | null) => {
-    if (!schedule) {
-      setBottomSheetSchedule(null);
-      bottomSheetIdRef.current = null;
-      return;
-    }
-    const targetId = schedule.id;
-    bottomSheetIdRef.current = targetId;
     setBottomSheetSchedule(schedule);
-
-    const hasCache = targetId in checkInsMapRef.current && !cacheStaleRef.current;
-    setBottomSheetLoading(!hasCache);
-
-    fetchCheckInsClient(targetId)
-      .then(({ checkIns: freshCi, reports: freshRp, shuttleReports: freshSr }) => {
-        setCheckInsMap((prev) => ({ ...prev, [targetId]: freshCi }));
-        // Realtime으로 먼저 도착한 보고가 fetch 결과에 없을 수 있음 — 병합
-        setReportsMap((prev) => {
-          const existing = prev[targetId] ?? [];
-          const freshIds = new Set(freshRp.map((r) => r.group_id));
-          const realtimeOnly = existing.filter((r) => !freshIds.has(r.group_id));
-          return { ...prev, [targetId]: [...freshRp, ...realtimeOnly] };
-        });
-        setShuttleReportsMap((prev) => ({ ...prev, [targetId]: freshSr }));
-      })
-      .catch(() => {}) // 실패 시 캐시 데이터 유지 — 별도 알림 불필요
-      .finally(() => {
-        // 레이스 컨디션 방어: 현재 바텀시트가 같은 일정일 때만 loading 해제
-        if (bottomSheetIdRef.current === targetId) setBottomSheetLoading(false);
-      });
+    bottomSheetIdRef.current = schedule?.id ?? null;
   }, []);
 
   // 다이얼로그
@@ -324,20 +292,7 @@ export default function AdminView({
   useRealtime(null, true, {
     onScheduleActivated: () => router.refresh(),
     onScheduleDeactivated: () => router.refresh(),
-    onMemberUpdated: () => {
-      // 멤버 변경~서버 갱신 완료 구간: 바텀시트 캐시 무효화 (stale flash 방지)
-      cacheStaleRef.current = true;
-      router.refresh();
-      if (activeSchedule) {
-        fetchCheckInsClient(activeSchedule.id)
-          .then(({ checkIns, reports, shuttleReports }) => {
-            setCheckInsMap((prev) => ({ ...prev, [activeSchedule.id]: checkIns }));
-            setReportsMap((prev) => ({ ...prev, [activeSchedule.id]: reports }));
-            setShuttleReportsMap((prev) => ({ ...prev, [activeSchedule.id]: shuttleReports }));
-          })
-          .catch(() => {});
-      }
-    },
+    onMemberUpdated: () => router.refresh(),
     onScheduleUpdated: ({ schedule_id, scheduled_time }) => {
       setSchedules((prev) =>
         prev.map((s) => (s.id === schedule_id ? { ...s, scheduled_time } : s))
@@ -570,7 +525,7 @@ export default function AdminView({
         checkIns={bottomSheetSchedule ? (checkInsMap[bottomSheetSchedule.id] ?? []) : []}
         reports={bottomSheetSchedule ? (reportsMap[bottomSheetSchedule.id] ?? []) : []}
         isReadOnly={isBottomSheetReadOnly}
-        loading={bottomSheetLoading}
+        loading={false}
         onClose={() => { setBottomSheetSchedule(null); bottomSheetIdRef.current = null; }}
         onCheckInsChange={handleBottomSheetCheckInsChange}
         showToast={showToast}
