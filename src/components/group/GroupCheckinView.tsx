@@ -180,6 +180,7 @@ export default function GroupCheckinView({
     const unchecked = members.filter(
       (m) => !checkIns.some((c) => c.user_id === m.id)
     ).length;
+    const confirmed = checkIns.length;
 
     const shuttleType = activeSchedule.shuttle_type;
     const shuttleBus = shuttleType === "departure"
@@ -201,7 +202,7 @@ export default function GroupCheckinView({
       );
       if (saved) {
         onReported();
-        showToast(COPY.reportButtonDone(checkedCount + absentIds.size, members.length));
+        showToast(COPY.reportButtonDone(confirmed, members.length));
       } else {
         showToast("저장 공간이 부족해요. 기기 저장소를 확인해주세요.");
       }
@@ -215,7 +216,7 @@ export default function GroupCheckinView({
           : await submitReport(currentUser.group_id, activeSchedule.id, unchecked);
         if (res.ok) {
           onReported();
-          showToast(COPY.reportButtonDone(checkedCount + absentIds.size, members.length));
+          showToast(COPY.reportButtonDone(confirmed, members.length));
           // broadcast 실패는 DB 보고 성공에 영향 없음 — 각자 독립 처리
           if (!shuttleType) {
             const reportPayload = {

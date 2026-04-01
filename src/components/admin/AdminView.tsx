@@ -261,7 +261,7 @@ export default function AdminView({
     if (!activeSchedule) return 0;
     let filtered = filterMembersByScope(adminMembers, activeSchedule.scope);
     if (activeSchedule.shuttle_type) {
-      const busField = activeSchedule.shuttle_type === "departure" ? "shuttle_bus" : "return_shuttle_bus";
+      const busField: "shuttle_bus" | "return_shuttle_bus" = activeSchedule.shuttle_type === "departure" ? "shuttle_bus" : "return_shuttle_bus";
       filtered = filtered.filter((m) => !!m[busField]);
     }
     if (filtered.length === 0) return 0;
@@ -411,7 +411,7 @@ export default function AdminView({
   const adminCheckinMembers = useMemo(() => {
     let filtered = filterMembersByScope(adminMembers, activeSchedule?.scope ?? "all");
     if (activeSchedule?.shuttle_type) {
-      const busField = activeSchedule.shuttle_type === "departure" ? "shuttle_bus" : "return_shuttle_bus";
+      const busField: "shuttle_bus" | "return_shuttle_bus" = activeSchedule.shuttle_type === "departure" ? "shuttle_bus" : "return_shuttle_bus";
       filtered = filtered.filter((m) => !!m[busField]);
     }
     return filtered.map((m) => ({ id: m.id, name: m.name, party: m.party }));
