@@ -57,6 +57,35 @@ export default function GroupView({
   const [checkIns, setCheckIns] = useState<CheckIn[]>(initialCheckIns);
   const [allCheckInsState, setAllCheckInsState] = useState(allCheckIns);
   const [allReportsState, setAllReportsState] = useState(initialReports);
+
+  // prop→state 동기화 (router.refresh() 시 서버에서 새 props가 올 때 state도 갱신)
+  const prevSchedulesRef = useRef(initialSchedules);
+  const prevCheckInsRef = useRef(initialCheckIns);
+  const prevAllCheckInsRef = useRef(allCheckIns);
+  const prevAllReportsRef = useRef(initialReports);
+
+  if (prevSchedulesRef.current !== initialSchedules) {
+    prevSchedulesRef.current = initialSchedules;
+    setSchedules(initialSchedules);
+  }
+  if (prevCheckInsRef.current !== initialCheckIns) {
+    prevCheckInsRef.current = initialCheckIns;
+    if (initialCheckIns.length > 0 || checkIns.length === 0) {
+      setCheckIns(initialCheckIns);
+    }
+  }
+  if (prevAllCheckInsRef.current !== allCheckIns) {
+    prevAllCheckInsRef.current = allCheckIns;
+    if (allCheckIns.length > 0 || allCheckInsState.length === 0) {
+      setAllCheckInsState(allCheckIns);
+    }
+  }
+  if (prevAllReportsRef.current !== initialReports) {
+    prevAllReportsRef.current = initialReports;
+    if (initialReports.length > 0 || allReportsState.length === 0) {
+      setAllReportsState(initialReports);
+    }
+  }
   // reported 초기값: DB 보고 이력 AND 현재 전원 확인 완료 시에만 true
   // → 세션 중 체크인한 경우 수동 보고 필수
   const [reported, setReported] = useState(() => {
