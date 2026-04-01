@@ -88,7 +88,7 @@ export default function GroupFeedView({
       if (allDone) reportedBusCount++;
     });
     return { reported: reportedBusCount, total: busGroupMap.size, unit: "차량" as const };
-  }, [activeSchedule, allMembers, allReports, allGroups]);
+  }, [activeSchedule, allMembers, allReports, allGroups, allCheckIns]);
 
   // scope 필터: 셔틀 일정은 버스 배정자만, 일반 일정은 조내 party 기준
   const hasAdvance = members.some((m) => m.party === "advance");
