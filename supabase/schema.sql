@@ -5,7 +5,7 @@
 
 CREATE TABLE IF NOT EXISTS groups (
   id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  name        text        NOT NULL,
+  name        text        NOT NULL UNIQUE,
   bus_name    text,
   created_at  timestamptz DEFAULT now()
 );
@@ -18,7 +18,8 @@ CREATE TABLE IF NOT EXISTS users (
   role        text        NOT NULL CHECK (role IN ('member', 'leader', 'admin', 'admin_leader')),
   group_id    uuid        NOT NULL REFERENCES groups(id),
   party       text,                                -- 선발/후발 구분 (advance | rear | null)
-  shuttle_bus text,                                -- 셔틀버스 배정 (예: 판교 출발 1)
+  shuttle_bus text,                                -- 출발 셔틀버스 배정 (예: 판교 출발 1)
+  return_shuttle_bus text,                         -- 귀가 셔틀버스 배정
   created_at  timestamptz DEFAULT now()
 );
 
@@ -30,10 +31,11 @@ CREATE TABLE IF NOT EXISTS schedules (
   sort_order      int         NOT NULL,
   scheduled_time  timestamptz,
   is_active       boolean     NOT NULL DEFAULT false,
-  is_shuttle      boolean     NOT NULL DEFAULT false,  -- 셔틀 일정 여부
   activated_at    timestamptz,
   scope           text        NOT NULL DEFAULT 'all',  -- 일정 대상 (all | advance | rear)
-  created_at      timestamptz DEFAULT now()
+  shuttle_type    text,                               -- 셔틀 타입 (departure | return | null)
+  created_at      timestamptz DEFAULT now(),
+  CONSTRAINT unique_schedule_position UNIQUE (day_number, sort_order)
 );
 
 -- 동시 활성 일정 1개 제한
