@@ -11,6 +11,7 @@ import {
   EVENT_SCHEDULE_DEACTIVATED,
   EVENT_CHECKIN_UPDATED,
   EVENT_GROUP_REPORTED,
+  EVENT_SHUTTLE_REPORTED,
   EVENT_REPORT_INVALIDATED,
   BROADCAST_SUBSCRIBE_TIMEOUT_MS,
 } from "@/lib/constants";
@@ -40,6 +41,7 @@ interface RealtimeCallbacks {
   onScheduleDeactivated?: (payload: { schedule_id: string; title: string }) => void;
   onCheckinUpdated?: (payload: { user_id: string; schedule_id: string; action: "insert" | "delete"; is_absent?: boolean }) => void;
   onGroupReported?: (payload: { group_id: string; schedule_id: string; pending_count: number }) => void;
+  onShuttleReported?: (payload: { shuttle_bus: string; schedule_id: string; pending_count: number }) => void;
   onReportInvalidated?: (payload: { group_id: string; schedule_id: string }) => void;
   onReconnected?: () => void;  // 네트워크 재연결 시 호출 (WiFi↔LTE 전환 등)
 }
@@ -108,6 +110,9 @@ export function useRealtime(
       .on("broadcast", { event: EVENT_GROUP_REPORTED }, ({ payload }) => {
         callbacksRef.current.onGroupReported?.(payload);
       })
+      .on("broadcast", { event: EVENT_SHUTTLE_REPORTED }, ({ payload }) => {
+        callbacksRef.current.onShuttleReported?.(payload);
+      })
       .on("broadcast", { event: EVENT_REPORT_INVALIDATED }, ({ payload }) => {
         callbacksRef.current.onReportInvalidated?.(payload);
       })
@@ -136,6 +141,9 @@ export function useRealtime(
         .channel(CHANNEL_ADMIN, { config: { broadcast: { self: true } } })
         .on("broadcast", { event: EVENT_GROUP_REPORTED }, ({ payload }) => {
           callbacksRef.current.onGroupReported?.(payload);
+        })
+        .on("broadcast", { event: EVENT_SHUTTLE_REPORTED }, ({ payload }) => {
+          callbacksRef.current.onShuttleReported?.(payload);
         })
         .on("broadcast", { event: EVENT_REPORT_INVALIDATED }, ({ payload }) => {
           callbacksRef.current.onReportInvalidated?.(payload);

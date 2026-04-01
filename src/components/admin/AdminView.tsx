@@ -349,6 +349,21 @@ export default function AdminView({
         return { ...prev, [sid]: [...list, newReport] };
       });
     },
+    onShuttleReported: ({ shuttle_bus, schedule_id, pending_count }) => {
+      const sid = schedule_id?.length ? schedule_id : activeSchedule?.id;
+      if (!sid) return;
+      setShuttleReportsMap((prev) => {
+        const list = prev[sid] ?? [];
+        const newReport = { shuttle_bus, pending_count, reported_at: new Date().toISOString() };
+        const idx = list.findIndex((r) => r.shuttle_bus === shuttle_bus);
+        if (idx >= 0) {
+          const updated = [...list];
+          updated[idx] = newReport;
+          return { ...prev, [sid]: updated };
+        }
+        return { ...prev, [sid]: [...list, newReport] };
+      });
+    },
     onReportInvalidated: ({ group_id, schedule_id }) => {
       const sid = schedule_id?.length ? schedule_id : activeSchedule?.id;
       if (!sid) return;

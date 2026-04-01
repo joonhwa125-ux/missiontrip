@@ -15,6 +15,7 @@ import {
   CHANNEL_GLOBAL,
   CHANNEL_ADMIN,
   EVENT_GROUP_REPORTED,
+  EVENT_SHUTTLE_REPORTED,
   EVENT_REPORT_INVALIDATED,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -215,16 +216,26 @@ export default function GroupCheckinView({
         if (res.ok) {
           onReported();
           showToast(COPY.reportButtonDone(checkedCount + absentIds.size, members.length));
+          // broadcast 실패는 DB 보고 성공에 영향 없음 — 각자 독립 처리
           if (!shuttleType) {
             const reportPayload = {
               group_id: currentUser.group_id,
               schedule_id: activeSchedule.id,
               pending_count: unchecked,
             };
-            // broadcast 실패는 DB 보고 성공에 영향 없음 — 각자 독립 처리
             await Promise.allSettled([
               broadcast(CHANNEL_GLOBAL, EVENT_GROUP_REPORTED, reportPayload),
               broadcast(CHANNEL_ADMIN, EVENT_GROUP_REPORTED, reportPayload),
+            ]);
+          } else {
+            const shuttlePayload = {
+              shuttle_bus: shuttleBus!,
+              schedule_id: activeSchedule.id,
+              pending_count: unchecked,
+            };
+            await Promise.allSettled([
+              broadcast(CHANNEL_GLOBAL, EVENT_SHUTTLE_REPORTED, shuttlePayload),
+              broadcast(CHANNEL_ADMIN, EVENT_SHUTTLE_REPORTED, shuttlePayload),
             ]);
           }
         } else {
