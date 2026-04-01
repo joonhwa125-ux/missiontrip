@@ -113,7 +113,7 @@ export default function PreviewStep({
             aria-selected={tab === t}
             onClick={() => setTab(t)}
             className={cn(
-              "min-h-11 flex-1 rounded-lg py-2 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-main-action",
+              "min-h-11 flex-1 rounded-lg py-2 text-sm font-medium transition-colors",
               tab === t ? "bg-white shadow-sm" : "text-muted-foreground"
             )}
           >
@@ -192,7 +192,7 @@ export default function PreviewStep({
       <div className="flex gap-3">
         <button
           onClick={onBack}
-          className="min-h-11 flex-1 rounded-xl bg-gray-100 py-3 text-sm font-medium focus-visible:ring-2 focus-visible:ring-main-action"
+          className="min-h-11 flex-1 rounded-xl bg-gray-100 py-3 text-sm font-medium"
         >
           뒤로
         </button>
@@ -200,7 +200,7 @@ export default function PreviewStep({
           onClick={() => setConfirmOpen(true)}
           disabled={isPending}
           className={cn(
-            "min-h-11 flex-1 rounded-xl py-3 text-sm font-bold focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2 disabled:opacity-50",
+            "min-h-11 flex-1 rounded-xl py-3 text-sm font-bold disabled:opacity-50",
             hasErrors ? "bg-gray-200 text-gray-500" : "bg-main-action"
           )}
         >
@@ -228,7 +228,7 @@ export default function PreviewStep({
             </DialogClose>
             <button
               onClick={handleImport}
-              className="min-h-11 flex-1 rounded-xl bg-main-action text-sm font-bold focus-visible:ring-2 focus-visible:ring-main-action"
+              className="min-h-11 flex-1 rounded-xl bg-main-action text-sm font-bold"
             >
               반영하기
             </button>

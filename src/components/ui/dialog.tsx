@@ -42,7 +42,7 @@ const DialogContent = React.forwardRef<
     >
       {children}
       {!hideClose && (
-        <DialogClose className="absolute right-4 top-3 flex h-11 w-11 items-center justify-center rounded-full opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2">
+        <DialogClose className="absolute right-4 top-3 flex h-11 w-11 items-center justify-center rounded-full opacity-70 transition-opacity hover:opacity-100">
           <X className="h-5 w-5" aria-hidden="true" />
           <span className="sr-only">닫기</span>
         </DialogClose>

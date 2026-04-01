@@ -41,7 +41,7 @@ export function CancelCheckinDialog({
           </DialogClose>
           <button
             onClick={onConfirm}
-            className="min-h-11 flex-1 rounded-xl bg-red-500 text-sm font-medium text-white focus-visible:ring-2 focus-visible:ring-red-500"
+            className="min-h-11 flex-1 rounded-xl bg-red-500 text-sm font-medium text-white"
           >
             취소할게요
           </button>
@@ -78,7 +78,7 @@ export function MarkAbsentDialog({
           </DialogClose>
           <button
             onClick={onConfirm}
-            className="min-h-11 flex-1 rounded-xl bg-gray-700 text-sm font-medium text-white focus-visible:ring-2 focus-visible:ring-ring"
+            className="min-h-11 flex-1 rounded-xl bg-gray-700 text-sm font-medium text-white"
           >
             불참 처리
           </button>

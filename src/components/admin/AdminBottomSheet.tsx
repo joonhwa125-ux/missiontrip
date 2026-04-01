@@ -211,7 +211,7 @@ export default function AdminBottomSheet({
         {!drillGroup && !drillBus && (
           <button
             onClick={handleClose}
-            className="absolute right-4 top-2 z-10 flex h-11 w-11 items-center justify-center rounded-full opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2"
+            className="absolute right-4 top-2 z-10 flex h-11 w-11 items-center justify-center rounded-full opacity-70 transition-opacity hover:opacity-100"
             aria-label="닫기"
           >
             <X className="h-5 w-5" aria-hidden="true" />
@@ -281,7 +281,7 @@ export default function AdminBottomSheet({
                           setDrillBus(busName);
                         }
                       }}
-                      className={cn("cursor-pointer rounded-2xl border bg-white p-4 text-left transition-colors active:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action min-h-11", badge === "reported" ? "border-emerald-300" : "border-stone-200")}
+                      className={cn("cursor-pointer rounded-2xl border bg-white p-4 text-left transition-colors active:bg-gray-50 min-h-11", badge === "reported" ? "border-emerald-300" : "border-stone-200")}
                       aria-label={`${busName} 상세 보기`}
                     >
                       <div className="mb-1.5">
@@ -327,7 +327,7 @@ export default function AdminBottomSheet({
                               setDrillGroup(group);
                             }
                           }}
-                          className={cn("cursor-pointer rounded-2xl border bg-white p-4 text-left transition-colors active:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action min-h-11", badge === "reported" ? "border-emerald-300" : "border-stone-200")}
+                          className={cn("cursor-pointer rounded-2xl border bg-white p-4 text-left transition-colors active:bg-gray-50 min-h-11", badge === "reported" ? "border-emerald-300" : "border-stone-200")}
                           aria-label={`${group.name} 상세 보기`}
                         >
                           <div className="mb-1.5">
@@ -344,7 +344,7 @@ export default function AdminBottomSheet({
                                   href={`tel:${leader.phone}`}
                                   onClick={(e) => e.stopPropagation()}
                                   onKeyDown={(e) => e.stopPropagation()}
-                                  className="flex min-h-11 min-w-11 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-main-action"
+                                  className="flex min-h-11 min-w-11 items-center justify-center rounded-lg"
                                   aria-label={`${leader.name} 조장에게 전화`}
                                 >
                                   <PhoneIcon />

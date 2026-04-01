@@ -78,7 +78,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
           <span>{errorMsg}</span>
           <button
             onClick={() => setErrorMsg(null)}
-            className="ml-3 min-h-11 min-w-11 rounded-lg focus-visible:ring-2 focus-visible:ring-red-400"
+            className="ml-3 min-h-11 min-w-11 rounded-lg"
             aria-label="오류 닫기"
           >
             ✕
@@ -101,7 +101,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
             aria-selected={tab === t}
             onClick={() => setTab(t)}
             className={cn(
-              "min-h-11 flex-1 rounded-lg text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-main-action",
+              "min-h-11 flex-1 rounded-lg text-sm font-medium transition-colors",
               tab === t
                 ? "bg-white font-bold shadow-sm"
                 : "text-muted-foreground"
@@ -143,8 +143,8 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
                   <td className="px-2 py-2 text-center text-xs">{s.shuttle_type === "departure" ? "출발" : s.shuttle_type === "return" ? "귀가" : "-"}</td>
                   <td className="px-2 py-2">
                     <div className="flex justify-center gap-1 whitespace-nowrap">
-                      <button onClick={() => setEditSchedule(s)} className="min-h-11 rounded-lg bg-gray-100 px-2 text-xs font-medium focus-visible:ring-2 focus-visible:ring-main-action" aria-label={`${s.title} 수정`}>수정</button>
-                      <button onClick={() => setDeleteScheduleTarget(s)} disabled={s.is_active} className="min-h-11 rounded-lg bg-red-50 px-2 text-xs font-medium text-red-600 focus-visible:ring-2 focus-visible:ring-red-400 disabled:opacity-40" aria-label={s.is_active ? `${s.title} 진행중 — 삭제 불가` : `${s.title} 삭제`}>삭제</button>
+                      <button onClick={() => setEditSchedule(s)} className="min-h-11 rounded-lg bg-gray-100 px-2 text-xs font-medium" aria-label={`${s.title} 수정`}>수정</button>
+                      <button onClick={() => setDeleteScheduleTarget(s)} disabled={s.is_active} className="min-h-11 rounded-lg bg-red-50 px-2 text-xs font-medium text-red-600 disabled:opacity-40" aria-label={s.is_active ? `${s.title} 진행중 — 삭제 불가` : `${s.title} 삭제`}>삭제</button>
                     </div>
                   </td>
                 </tr>
@@ -187,8 +187,8 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
                   <td className="px-2 py-2 text-center text-xs">{u.return_shuttle_bus ?? "-"}</td>
                   <td className="px-2 py-2">
                     <div className="flex justify-center gap-1 whitespace-nowrap">
-                      <button onClick={() => setEditUser(u)} className="min-h-11 rounded-lg bg-gray-100 px-2 text-xs font-medium focus-visible:ring-2 focus-visible:ring-main-action" aria-label={`${u.name} 수정`}>수정</button>
-                      <button onClick={() => setDeleteUserTarget(u)} disabled={u.id === currentUserId} className="min-h-11 rounded-lg bg-red-50 px-2 text-xs font-medium text-red-600 focus-visible:ring-2 focus-visible:ring-red-400 disabled:opacity-40" aria-label={u.id === currentUserId ? "본인 계정 — 삭제 불가" : `${u.name} 삭제`}>삭제</button>
+                      <button onClick={() => setEditUser(u)} className="min-h-11 rounded-lg bg-gray-100 px-2 text-xs font-medium" aria-label={`${u.name} 수정`}>수정</button>
+                      <button onClick={() => setDeleteUserTarget(u)} disabled={u.id === currentUserId} className="min-h-11 rounded-lg bg-red-50 px-2 text-xs font-medium text-red-600 disabled:opacity-40" aria-label={u.id === currentUserId ? "본인 계정 — 삭제 불가" : `${u.name} 삭제`}>삭제</button>
                     </div>
                   </td>
                 </tr>
@@ -234,11 +234,11 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
           </DialogHeader>
           <DialogFooter>
             <DialogClose asChild>
-              <button className="min-h-11 rounded-xl bg-gray-100 px-4 text-sm font-medium focus-visible:ring-2 focus-visible:ring-main-action">취소</button>
+              <button className="min-h-11 rounded-xl bg-gray-100 px-4 text-sm font-medium">취소</button>
             </DialogClose>
             <button
               onClick={() => run(() => deleteSchedule(deleteScheduleTarget!.id), () => setDeleteScheduleTarget(null), "삭제가 완료됐어요")}
-              className="min-h-11 rounded-xl bg-red-500 px-4 text-sm font-bold text-white focus-visible:ring-2 focus-visible:ring-red-400"
+              className="min-h-11 rounded-xl bg-red-500 px-4 text-sm font-bold text-white"
             >
               삭제
             </button>
@@ -257,11 +257,11 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
           </DialogHeader>
           <DialogFooter>
             <DialogClose asChild>
-              <button className="min-h-11 rounded-xl bg-gray-100 px-4 text-sm font-medium focus-visible:ring-2 focus-visible:ring-main-action">취소</button>
+              <button className="min-h-11 rounded-xl bg-gray-100 px-4 text-sm font-medium">취소</button>
             </DialogClose>
             <button
               onClick={() => run(() => deleteUser(deleteUserTarget!.id), () => setDeleteUserTarget(null), "삭제가 완료됐어요")}
-              className="min-h-11 rounded-xl bg-red-500 px-4 text-sm font-bold text-white focus-visible:ring-2 focus-visible:ring-red-400"
+              className="min-h-11 rounded-xl bg-red-500 px-4 text-sm font-bold text-white"
             >
               삭제
             </button>

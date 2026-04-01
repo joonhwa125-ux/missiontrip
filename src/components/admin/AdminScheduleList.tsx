@@ -141,7 +141,7 @@ export default function AdminScheduleList({
                 setWarningTarget(null);
                 if (target) handleActivate(target);
               }}
-              className="min-h-11 flex-1 rounded-xl bg-main-action text-sm font-bold focus-visible:ring-2 focus-visible:ring-main-action"
+              className="min-h-11 flex-1 rounded-xl bg-main-action text-sm font-bold"
               aria-label="일정 전환 확인"
             >
               전환할게요
@@ -171,7 +171,7 @@ export default function AdminScheduleList({
                 setDeactivateTarget(null);
                 if (target) handleDeactivate(target);
               }}
-              className="min-h-11 flex-1 rounded-xl bg-red-500 text-sm font-medium text-white focus-visible:ring-2 focus-visible:ring-red-500"
+              className="min-h-11 flex-1 rounded-xl bg-red-500 text-sm font-medium text-white"
               aria-label="일정 종료 확인"
             >
               종료

@@ -54,7 +54,7 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
         {isAbsent ? (
           <button
             onClick={() => onCancel(user)}
-            className="min-h-11 min-w-16 rounded-xl border border-rose-300 px-3 text-sm font-medium text-rose-500 focus-visible:ring-2 focus-visible:ring-rose-300 focus-visible:ring-offset-2"
+            className="min-h-11 min-w-16 rounded-xl border border-rose-300 px-3 text-sm font-medium text-rose-500"
             aria-label={`${user.name} 불참 취소`}
           >
             {COPY.cancelButton}
@@ -62,7 +62,7 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
         ) : isChecked ? (
           <button
             onClick={() => onCancel(user)}
-            className="min-h-11 min-w-16 rounded-xl border border-rose-300 px-3 text-sm font-medium text-rose-500 focus-visible:ring-2 focus-visible:ring-rose-300 focus-visible:ring-offset-2"
+            className="min-h-11 min-w-16 rounded-xl border border-rose-300 px-3 text-sm font-medium text-rose-500"
             aria-label={`${user.name} 체크인 취소`}
           >
             {COPY.cancelButton}
@@ -71,14 +71,14 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
           <>
             <button
               onClick={() => onAbsent(user)}
-              className="min-h-11 min-w-11 rounded-xl border border-stone-300 px-3 text-sm font-bold text-stone-700 focus-visible:ring-2 focus-visible:ring-stone-300 focus-visible:ring-offset-2"
+              className="min-h-11 min-w-11 rounded-xl border border-stone-300 px-3 text-sm font-bold text-stone-700"
               aria-label={`${user.name} 불참 처리`}
             >
               {COPY.absent}
             </button>
             <button
               onClick={() => onCheckin(user.id)}
-              className="min-h-11 min-w-[4.5rem] rounded-xl bg-main-action px-3 text-sm font-bold shadow-sm focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2"
+              className="min-h-11 min-w-[4.5rem] rounded-xl bg-main-action px-3 text-sm font-bold shadow-sm"
               aria-label={`${user.name} 탑승 확인`}
             >
               {COPY.checkinButton}

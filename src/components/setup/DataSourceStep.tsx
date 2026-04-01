@@ -158,7 +158,7 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
           aria-controls="panel-sheets"
           onClick={() => { setTab("sheets"); setError(null); }}
           className={cn(
-            "min-h-11 flex-1 rounded-lg text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-main-action",
+            "min-h-11 flex-1 rounded-lg text-sm font-medium transition-colors",
             tab === "sheets"
               ? "bg-white font-bold shadow-sm"
               : "text-muted-foreground"
@@ -172,7 +172,7 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
           aria-controls="panel-csv"
           onClick={() => { setTab("csv"); setError(null); }}
           className={cn(
-            "min-h-11 flex-1 rounded-lg text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-main-action",
+            "min-h-11 flex-1 rounded-lg text-sm font-medium transition-colors",
             tab === "csv"
               ? "bg-white font-bold shadow-sm"
               : "text-muted-foreground"
@@ -195,7 +195,7 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
               value={usersUrl}
               onChange={(e) => { setUsersUrl(e.target.value); setError(null); }}
               placeholder="참가자 시트 탭을 선택한 후 URL을 복사해 붙여넣기"
-              className="w-full rounded-xl border px-3 py-2.5 text-sm focus-visible:ring-2 focus-visible:ring-main-action"
+              className="w-full rounded-xl border px-3 py-2.5 text-sm"
             />
           </div>
           <div className="mb-4">
@@ -208,13 +208,13 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
               value={schedulesUrl}
               onChange={(e) => { setSchedulesUrl(e.target.value); setError(null); }}
               placeholder="일정 시트 탭을 선택한 후 URL을 복사해 붙여넣기"
-              className="w-full rounded-xl border px-3 py-2.5 text-sm focus-visible:ring-2 focus-visible:ring-main-action"
+              className="w-full rounded-xl border px-3 py-2.5 text-sm"
             />
           </div>
           <button
             onClick={handleGoogleSheet}
             disabled={isPending}
-            className="min-h-11 w-full rounded-xl bg-main-action py-3 text-sm font-bold focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2 disabled:opacity-50"
+            className="min-h-11 w-full rounded-xl bg-main-action py-3 text-sm font-bold disabled:opacity-50"
           >
             {isPending ? "불러오는 중..." : "불러오기"}
           </button>
@@ -245,7 +245,7 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
               type="button"
               onClick={() => userFileRef.current?.click()}
               className={cn(
-                "flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed px-4 py-3 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-main-action",
+                "flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed px-4 py-3 text-sm transition-colors",
                 userFileName
                   ? "border-main-action bg-[#FEF9E7] text-foreground"
                   : "border-gray-300 bg-[#F5F3EF] text-muted-foreground hover:border-main-action hover:bg-[#FEF9E7]"
@@ -276,7 +276,7 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
               type="button"
               onClick={() => scheduleFileRef.current?.click()}
               className={cn(
-                "flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed px-4 py-3 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-main-action",
+                "flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed px-4 py-3 text-sm transition-colors",
                 scheduleFileName
                   ? "border-main-action bg-[#FEF9E7] text-foreground"
                   : "border-gray-300 bg-[#F5F3EF] text-muted-foreground hover:border-main-action hover:bg-[#FEF9E7]"
@@ -289,7 +289,7 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
           <button
             onClick={handleCsvUpload}
             disabled={isPending}
-            className="min-h-11 w-full rounded-xl bg-main-action py-3 text-sm font-bold focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2 disabled:opacity-50"
+            className="min-h-11 w-full rounded-xl bg-main-action py-3 text-sm font-bold disabled:opacity-50"
           >
             {isPending ? "처리 중..." : "CSV 업로드"}
           </button>

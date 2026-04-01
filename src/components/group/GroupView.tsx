@@ -359,7 +359,7 @@ export default function GroupView({
                   setView("feed");
                   showToast("");
                 }}
-                className="ml-2 min-h-11 font-medium underline focus-visible:ring-2 focus-visible:ring-main-action"
+                className="ml-2 min-h-11 font-medium underline"
                 aria-label="피드 화면으로 이동"
               >
                 피드로 이동

@@ -290,7 +290,7 @@ export default function GroupCheckinView({
             </div>
             <button
               onClick={onBack}
-              className="absolute right-0 flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-main-action"
+              className="absolute right-0 flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center rounded-lg"
               aria-label="닫기"
             >
               <XIcon className="h-5 w-5" aria-hidden />
@@ -301,7 +301,7 @@ export default function GroupCheckinView({
           <div className="flex items-start gap-2">
             <button
               onClick={onBack}
-              className="flex min-h-11 min-w-11 flex-shrink-0 items-start justify-center rounded-lg pt-0.5 focus-visible:ring-2 focus-visible:ring-main-action"
+              className="flex min-h-11 min-w-11 flex-shrink-0 items-start justify-center rounded-lg pt-0.5"
               aria-label="일정 피드로 돌아가기"
             >
               <ChevronLeftIcon aria-hidden />
@@ -424,7 +424,7 @@ export default function GroupCheckinView({
         )}
         {reported ? (
           <button
-            className="flex w-full items-center justify-center gap-2 min-h-11 rounded-xl border border-[#EBE8E3] bg-app-bg py-4 text-base font-medium text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2"
+            className="flex w-full items-center justify-center gap-2 min-h-11 rounded-xl border border-[#EBE8E3] bg-app-bg py-4 text-base font-medium text-muted-foreground"
           >
             <CheckIcon className="h-5 w-5 text-complete-check" aria-hidden />
             {COPY.reportButtonDone(checkedCount + absentIds.size, members.length)}
@@ -434,10 +434,10 @@ export default function GroupCheckinView({
             aria-disabled={!allComplete}
             onClick={allComplete ? handleReport : undefined}
             className={cn(
-              "w-full min-h-11 rounded-xl py-4 text-base transition-colors focus-visible:ring-2 focus-visible:ring-offset-2",
+              "w-full min-h-11 rounded-xl py-4 text-base transition-colors",
               allComplete
-                ? "bg-main-action font-bold focus-visible:ring-main-action"
-                : "bg-gray-200 text-gray-400 font-medium focus-visible:ring-gray-300"
+                ? "bg-main-action font-bold"
+                : "bg-gray-200 text-gray-400 font-medium"
             )}
           >
             {allComplete ? COPY.reportButtonComplete : COPY.reportButtonPending(uncheckedCount)}

@@ -149,7 +149,7 @@ export default function AdminBusDrillDown({
           <div className="flex items-center gap-1 min-w-0">
             <button
               onClick={onBack}
-              className="-ml-2 flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center rounded-lg text-muted-foreground focus-visible:ring-2 focus-visible:ring-main-action"
+              className="-ml-2 flex min-h-11 min-w-11 flex-shrink-0 items-center justify-center rounded-lg text-muted-foreground"
               aria-label="현황 목록으로 돌아가기"
             >
               <ChevronLeftIcon className="h-5 w-5" />
@@ -239,14 +239,14 @@ function MemberRow({ member, checkin, activeSchedule, onCheckin, onAbsent, onCan
         <>
           <button
             onClick={onAbsent}
-            className="min-h-11 flex-shrink-0 rounded-xl border border-stone-300 px-3 text-xs font-bold text-stone-700 focus-visible:ring-2 focus-visible:ring-stone-300 focus-visible:ring-offset-2"
+            className="min-h-11 flex-shrink-0 rounded-xl border border-stone-300 px-3 text-xs font-bold text-stone-700"
             aria-label={`${member.name} 불참 처리`}
           >
             {COPY.absent}
           </button>
           <button
             onClick={onCheckin}
-            className="min-h-11 flex-shrink-0 rounded-xl bg-main-action px-3 text-xs font-bold focus-visible:ring-2 focus-visible:ring-ring"
+            className="min-h-11 flex-shrink-0 rounded-xl bg-main-action px-3 text-xs font-bold"
             aria-label={`${member.name} ${COPY.checkinButton}`}
           >
             {COPY.checkinButton}
@@ -256,7 +256,7 @@ function MemberRow({ member, checkin, activeSchedule, onCheckin, onAbsent, onCan
       {isChecked && hasSchedule && (
         <button
           onClick={onCancel}
-          className="min-h-11 flex-shrink-0 rounded-xl border border-rose-300 px-3 text-xs font-medium text-rose-500 focus-visible:ring-2 focus-visible:ring-rose-300"
+          className="min-h-11 flex-shrink-0 rounded-xl border border-rose-300 px-3 text-xs font-medium text-rose-500"
           aria-label={`${member.name} 체크인 취소`}
         >
           {COPY.cancelButton}
@@ -265,7 +265,7 @@ function MemberRow({ member, checkin, activeSchedule, onCheckin, onAbsent, onCan
       {isAbsent && hasSchedule && (
         <button
           onClick={onCancel}
-          className="min-h-11 flex-shrink-0 rounded-xl border border-rose-300 px-3 text-xs font-medium text-rose-500 focus-visible:ring-2 focus-visible:ring-rose-300"
+          className="min-h-11 flex-shrink-0 rounded-xl border border-rose-300 px-3 text-xs font-medium text-rose-500"
           aria-label={`${member.name} 불참 취소`}
         >
           {COPY.cancelButton}
@@ -328,7 +328,7 @@ function ConfirmDialog({ action, onClose, onConfirm }: ConfirmDialogProps) {
           </DialogClose>
           <button
             onClick={onConfirm}
-            className="min-h-11 flex-1 rounded-xl bg-main-action text-sm font-bold focus-visible:ring-2 focus-visible:ring-ring"
+            className="min-h-11 flex-1 rounded-xl bg-main-action text-sm font-bold"
             aria-label="확인"
           >
             확인

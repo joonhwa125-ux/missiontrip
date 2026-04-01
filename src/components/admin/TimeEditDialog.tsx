@@ -78,7 +78,7 @@ export default function TimeEditDialog({
           <select
             value={timeHour}
             onChange={(e) => setTimeHour(e.target.value)}
-            className="flex-1 rounded-xl border px-4 py-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+            className="flex-1 rounded-xl border px-4 py-3 text-base"
             aria-label="시"
           >
             <option value="">시</option>
@@ -89,7 +89,7 @@ export default function TimeEditDialog({
           <select
             value={timeMinute}
             onChange={(e) => setTimeMinute(e.target.value)}
-            className="flex-1 rounded-xl border px-4 py-3 text-base focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+            className="flex-1 rounded-xl border px-4 py-3 text-base"
             aria-label="분"
           >
             <option value="">분</option>

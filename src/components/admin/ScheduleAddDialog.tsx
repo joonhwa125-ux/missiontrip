@@ -79,14 +79,14 @@ export default function ScheduleAddDialog({
             placeholder="일정명 *"
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
-            className="w-full rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+            className="w-full rounded-xl border px-4 py-3"
             aria-label="일정명"
           />
           <input
             placeholder="장소 (선택)"
             value={newLocation}
             onChange={(e) => setNewLocation(e.target.value)}
-            className="w-full rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+            className="w-full rounded-xl border px-4 py-3"
             aria-label="장소"
           />
           <div className="grid grid-cols-2 gap-2">
@@ -95,7 +95,7 @@ export default function ScheduleAddDialog({
               <select
                 value={newDay}
                 onChange={(e) => setNewDay(e.target.value)}
-                className="w-full rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+                className="w-full rounded-xl border px-4 py-3"
                 aria-label="일차"
               >
                 <option value="1">1일차</option>
@@ -108,7 +108,7 @@ export default function ScheduleAddDialog({
               <select
                 value={newScope}
                 onChange={(e) => setNewScope(e.target.value as ScheduleScope)}
-                className="w-full rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+                className="w-full rounded-xl border px-4 py-3"
                 aria-label="적용 대상"
               >
                 <option value="all">전체</option>
@@ -123,7 +123,7 @@ export default function ScheduleAddDialog({
               <select
                 value={newHour}
                 onChange={(e) => setNewHour(e.target.value)}
-                className="flex-1 rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+                className="flex-1 rounded-xl border px-4 py-3"
                 aria-label="시"
               >
                 <option value="">시</option>
@@ -134,7 +134,7 @@ export default function ScheduleAddDialog({
               <select
                 value={newMinute}
                 onChange={(e) => setNewMinute(e.target.value)}
-                className="flex-1 rounded-xl border px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action"
+                className="flex-1 rounded-xl border px-4 py-3"
                 aria-label="분"
               >
                 <option value="">분</option>
@@ -152,7 +152,7 @@ export default function ScheduleAddDialog({
           <button
             onClick={handleAdd}
             disabled={!newTitle.trim()}
-            className="min-h-11 flex-1 rounded-xl bg-main-action text-sm font-bold text-[#3C1E1E] focus-visible:ring-2 focus-visible:ring-main-action disabled:opacity-50"
+            className="min-h-11 flex-1 rounded-xl bg-main-action text-sm font-bold text-[#3C1E1E] disabled:opacity-50"
             aria-label="일정 추가 확인"
           >
             추가

@@ -42,7 +42,7 @@ export default function ImportResultStep({ result, error, onReset }: Props) {
 
       <button
         onClick={onReset}
-        className="min-h-11 w-full rounded-xl bg-gray-100 py-3 text-sm font-medium focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2"
+        className="min-h-11 w-full rounded-xl bg-gray-100 py-3 text-sm font-medium"
       >
         처음으로
       </button>

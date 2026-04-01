@@ -63,7 +63,7 @@ export default function SetupPageTabs({ wizard, currentData, hasData }: Props) {
         <div className="flex items-center gap-1">
           <Link
             href="/admin"
-            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:ring-gray-900"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-lg"
             aria-label="관리자 화면으로 돌아가기"
           >
             <ChevronLeftIcon aria-hidden />
@@ -75,7 +75,7 @@ export default function SetupPageTabs({ wizard, currentData, hasData }: Props) {
             onClick={() => router.push(
               hasSheetSource ? "/setup?tab=upload&resync=1" : "/setup?tab=upload"
             )}
-            className="flex min-h-11 min-w-11 flex-col items-center justify-center rounded-lg px-2 py-1 text-gray-500 focus-visible:ring-2 focus-visible:ring-gray-900"
+            className="flex min-h-11 min-w-11 flex-col items-center justify-center rounded-lg px-2 py-1 text-gray-500"
             aria-label="데이터 다시 불러오기"
           >
             <ArrowPathIcon className="h-4 w-4" aria-hidden />
@@ -103,7 +103,7 @@ export default function SetupPageTabs({ wizard, currentData, hasData }: Props) {
             aria-disabled={!hasData}
             onClick={() => { if (hasData) setTab("data"); }}
             className={cn(
-              "min-h-11 rounded-t-lg px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action",
+              "min-h-11 rounded-t-lg px-4 text-sm font-medium",
               tab === "data"
                 ? "border-b-2 border-gray-900 text-gray-900"
                 : "text-muted-foreground hover:text-gray-600",
@@ -120,7 +120,7 @@ export default function SetupPageTabs({ wizard, currentData, hasData }: Props) {
             aria-controls="panel-upload"
             onClick={() => setTab("upload")}
             className={cn(
-              "min-h-11 rounded-t-lg px-4 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action",
+              "min-h-11 rounded-t-lg px-4 text-sm font-medium",
               tab === "upload"
                 ? "border-b-2 border-gray-900 text-gray-900"
                 : "text-muted-foreground hover:text-gray-600"

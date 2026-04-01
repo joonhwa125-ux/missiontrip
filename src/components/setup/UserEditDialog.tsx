@@ -54,7 +54,7 @@ const PARTY_OPTIONS: { value: GroupParty | ""; label: string }[] = [
 ];
 
 const INPUT_CLASS =
-  "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action";
+  "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm";
 
 export default function UserEditDialog({ user, groups, onSave, onClose }: Props) {
   const [form, setForm] = useState({
@@ -182,13 +182,13 @@ export default function UserEditDialog({ user, groups, onSave, onClose }: Props)
             <button
               type="button"
               onClick={onClose}
-              className="min-h-11 rounded-xl bg-gray-100 px-4 text-sm font-medium focus-visible:ring-2 focus-visible:ring-main-action"
+              className="min-h-11 rounded-xl bg-gray-100 px-4 text-sm font-medium"
             >
               취소
             </button>
             <button
               type="submit"
-              className="min-h-11 rounded-xl bg-main-action px-4 text-sm font-bold focus-visible:ring-2 focus-visible:ring-main-action"
+              className="min-h-11 rounded-xl bg-main-action px-4 text-sm font-bold"
             >
               저장
             </button>
