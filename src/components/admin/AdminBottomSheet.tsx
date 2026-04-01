@@ -31,7 +31,6 @@ interface Props {
   checkIns: AdminCheckIn[];
   reports: AdminReport[];
   isReadOnly: boolean;
-  loading?: boolean;
   onClose: () => void;
   onCheckInsChange: React.Dispatch<React.SetStateAction<AdminCheckIn[]>>;
   showToast?: (msg: string) => void;
@@ -44,7 +43,6 @@ export default function AdminBottomSheet({
   checkIns,
   reports,
   isReadOnly,
-  loading,
   onClose,
   onCheckInsChange,
   showToast,
@@ -253,12 +251,7 @@ export default function AdminBottomSheet({
               </DialogHeader>
             </div>
 
-            <div className="relative overflow-y-auto px-6 pb-6">
-            {loading && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60">
-                <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-main-action" role="status" aria-label="불러오는 중" />
-              </div>
-            )}
+            <div className="overflow-y-auto px-6 pb-6">
             {shuttleEntries ? (
               /* 셔틀 일정: 버스별 카드 + 드릴다운 */
               <div className="grid grid-cols-2 gap-2 [&>*:last-child:nth-child(odd)]:col-span-2">

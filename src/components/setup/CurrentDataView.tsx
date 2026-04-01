@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo, useCallback, useRef, useEffect } from "react";
+import { useState, useTransition, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -15,6 +15,7 @@ import { updateSchedule, deleteSchedule, updateUser, deleteUser } from "@/action
 import { formatTime, cn } from "@/lib/utils";
 import { SCOPE_LABEL, ROLE_LABEL, getPartyLabel, CHANNEL_GLOBAL, EVENT_MEMBER_UPDATED } from "@/lib/constants";
 import { useBroadcast } from "@/hooks/useRealtime";
+import { useToast } from "@/hooks/useToast";
 import ScheduleEditDialog from "./ScheduleEditDialog";
 import UserEditDialog from "./UserEditDialog";
 import type { Schedule, UserRole, GroupParty } from "@/lib/types";
@@ -50,9 +51,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
   const [deleteScheduleTarget, setDeleteScheduleTarget] = useState<Schedule | null>(null);
   const [deleteUserTarget, setDeleteUserTarget] = useState<SetupUser | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const successTimerRef = useRef<ReturnType<typeof setTimeout>>();
-  useEffect(() => () => clearTimeout(successTimerRef.current), []);
+  const { toast, showToast } = useToast();
 
   const groupMap = useMemo(() => new Map(groups.map((g) => [g.id, g.name])), [groups]);
   const groupBusMap = useMemo(() => new Map(groups.map((g) => [g.id, g.bus_name])), [groups]);
@@ -63,13 +62,13 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
         const result = await action();
         if (!result.ok) { setErrorMsg(result.error ?? "오류가 발생했어요"); return; }
         setErrorMsg(null);
-        if (successText) { setSuccessMsg(successText); clearTimeout(successTimerRef.current); successTimerRef.current = setTimeout(() => setSuccessMsg(null), 3000); }
+        if (successText) { showToast(successText); }
         onSuccess();
         router.refresh();
         await afterSuccess?.();
       });
     },
-    [router]
+    [router, showToast]
   );
 
   // 참가자 편집/삭제 후 admin/leader 뷰에 멤버 변경 알림
@@ -94,10 +93,16 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
           </button>
         </div>
       )}
-      {/* 성공 배너 */}
-      {successMsg && (
-        <div role="status" aria-live="polite" className="mb-3 rounded-xl bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-          {successMsg}
+      {/* 토스트 — 메인 뷰와 동일 스타일 */}
+      {toast && (
+        <div
+          className="fixed bottom-[max(5rem,calc(3.5rem+env(safe-area-inset-bottom)))] left-1/2 z-50 w-full max-w-lg -translate-x-1/2 px-4"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="rounded-xl bg-gray-900 px-4 py-3 text-center text-sm text-white shadow-lg">
+            {toast}
+          </div>
         </div>
       )}
 

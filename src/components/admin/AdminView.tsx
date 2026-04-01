@@ -92,9 +92,6 @@ export default function AdminView({
   const checkInsMapRef = useRef(checkInsMap);
   checkInsMapRef.current = checkInsMap;
 
-  // 레이스 컨디션 방어용 ref (현재 열린 바텀시트의 schedule id 추적)
-  const bottomSheetIdRef = useRef<string | null>(null);
-
   // 서버 prop → state 동기화 (router.refresh() / 페이지 재진입 시)
   // useState는 초기값만 사용하므로, prop이 바뀌면 수동으로 state를 갱신해야 한다.
   const prevCheckInsRef = useRef(initialCheckInsMap);
@@ -187,6 +184,32 @@ export default function AdminView({
       .catch(() => {}); // 실패 시 기존 캐시 유지 — 별도 알림 불필요
   }, [activeSchedule]);
 
+  // 멤버 변경(조 이동 등) 시 캐시된 모든 일정의 checkIns를 DB에서 refetch
+  // — 조 변경으로 삭제된 체크인이 stale 캐시에 남아 바텀시트에서 flash되는 것을 방지
+  const refetchAllCachedSchedules = useCallback(() => {
+    const cachedIds = Object.keys(checkInsMapRef.current);
+    if (cachedIds.length === 0) return;
+    Promise.all(cachedIds.map((sid) => fetchCheckInsClient(sid).then((r) => ({ sid, ...r }))))
+      .then((results) => {
+        setCheckInsMap((prev) => {
+          const next = { ...prev };
+          for (const { sid, checkIns } of results) next[sid] = checkIns;
+          return next;
+        });
+        setReportsMap((prev) => {
+          const next = { ...prev };
+          for (const { sid, reports } of results) next[sid] = reports;
+          return next;
+        });
+        setShuttleReportsMap((prev) => {
+          const next = { ...prev };
+          for (const { sid, shuttleReports } of results) next[sid] = shuttleReports;
+          return next;
+        });
+      })
+      .catch(() => {});
+  }, []);
+
   useVisibilityRefresh(fetchOnVisible);
 
   // J-2: 일차 탭 메모이제이션
@@ -196,36 +219,11 @@ export default function AdminView({
   );
   const [selectedDay, setSelectedDay] = useState(() => getDefaultDay(schedules));
 
-  // 바텀시트 대상 일정 — 열 때마다 DB에서 최신 데이터 fetch (로딩 스피너 → 표시)
+  // 바텀시트 대상 일정 — server prop + Realtime 단일 소스 (조장 뷰와 동일 패턴)
   const [bottomSheetSchedule, setBottomSheetSchedule] = useState<Schedule | null>(null);
-  const [bottomSheetLoading, setBottomSheetLoading] = useState(false);
 
   const openBottomSheet = useCallback((schedule: Schedule | null) => {
-    if (!schedule) {
-      setBottomSheetSchedule(null);
-      bottomSheetIdRef.current = null;
-      return;
-    }
-    const targetId = schedule.id;
-    bottomSheetIdRef.current = targetId;
     setBottomSheetSchedule(schedule);
-    setBottomSheetLoading(true);
-
-    fetchCheckInsClient(targetId)
-      .then(({ checkIns: freshCi, reports: freshRp, shuttleReports: freshSr }) => {
-        setCheckInsMap((prev) => ({ ...prev, [targetId]: freshCi }));
-        setReportsMap((prev) => {
-          const existing = prev[targetId] ?? [];
-          const freshIds = new Set(freshRp.map((r) => r.group_id));
-          const realtimeOnly = existing.filter((r) => !freshIds.has(r.group_id));
-          return { ...prev, [targetId]: [...freshRp, ...realtimeOnly] };
-        });
-        setShuttleReportsMap((prev) => ({ ...prev, [targetId]: freshSr }));
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (bottomSheetIdRef.current === targetId) setBottomSheetLoading(false);
-      });
   }, []);
 
   // 다이얼로그
@@ -316,7 +314,7 @@ export default function AdminView({
   useRealtime(null, true, {
     onScheduleActivated: () => router.refresh(),
     onScheduleDeactivated: () => router.refresh(),
-    onMemberUpdated: () => router.refresh(),
+    onMemberUpdated: () => { router.refresh(); refetchAllCachedSchedules(); },
     onScheduleUpdated: ({ schedule_id, scheduled_time }) => {
       setSchedules((prev) =>
         prev.map((s) => (s.id === schedule_id ? { ...s, scheduled_time } : s))
@@ -549,8 +547,7 @@ export default function AdminView({
         checkIns={bottomSheetSchedule ? (checkInsMap[bottomSheetSchedule.id] ?? []) : []}
         reports={bottomSheetSchedule ? (reportsMap[bottomSheetSchedule.id] ?? []) : []}
         isReadOnly={isBottomSheetReadOnly}
-        loading={bottomSheetLoading}
-        onClose={() => { setBottomSheetSchedule(null); bottomSheetIdRef.current = null; }}
+        onClose={() => setBottomSheetSchedule(null)}
         onCheckInsChange={handleBottomSheetCheckInsChange}
         showToast={showToast}
       />

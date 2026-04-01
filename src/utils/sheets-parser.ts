@@ -230,7 +230,7 @@ function validateScheduleRow(
 }
 
 // 참가자 시트 파싱 (8컬럼: 이름, 전화번호, 역할, 소속조, 배정차량, 출발셔틀버스, 귀가셔틀버스, 선후발)
-// 이메일은 이름 기반 자동 생성 (조장/관리자: name@도메인, 조원: nologin)
+// 이메일은 이름 기반 자동 생성 (전원: name@도메인)
 // groups는 소속조 고유값에서 자동 추출, bus_name은 배정차량 열에서 매핑, party는 유저별
 export function parseUsersSheet(rows: string[][]): {
   users: ParsedUser[];
