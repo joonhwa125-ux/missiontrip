@@ -4,7 +4,7 @@ import { useState, useTransition, useRef } from "react";
 import { previewFromGoogleSheet, previewFromCsv } from "@/actions/setup";
 import { extractSheetId, extractGid } from "@/utils/sheets-parser";
 import { cn } from "@/lib/utils";
-import { SETUP_SOURCE_KEY } from "@/lib/constants";
+import { SETUP_SOURCE_KEY, SETUP_CSV_KEY } from "@/lib/constants";
 import { UploadIcon } from "@/components/ui/icons";
 import type { SetupPreviewData } from "@/lib/types";
 
@@ -14,56 +14,51 @@ interface Props {
 
 type SourceTab = "sheets" | "csv";
 
+// localStorage에서 저장된 소스 정보를 한 번만 파싱
+function loadSavedSource() {
+  if (typeof window === "undefined") return null;
+  try {
+    const saved = localStorage.getItem(SETUP_SOURCE_KEY);
+    return saved ? JSON.parse(saved) : null;
+  } catch { return null; }
+}
+
+function loadSavedCsv() {
+  if (typeof window === "undefined") return null;
+  try {
+    const saved = localStorage.getItem(SETUP_CSV_KEY);
+    return saved ? JSON.parse(saved) : null;
+  } catch { return null; }
+}
+
 export default function DataSourceStep({ onPreviewReady }: Props) {
-  const [tab, setTab] = useState<SourceTab>(() => {
-    if (typeof window === "undefined") return "sheets";
-    try {
-      const saved = localStorage.getItem(SETUP_SOURCE_KEY);
-      if (!saved) return "sheets";
-      const s = JSON.parse(saved);
-      return s.type === "csv" ? "csv" : "sheets";
-    } catch { return "sheets"; }
-  });
-  const [usersUrl, setUsersUrl] = useState(() => {
-    if (typeof window === "undefined") return "";
-    try {
-      const saved = localStorage.getItem(SETUP_SOURCE_KEY);
-      if (!saved) return "";
-      const s = JSON.parse(saved);
-      return s.type === "sheets" ? (s.usersUrl as string) ?? "" : "";
-    } catch { return ""; }
-  });
-  const [schedulesUrl, setSchedulesUrl] = useState(() => {
-    if (typeof window === "undefined") return "";
-    try {
-      const saved = localStorage.getItem(SETUP_SOURCE_KEY);
-      if (!saved) return "";
-      const s = JSON.parse(saved);
-      return s.type === "sheets" ? (s.schedulesUrl as string) ?? "" : "";
-    } catch { return ""; }
-  });
+  const saved = loadSavedSource();
+  const savedCsv = loadSavedCsv();
+
+  const [tab, setTab] = useState<SourceTab>(saved?.type === "csv" ? "csv" : "sheets");
+  const [usersUrl, setUsersUrl] = useState<string>(
+    saved?.type === "sheets" ? (saved.usersUrl ?? "") : ""
+  );
+  const [schedulesUrl, setSchedulesUrl] = useState<string>(
+    saved?.type === "sheets" ? (saved.schedulesUrl ?? "") : ""
+  );
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const userFileRef = useRef<HTMLInputElement>(null);
   const scheduleFileRef = useRef<HTMLInputElement>(null);
-  const [userFileName, setUserFileName] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    try {
-      const saved = localStorage.getItem(SETUP_SOURCE_KEY);
-      if (!saved) return null;
-      const s = JSON.parse(saved);
-      return s.type === "csv" ? (s.userFileName as string) ?? null : null;
-    } catch { return null; }
-  });
-  const [scheduleFileName, setScheduleFileName] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    try {
-      const saved = localStorage.getItem(SETUP_SOURCE_KEY);
-      if (!saved) return null;
-      const s = JSON.parse(saved);
-      return s.type === "csv" ? (s.scheduleFileName as string) ?? null : null;
-    } catch { return null; }
-  });
+  const [userFileName, setUserFileName] = useState<string | null>(
+    saved?.type === "csv" ? (savedCsv?.userFileName ?? null) : null
+  );
+  const [scheduleFileName, setScheduleFileName] = useState<string | null>(
+    saved?.type === "csv" ? (savedCsv?.scheduleFileName ?? null) : null
+  );
+  // 복원된 CSV 내용 (재선택 없이 업로드 가능)
+  const [restoredUsersCsv, setRestoredUsersCsv] = useState<string | null>(
+    saved?.type === "csv" ? (savedCsv?.usersCsv ?? null) : null
+  );
+  const [restoredSchedulesCsv, setRestoredSchedulesCsv] = useState<string | null>(
+    saved?.type === "csv" ? (savedCsv?.schedulesCsv ?? null) : null
+  );
 
   const handleGoogleSheet = () => {
     const sheetId1 = extractSheetId(usersUrl);
@@ -106,22 +101,45 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
   const handleCsvUpload = () => {
     const userFile = userFileRef.current?.files?.[0];
     const scheduleFile = scheduleFileRef.current?.files?.[0];
-    if (!userFile || !scheduleFile) {
+
+    // 새 파일이 없으면 복원된 CSV 내용으로 업로드
+    const hasNewFiles = userFile && scheduleFile;
+    const hasRestored = restoredUsersCsv && restoredSchedulesCsv;
+
+    if (!hasNewFiles && !hasRestored) {
       setError("참가자 CSV와 일정 CSV 파일을 모두 선택해주세요");
       return;
     }
+
     setError(null);
     startTransition(async () => {
-      const [usersCsv, schedulesCsv] = await Promise.all([
-        userFile.text(),
-        scheduleFile.text(),
-      ]);
+      let usersCsv: string;
+      let schedulesCsv: string;
+      let uName: string;
+      let sName: string;
+
+      if (hasNewFiles) {
+        [usersCsv, schedulesCsv] = await Promise.all([
+          userFile.text(),
+          scheduleFile.text(),
+        ]);
+        uName = userFile.name;
+        sName = scheduleFile.name;
+      } else {
+        usersCsv = restoredUsersCsv!;
+        schedulesCsv = restoredSchedulesCsv!;
+        uName = userFileName ?? "참가자.csv";
+        sName = scheduleFileName ?? "일정.csv";
+      }
+
       const res = await previewFromCsv(usersCsv, schedulesCsv);
       if (res.ok && res.data) {
         localStorage.setItem(SETUP_SOURCE_KEY, JSON.stringify({
-          type: "csv",
-          userFileName: userFile.name,
-          scheduleFileName: scheduleFile.name,
+          type: "csv", userFileName: uName, scheduleFileName: sName,
+        }));
+        localStorage.setItem(SETUP_CSV_KEY, JSON.stringify({
+          userFileName: uName, scheduleFileName: sName,
+          usersCsv, schedulesCsv,
         }));
         onPreviewReady(res.data);
       } else {
@@ -217,7 +235,9 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
               aria-label="참가자 CSV 파일 선택"
               className="sr-only"
               onChange={(e) => {
-                setUserFileName(e.target.files?.[0]?.name ?? null);
+                const file = e.target.files?.[0];
+                setUserFileName(file?.name ?? null);
+                setRestoredUsersCsv(null);
                 setError(null);
               }}
             />
@@ -246,7 +266,9 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
               aria-label="일정 CSV 파일 선택"
               className="sr-only"
               onChange={(e) => {
-                setScheduleFileName(e.target.files?.[0]?.name ?? null);
+                const file = e.target.files?.[0];
+                setScheduleFileName(file?.name ?? null);
+                setRestoredSchedulesCsv(null);
                 setError(null);
               }}
             />

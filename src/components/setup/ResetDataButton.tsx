@@ -23,12 +23,12 @@ export default function ResetDataButton({ onSuccess }: Props) {
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<string | null>(null);
 
-  const openStep1 = () => { setStep(1); setInputValue(""); };
+  const openStep1 = () => { setStep(1); setInputValue(""); setResult(null); };
   const closeDialog = () => { setStep(null); setInputValue(""); };
 
   const handleReset = () => {
-    closeDialog();
     startTransition(async () => {
+      closeDialog();
       const res = await resetAllData();
       if (res.ok) {
         setResult("전체 데이터가 초기화되었어요");

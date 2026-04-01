@@ -254,18 +254,22 @@ export default function AdminView({
     [adminMembers]
   );
 
-  // 내 조 미확인 카운트 — scope 필터 적용 후, 체크인 기록이 없는 인원
-  // (후발 일정 활성 시 선발 조원은 카운트 제외)
+  // 내 조 미확인 카운트 — scope + 셔틀 버스 필터 적용 후, 체크인 기록이 없는 인원
+  // (후발 일정 활성 시 선발 조원 제외, 셔틀 일정 시 해당 버스 미배정 조원 제외)
   const adminUncheckedCount = useMemo(() => {
     if (!activeSchedule) return 0;
-    const scopeMembers = filterMembersByScope(adminMembers, activeSchedule.scope);
-    if (scopeMembers.length === 0) return 0;
-    const scopeMemberIds = new Set(scopeMembers.map((m) => m.id));
+    let filtered = filterMembersByScope(adminMembers, activeSchedule.scope);
+    if (activeSchedule.shuttle_type) {
+      const busField = activeSchedule.shuttle_type === "departure" ? "shuttle_bus" : "return_shuttle_bus";
+      filtered = filtered.filter((m) => !!m[busField]);
+    }
+    if (filtered.length === 0) return 0;
+    const filteredIds = new Set(filtered.map((m) => m.id));
     const ciList = checkInsMap[activeSchedule.id] ?? [];
     const confirmedIds = new Set(
-      ciList.filter((ci) => scopeMemberIds.has(ci.user_id)).map((ci) => ci.user_id)
+      ciList.filter((ci) => filteredIds.has(ci.user_id)).map((ci) => ci.user_id)
     );
-    return scopeMembers.filter((m) => !confirmedIds.has(m.id)).length;
+    return filtered.filter((m) => !confirmedIds.has(m.id)).length;
   }, [activeSchedule, checkInsMap, adminMembers]);
 
   // Sheet 열 때 현재 체크인 데이터로 초기화
@@ -404,9 +408,13 @@ export default function AdminView({
     : false;
 
   const adminCheckinMembers = useMemo(() => {
-    const filtered = filterMembersByScope(adminMembers, activeSchedule?.scope ?? "all");
+    let filtered = filterMembersByScope(adminMembers, activeSchedule?.scope ?? "all");
+    if (activeSchedule?.shuttle_type) {
+      const busField = activeSchedule.shuttle_type === "departure" ? "shuttle_bus" : "return_shuttle_bus";
+      filtered = filtered.filter((m) => !!m[busField]);
+    }
     return filtered.map((m) => ({ id: m.id, name: m.name, party: m.party }));
-  }, [activeSchedule?.scope, adminMembers]);
+  }, [activeSchedule, adminMembers]);
 
   // 내 조 Sheet 보고 상태 (reportsMap에서 파생)
   const sheetReported = useMemo(() => {

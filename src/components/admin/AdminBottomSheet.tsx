@@ -13,6 +13,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import AdminGroupDrillDown from "./AdminGroupDrillDown";
+import AdminBusDrillDown from "./AdminBusDrillDown";
 import { PhoneIcon } from "@/components/ui/icons";
 import type {
   Group,
@@ -49,6 +50,7 @@ export default function AdminBottomSheet({
   showToast,
 }: Props) {
   const [drillGroup, setDrillGroup] = useState<Group | null>(null);
+  const [drillBus, setDrillBus] = useState<string | null>(null);
   const [shuttleReports, setShuttleReports] = useState<ShuttleReport[]>([]);
   const [closing, setClosing] = useState(false);
   const closingRef = useRef(false);
@@ -57,6 +59,7 @@ export default function AdminBottomSheet({
   useEffect(() => {
     if (closingRef.current) return; // 닫힘 애니메이션 중 상태 변경 방지
     setDrillGroup(null);
+    setDrillBus(null);
     if (!schedule?.shuttle_type) {
       setShuttleReports([]);
       return;
@@ -153,6 +156,7 @@ export default function AdminBottomSheet({
     setTimeout(() => {
       if (contentRef.current) contentRef.current.style.height = "";
       setDrillGroup(null);
+      setDrillBus(null);
       setShuttleReports([]);
       closingRef.current = false;
       setClosing(false);
@@ -172,6 +176,8 @@ export default function AdminBottomSheet({
           // 스택 네비게이션: 드릴다운 → 그리드 → 닫기
           if (drillGroup) {
             setDrillGroup(null);
+          } else if (drillBus) {
+            setDrillBus(null);
           } else {
             deferClose();
           }
@@ -186,17 +192,23 @@ export default function AdminBottomSheet({
           if (drillGroup) {
             e.preventDefault();
             setDrillGroup(null);
+          } else if (drillBus) {
+            e.preventDefault();
+            setDrillBus(null);
           }
         }}
         onPointerDownOutside={(e) => {
           if (drillGroup) {
             e.preventDefault();
             setDrillGroup(null);
+          } else if (drillBus) {
+            e.preventDefault();
+            setDrillBus(null);
           }
         }}
       >
         {/* 닫기 버튼 — 드릴다운에서는 숨김 (← 뒤로가기만 노출) */}
-        {!drillGroup && (
+        {!drillGroup && !drillBus && (
           <button
             onClick={handleClose}
             className="absolute right-4 top-2 z-10 flex h-11 w-11 items-center justify-center rounded-full opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action focus-visible:ring-offset-2"
@@ -213,6 +225,20 @@ export default function AdminBottomSheet({
             checkIns={checkIns}
             activeSchedule={isReadOnly ? null : schedule}
             onBack={() => setDrillGroup(null)}
+            onCheckInsChange={onCheckInsChange}
+            showToast={showToast}
+          />
+        ) : drillBus ? (
+          <AdminBusDrillDown
+            busName={drillBus}
+            busMembers={(() => {
+              if (!schedule?.shuttle_type) return [];
+              const busField = schedule.shuttle_type === "departure" ? "shuttle_bus" : "return_shuttle_bus";
+              return scopeMembers.filter((m) => m[busField] === drillBus);
+            })()}
+            checkIns={checkIns}
+            activeSchedule={isReadOnly ? null : schedule}
+            onBack={() => setDrillBus(null)}
             onCheckInsChange={onCheckInsChange}
             showToast={showToast}
           />
@@ -234,7 +260,7 @@ export default function AdminBottomSheet({
               </div>
             )}
             {shuttleEntries ? (
-              /* 셔틀 일정: 버스별 카드 (드릴다운 없음) */
+              /* 셔틀 일정: 버스별 카드 + 드릴다운 */
               <div className="grid grid-cols-2 gap-2 [&>*:last-child:nth-child(odd)]:col-span-2">
                 {shuttleEntries.map(([busName, { busMembers, report }]) => {
                   const absentCount = busMembers.filter((m) => absentIds.has(m.id)).length;
@@ -246,7 +272,17 @@ export default function AdminBottomSheet({
                   return (
                     <div
                       key={busName}
-                      className={cn("rounded-2xl border bg-white p-4", badge === "reported" ? "border-emerald-300" : "border-stone-200")}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setDrillBus(busName)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setDrillBus(busName);
+                        }
+                      }}
+                      className={cn("cursor-pointer rounded-2xl border bg-white p-4 text-left transition-colors active:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-main-action min-h-11", badge === "reported" ? "border-emerald-300" : "border-stone-200")}
+                      aria-label={`${busName} 상세 보기`}
                     >
                       <div className="mb-1.5">
                         <span className={cn("inline-block -ml-1 rounded-full px-2 py-0.5 text-[0.8125rem] font-medium", b.bg, b.text)}>

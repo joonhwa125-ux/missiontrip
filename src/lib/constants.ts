@@ -13,6 +13,7 @@ export const ACTIVE_SCHEDULE_KEY = "mtrip_active_schedule";
 // 셋업 동기화 스토리지 키
 export const SETUP_LAST_SYNCED_KEY = "setup_last_synced";
 export const SETUP_SOURCE_KEY = "setup_source";
+export const SETUP_CSV_KEY = "setup_csv_content";
 
 // Realtime
 export const BROADCAST_SUBSCRIBE_TIMEOUT_MS = 5_000; // broadcast 채널 구독 최대 대기 시간
