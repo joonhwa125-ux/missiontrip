@@ -188,6 +188,30 @@ export async function importToDatabase(
 
   const supabase = createServiceClient();
 
+  // 재업로드 시 고아 행 방지 — UPSERT 전에 기존 데이터 삭제 (FK 역순)
+  // 관리자 본인 레코드 + 소속 조는 보존 (삭제 시 미들웨어 역할 검사 실패)
+  const cleanupTables = [
+    { table: "check_ins", filter: null },
+    { table: "group_reports", filter: null },
+    { table: "users", filter: admin.id },
+    { table: "schedules", filter: null },
+  ] as const;
+  for (const { table, filter } of cleanupTables) {
+    let q = supabase.from(table).delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    if (filter) q = q.neq("id", filter);
+    const { error } = await q;
+    if (error) return { ok: false, error: `기존 데이터 정리 실패 (${table}): ${error.message}` };
+  }
+  // groups는 users 삭제 후 처리 (FK)
+  {
+    const { error } = await supabase
+      .from("groups")
+      .delete()
+      .neq("id", admin.group_id)
+      .neq("id", "00000000-0000-0000-0000-000000000000");
+    if (error) return { ok: false, error: `기존 데이터 정리 실패 (groups): ${error.message}` };
+  }
+
   const { groupMap, error: ge } = await upsertGroups(supabase, data.groups);
   if (ge || !groupMap) return { ok: false, error: ge ?? "조 등록 실패" };
 
