@@ -8,6 +8,7 @@ import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
 import { useToast } from "@/hooks/useToast";
 import { createClient } from "@/lib/supabase/client";
 import { sortSchedulesByStatus, getDefaultDay, filterMembersByScope } from "@/lib/utils";
+import { isLeaderRole } from "@/lib/constants";
 import PageHeader from "@/components/common/PageHeader";
 import DayTabs from "@/components/common/DayTabs";
 import AdminScheduleList from "./AdminScheduleList";
@@ -25,7 +26,7 @@ import SettingsDropdown from "@/components/common/SettingsDropdown";
 import type { Group, Schedule, AdminMember, AdminCheckIn, AdminReport, AdminShuttleReport, CheckIn } from "@/lib/types";
 
 interface Props {
-  currentUser: { id: string; group_id: string; shuttle_bus: string | null; return_shuttle_bus: string | null };
+  currentUser: { id: string; role: string; group_id: string; shuttle_bus: string | null; return_shuttle_bus: string | null };
   groups: Group[];
   members: AdminMember[];
   activeSchedule: Schedule | null;
@@ -474,15 +475,15 @@ export default function AdminView({
           <div className="-mr-2 flex items-center -space-x-1">
             <button
               onClick={() => setAddOpen(true)}
-              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-700"
               aria-label="일정 추가"
             >
               <PlusIcon className="h-6 w-6" aria-hidden />
             </button>
-            {activeSchedule && adminCheckinMembers.length > 0 && (
+            {activeSchedule && isLeaderRole(currentUser.role) && adminCheckinMembers.length > 0 && (
               <button
                 onClick={openCheckinSheet}
-                className="relative flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-700 focus-visible:ring-2 focus-visible:ring-gray-900"
+                className="relative flex min-h-11 min-w-11 items-center justify-center rounded-lg text-gray-700"
                 aria-label={`${adminGroupName} 체크인 — 미확인 ${adminUncheckedCount}명`}
               >
                 <UsersIcon className="h-6 w-6" aria-hidden />
@@ -508,7 +509,7 @@ export default function AdminView({
             설정에서 데이터를 업로드하거나,{" "}
             <button
               onClick={() => setAddOpen(true)}
-              className="inline font-medium text-gray-900 underline underline-offset-2 focus-visible:ring-2 focus-visible:ring-main-action"
+              className="inline font-medium text-gray-900 underline underline-offset-2"
             >
               일정을 추가
             </button>
