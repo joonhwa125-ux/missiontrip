@@ -6,11 +6,80 @@ import { canCheckin, isAdminRole } from "@/lib/constants";
 import { revalidateMainPaths } from "./_shared";
 import type { ActionResult, OfflinePendingCheckin, CheckedBy, ShuttleType } from "@/lib/types";
 
-/** 조장의 자기 조원/버스 접근 권한 검증. 실패 시 ActionResult 반환, 통과 시 null */
+/**
+ * v2: actor가 특정 일정의 임시 조장인지 확인.
+ * member 역할이어도 temp_role='leader'면 해당 일정에 한해 체크인 가능.
+ */
+async function isTempLeaderFor(
+  supabase: ReturnType<typeof createServiceClient>,
+  userId: string,
+  scheduleId: string
+): Promise<boolean> {
+  const { data } = await supabase
+    .from("schedule_member_info")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("schedule_id", scheduleId)
+    .eq("temp_role", "leader")
+    .maybeSingle();
+  return !!data;
+}
+
+/**
+ * v2: 체크인 권한 사전 검증 — 역할 기반 OR 임시 조장 기반
+ * - 기존: canCheckin(role) 만으로 판단 (leader/admin/admin_leader)
+ * - v2: 위 조건 실패 시 schedule_member_info.temp_role='leader' 체크
+ */
+async function canActorCheckin(
+  supabase: ReturnType<typeof createServiceClient>,
+  actor: { id: string; role: string },
+  scheduleId: string
+): Promise<boolean> {
+  if (canCheckin(actor.role)) return true;
+  return await isTempLeaderFor(supabase, actor.id, scheduleId);
+}
+
+/**
+ * v2: 특정 일정에서 사용자의 실효 조 ID를 반환
+ * - temp_group_id가 설정되어 있으면 그것
+ * - 아니면 users.group_id 원본
+ */
+async function getEffectiveGroupId(
+  supabase: ReturnType<typeof createServiceClient>,
+  userId: string,
+  scheduleId: string
+): Promise<string | null> {
+  const { data: smi } = await supabase
+    .from("schedule_member_info")
+    .select("temp_group_id")
+    .eq("user_id", userId)
+    .eq("schedule_id", scheduleId)
+    .maybeSingle();
+
+  if (smi?.temp_group_id) return smi.temp_group_id;
+
+  const { data: user } = await supabase
+    .from("users")
+    .select("group_id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  return user?.group_id ?? null;
+}
+
+/**
+ * 조장의 자기 조원/버스 접근 권한 검증. 실패 시 ActionResult 반환, 통과 시 null
+ *
+ * v2 변경:
+ * - scheduleId 파라미터 추가 (일반 일정에서 effective group 계산에 사용)
+ * - 일반 일정 검증 시 actor/target의 effective group 비교
+ * - 셔틀 일정은 기존 로직 유지 (temp_group_id는 셔틀 일정 대상이 아님)
+ */
 async function validateGroupAccess(
   supabase: ReturnType<typeof createServiceClient>,
-  actor: { role: string; group_id: string; shuttle_bus?: string | null; return_shuttle_bus?: string | null },
+  actor: { id: string; role: string; group_id: string; shuttle_bus?: string | null; return_shuttle_bus?: string | null },
   targetUserId: string,
+  scheduleId: string,
   shuttleType: ShuttleType | null = null
 ): Promise<ActionResult | null> {
   if (isAdminRole(actor.role)) return null;
@@ -45,12 +114,14 @@ async function validateGroupAccess(
     return null;
   }
 
-  const { data } = await supabase
-    .from("users")
-    .select("group_id")
-    .eq("id", targetUserId)
-    .single();
-  if (!data || data.group_id !== actor.group_id) {
+  // v2: 일반 일정 — effective group 기준 비교
+  const actorGroupId = await getEffectiveGroupId(supabase, actor.id, scheduleId);
+  const targetGroupId = await getEffectiveGroupId(supabase, targetUserId, scheduleId);
+
+  if (!actorGroupId || !targetGroupId) {
+    return { ok: false, error: "사용자 정보를 찾을 수 없어요" };
+  }
+  if (actorGroupId !== targetGroupId) {
     return { ok: false, error: "자기 조원만 처리할 수 있어요" };
   }
   return null;
@@ -63,22 +134,36 @@ export async function createCheckin(
   shuttleType: ShuttleType | null = null
 ): Promise<ActionResult> {
   const actor = await getCurrentUser();
-
-  if (!actor || !canCheckin(actor.role)) {
-    return { ok: false, error: "권한이 없어요" };
-  }
+  if (!actor) return { ok: false, error: "권한이 없어요" };
 
   const supabase = createServiceClient();
-  const denied = await validateGroupAccess(supabase, actor, userId, shuttleType);
+
+  // v2: 역할 기반 OR 임시 조장 기반 권한 체크
+  const allowed = await canActorCheckin(supabase, actor, scheduleId);
+  if (!allowed) return { ok: false, error: "권한이 없어요" };
+
+  const denied = await validateGroupAccess(supabase, actor, userId, scheduleId, shuttleType);
   if (denied) return denied;
 
-  const checkedBy = isAdminRole(actor.role) ? "admin" : "leader";
+  // v2: checked_by — admin / temp_leader / leader 구분
+  const checkedBy: CheckedBy = isAdminRole(actor.role)
+    ? "admin"
+    : canCheckin(actor.role)
+    ? "leader"
+    : "temp_leader";
+
+  // v2: group_id_at_checkin — 체크인 시점의 조 스냅샷 (immutable 기록)
+  const targetGroupAtCheckin = shuttleType
+    ? null  // 셔틀 체크인은 조 개념이 다름 — null 저장
+    : await getEffectiveGroupId(supabase, userId, scheduleId);
+
   const { error } = await supabase.from("check_ins").upsert(
     {
       user_id: userId,
       schedule_id: scheduleId,
       checked_by: checkedBy,
       checked_by_user_id: actor.id,
+      group_id_at_checkin: targetGroupAtCheckin,
     },
     { onConflict: "user_id,schedule_id", ignoreDuplicates: true }
   );
@@ -98,13 +183,14 @@ export async function deleteCheckin(
   shuttleType: ShuttleType | null = null
 ): Promise<ActionResult> {
   const actor = await getCurrentUser();
-
-  if (!actor || !canCheckin(actor.role)) {
-    return { ok: false, error: "권한이 없어요" };
-  }
+  if (!actor) return { ok: false, error: "권한이 없어요" };
 
   const supabase = createServiceClient();
-  const denied = await validateGroupAccess(supabase, actor, userId, shuttleType);
+
+  const allowed = await canActorCheckin(supabase, actor, scheduleId);
+  if (!allowed) return { ok: false, error: "권한이 없어요" };
+
+  const denied = await validateGroupAccess(supabase, actor, userId, scheduleId, shuttleType);
   if (denied) return denied;
 
   const { error } = await supabase
@@ -140,15 +226,8 @@ export async function deleteCheckin(
         .eq("schedule_id", scheduleId);
     }
   } else {
-    // 일반 일정: group_reports 무효화
-    let targetGroupId: string | null;
-    if (isAdminRole(actor.role)) {
-      const { data, error: lookupError } = await supabase
-        .from("users").select("group_id").eq("id", userId).single();
-      targetGroupId = lookupError || !data ? null : data.group_id;
-    } else {
-      targetGroupId = actor.group_id;
-    }
+    // 일반 일정: group_reports 무효화 (v2: effective group 기준)
+    const targetGroupId = await getEffectiveGroupId(supabase, userId, scheduleId);
     if (targetGroupId) {
       await supabase
         .from("group_reports")
@@ -163,22 +242,46 @@ export async function deleteCheckin(
 }
 
 // 불참 처리 INSERT (is_absent=true)
+// v2: absence_reason, absence_location 파라미터 추가
+const ABSENCE_TEXT_MAX_LENGTH = 200;
 export async function markAbsent(
   userId: string,
   scheduleId: string,
-  shuttleType: ShuttleType | null = null
+  shuttleType: ShuttleType | null = null,
+  absenceReason: string | null = null,
+  absenceLocation: string | null = null
 ): Promise<ActionResult> {
   const actor = await getCurrentUser();
+  if (!actor) return { ok: false, error: "권한이 없어요" };
 
-  if (!actor || !canCheckin(actor.role)) {
-    return { ok: false, error: "권한이 없어요" };
-  }
+  // v2: 자유 텍스트 필드 길이 제한 (DB 낭비 방지 + CSV 포뮬러 인젝션 1차 방어)
+  const sanitizedReason =
+    absenceReason && absenceReason.trim()
+      ? absenceReason.trim().slice(0, ABSENCE_TEXT_MAX_LENGTH)
+      : null;
+  const sanitizedLocation =
+    absenceLocation && absenceLocation.trim()
+      ? absenceLocation.trim().slice(0, ABSENCE_TEXT_MAX_LENGTH)
+      : null;
 
   const supabase = createServiceClient();
-  const denied = await validateGroupAccess(supabase, actor, userId, shuttleType);
+
+  const allowed = await canActorCheckin(supabase, actor, scheduleId);
+  if (!allowed) return { ok: false, error: "권한이 없어요" };
+
+  const denied = await validateGroupAccess(supabase, actor, userId, scheduleId, shuttleType);
   if (denied) return denied;
 
-  const checkedBy = isAdminRole(actor.role) ? "admin" : "leader";
+  const checkedBy: CheckedBy = isAdminRole(actor.role)
+    ? "admin"
+    : canCheckin(actor.role)
+    ? "leader"
+    : "temp_leader";
+
+  const targetGroupAtCheckin = shuttleType
+    ? null
+    : await getEffectiveGroupId(supabase, userId, scheduleId);
+
   const { error } = await supabase.from("check_ins").upsert(
     {
       user_id: userId,
@@ -186,6 +289,9 @@ export async function markAbsent(
       checked_by: checkedBy,
       checked_by_user_id: actor.id,
       is_absent: true,
+      absence_reason: sanitizedReason,
+      absence_location: sanitizedLocation,
+      group_id_at_checkin: targetGroupAtCheckin,
     },
     { onConflict: "user_id,schedule_id" }
   );
@@ -199,14 +305,13 @@ export async function markAbsent(
 }
 
 // 오프라인 체크인 일괄 동기화
+// v2: temp_leader (member with temp_role='leader') 도 sync 허용
+//     - 본인이 queue한 각 item의 schedule_id 기준으로 권한 재검증
 export async function syncOfflineCheckins(
   checkins: OfflinePendingCheckin[]
 ): Promise<ActionResult<number>> {
   const actor = await getCurrentUser();
-
-  if (!actor || !canCheckin(actor.role)) {
-    return { ok: false, error: "권한이 없어요" };
-  }
+  if (!actor) return { ok: false, error: "권한이 없어요" };
 
   if (!Array.isArray(checkins) || checkins.length === 0) {
     return { ok: false, error: "동기화할 데이터가 없어요" };
@@ -214,7 +319,8 @@ export async function syncOfflineCheckins(
   if (checkins.length > 500) {
     return { ok: false, error: "한 번에 동기화할 수 있는 최대 건수를 초과했어요" };
   }
-  const VALID_CHECKED_BY: CheckedBy[] = ["leader", "admin"];
+  // v2: 'temp_leader'도 허용
+  const VALID_CHECKED_BY: CheckedBy[] = ["leader", "admin", "temp_leader"];
   for (const item of checkins) {
     if (!VALID_CHECKED_BY.includes(item.checked_by)) {
       return { ok: false, error: "유효하지 않은 체크인 데이터예요" };
@@ -222,6 +328,16 @@ export async function syncOfflineCheckins(
   }
 
   const supabase = createServiceClient();
+
+  // 권한 체크: 영구 권한자가 아니면 각 item의 schedule_id에 대해 temp_leader 권한 확인
+  if (!canCheckin(actor.role)) {
+    const uniqueScheduleIds = Array.from(new Set(checkins.map((c) => c.schedule_id)));
+    for (const sid of uniqueScheduleIds) {
+      const ok = await isTempLeaderFor(supabase, actor.id, sid);
+      if (!ok) return { ok: false, error: "권한이 없어요" };
+    }
+  }
+
   const { data, error } = await supabase.rpc("sync_offline_checkins", {
     checkins,
   });

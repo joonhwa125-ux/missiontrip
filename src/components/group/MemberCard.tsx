@@ -18,6 +18,12 @@ interface Props {
 export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsent }: Props) {
   const isAbsent = checkIn?.is_absent === true;
   const isChecked = checkIn && !isAbsent;
+  // v2: 불참 사유 표시용 — "기타: ..." 형식이면 prefix 제거하고 본문만 노출
+  const absenceReasonShort = isAbsent && checkIn?.absence_reason
+    ? checkIn.absence_reason.startsWith("기타:")
+      ? checkIn.absence_reason.slice(3).trim()
+      : checkIn.absence_reason
+    : null;
 
   return (
     <li
@@ -30,7 +36,7 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
           : "border-[#E0DDD8] bg-white"
       )}
     >
-      <div className={cn("min-w-0", (isChecked || isAbsent) && "flex items-center gap-2")}>
+      <div className={cn("min-w-0", (isChecked || isAbsent) && "flex items-center gap-2 flex-wrap")}>
         <p className={cn("min-w-0 text-base font-medium truncate", (isChecked || isAbsent) && "text-muted-foreground")}>{user.name}</p>
         {isChecked ? (
           <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-600">
@@ -39,10 +45,18 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
             <span className="sr-only">탑승 완료</span>
           </span>
         ) : isAbsent ? (
-          <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-600">
-            <MinusIcon className="h-3 w-3" aria-hidden />
-            {COPY.absent}
-          </span>
+          <>
+            <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-600">
+              <MinusIcon className="h-3 w-3" aria-hidden />
+              {COPY.absent}
+            </span>
+            {absenceReasonShort && (
+              <span className="inline-block max-w-[10rem] truncate rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
+                {absenceReasonShort}
+                {checkIn?.absence_location ? ` · ${checkIn.absence_location}` : ""}
+              </span>
+            )}
+          </>
         ) : (
           <p className="text-sm text-muted-foreground">
             {COPY.notChecked}

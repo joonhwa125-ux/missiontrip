@@ -22,13 +22,17 @@ interface Props {
   onBack: () => void;
 }
 
+type PreviewTab = "users" | "schedules" | "group_info" | "member_info";
+
 export default function PreviewStep({
   data,
   onImportDone,
   onImportError,
   onBack,
 }: Props) {
-  const [tab, setTab] = useState<"users" | "schedules">("users");
+  const hasGroupInfo = data.groupInfos.length > 0;
+  const hasMemberInfo = data.memberInfos.length > 0;
+  const [tab, setTab] = useState<PreviewTab>("users");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -101,25 +105,76 @@ export default function PreviewStep({
         </div>
       )}
 
+      {/* v2 배정 정보 요약 */}
+      {(hasGroupInfo || hasMemberInfo || data.users.some((u) => u.airline || u.trip_role)) && (
+        <div className="rounded-xl bg-white p-3">
+          <p className="mb-1 text-xs font-medium text-muted-foreground">v2 배정 정보</p>
+          <div className="flex flex-wrap gap-1.5 text-xs text-muted-foreground">
+            {data.users.some((u) => u.airline) && (
+              <span>항공사 {data.users.filter((u) => u.airline).length}명</span>
+            )}
+            {data.users.some((u) => u.trip_role) && (
+              <span>· 여행역할 {data.users.filter((u) => u.trip_role).length}명</span>
+            )}
+            {hasGroupInfo && <span>· 조별배정 {data.groupInfos.length}건</span>}
+            {hasMemberInfo && <span>· 인원별배정 {data.memberInfos.length}건</span>}
+          </div>
+        </div>
+      )}
+
       {/* 검증 오류 */}
       {hasErrors && <ValidationErrorList errors={data.errors} />}
 
-      {/* 탭 */}
+      {/* 탭 — 배정 정보가 있으면 탭 추가 */}
       <div className="flex gap-1 rounded-xl bg-gray-100 p-1" role="tablist">
-        {(["users", "schedules"] as const).map((t) => (
+        <button
+          role="tab"
+          aria-selected={tab === "users"}
+          onClick={() => setTab("users")}
+          className={cn(
+            "min-h-11 flex-1 rounded-lg py-2 text-sm font-medium transition-colors",
+            tab === "users" ? "bg-white shadow-sm" : "text-muted-foreground"
+          )}
+        >
+          참가자
+        </button>
+        <button
+          role="tab"
+          aria-selected={tab === "schedules"}
+          onClick={() => setTab("schedules")}
+          className={cn(
+            "min-h-11 flex-1 rounded-lg py-2 text-sm font-medium transition-colors",
+            tab === "schedules" ? "bg-white shadow-sm" : "text-muted-foreground"
+          )}
+        >
+          일정
+        </button>
+        {hasGroupInfo && (
           <button
-            key={t}
             role="tab"
-            aria-selected={tab === t}
-            onClick={() => setTab(t)}
+            aria-selected={tab === "group_info"}
+            onClick={() => setTab("group_info")}
             className={cn(
               "min-h-11 flex-1 rounded-lg py-2 text-sm font-medium transition-colors",
-              tab === t ? "bg-white shadow-sm" : "text-muted-foreground"
+              tab === "group_info" ? "bg-white shadow-sm" : "text-muted-foreground"
             )}
           >
-            {t === "users" ? "참가자" : "일정"}
+            조별배정
           </button>
-        ))}
+        )}
+        {hasMemberInfo && (
+          <button
+            role="tab"
+            aria-selected={tab === "member_info"}
+            onClick={() => setTab("member_info")}
+            className={cn(
+              "min-h-11 flex-1 rounded-lg py-2 text-sm font-medium transition-colors",
+              tab === "member_info" ? "bg-white shadow-sm" : "text-muted-foreground"
+            )}
+          >
+            인원별배정
+          </button>
+        )}
       </div>
 
       {/* 테이블 */}
@@ -127,7 +182,7 @@ export default function PreviewStep({
         role="tabpanel"
         className="max-h-96 overflow-auto rounded-xl bg-white"
       >
-        {tab === "users" ? (
+        {tab === "users" && (
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-gray-50">
               <tr className="text-center text-xs text-muted-foreground">
@@ -136,11 +191,18 @@ export default function PreviewStep({
                 <th className="min-w-[110px] px-3 py-2">전화번호</th>
                 <th className="min-w-[80px] px-3 py-2">역할</th>
                 <th className="min-w-[96px] px-3 py-2">조편성</th>
+                <th className="min-w-[96px] px-3 py-2">배정차량</th>
+                <th className="min-w-[120px] px-3 py-2">출발셔틀</th>
+                <th className="min-w-[120px] px-3 py-2">귀가셔틀</th>
                 <th className="min-w-[64px] px-3 py-2">구분</th>
+                <th className="min-w-[96px] px-3 py-2">항공사</th>
+                <th className="min-w-[120px] px-3 py-2">여행역할</th>
               </tr>
             </thead>
             <tbody>
-              {data.users.map((u, i) => (
+              {data.users.map((u, i) => {
+                const busName = data.groups.find((g) => g.name === u.group_name)?.bus_name ?? "-";
+                return (
                 <tr
                   key={i}
                   className={cn(
@@ -153,12 +215,19 @@ export default function PreviewStep({
                   <td className="px-3 py-2">{u.phone ?? "-"}</td>
                   <td className="px-3 py-2 text-center">{ROLE_LABEL[u.role]}</td>
                   <td className="px-3 py-2 text-center">{u.group_name}</td>
+                  <td className="px-3 py-2 text-center">{busName}</td>
+                  <td className="px-3 py-2 text-center">{u.shuttle_bus ?? "-"}</td>
+                  <td className="px-3 py-2 text-center">{u.return_shuttle_bus ?? "-"}</td>
                   <td className="px-3 py-2 text-center">{u.party ? (SCOPE_LABEL[u.party] ?? "-") : "-"}</td>
+                  <td className="px-3 py-2 text-center">{u.airline ?? "-"}</td>
+                  <td className="px-3 py-2 text-center">{u.trip_role ?? "-"}</td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
-        ) : (
+        )}
+        {tab === "schedules" && (
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-gray-50">
               <tr className="text-center text-xs text-muted-foreground">
@@ -168,6 +237,7 @@ export default function PreviewStep({
                 <th className="min-w-[160px] px-3 py-2">집결지</th>
                 <th className="min-w-[56px] px-3 py-2">예정 시간</th>
                 <th className="min-w-[48px] px-3 py-2">구분</th>
+                <th className="min-w-[72px] px-3 py-2">셔틀</th>
               </tr>
             </thead>
             <tbody>
@@ -181,6 +251,61 @@ export default function PreviewStep({
                   <td className="px-3 py-2 text-center">
                     {SCOPE_LABEL[s.scope]}
                   </td>
+                  <td className="px-3 py-2 text-center">
+                    {s.shuttle_type === "departure" ? "출발" : s.shuttle_type === "return" ? "귀가" : "-"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {tab === "group_info" && (
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 bg-gray-50">
+              <tr className="text-center text-xs text-muted-foreground">
+                <th className="min-w-[48px] px-3 py-2">일정</th>
+                <th className="min-w-[36px] px-3 py-2">순서</th>
+                <th className="min-w-[72px] px-3 py-2">조</th>
+                <th className="min-w-[80px] px-3 py-2">층수</th>
+                <th className="min-w-[96px] px-3 py-2">순환</th>
+                <th className="min-w-[96px] px-3 py-2">장소상세</th>
+                <th className="min-w-[160px] px-3 py-2">메모</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.groupInfos.map((gi, i) => (
+                <tr key={i} className="border-t">
+                  <td className="px-3 py-2 text-center">{gi.day_number}</td>
+                  <td className="px-3 py-2 text-center">{gi.sort_order}</td>
+                  <td className="px-3 py-2 text-center font-medium">{gi.group_name}</td>
+                  <td className="px-3 py-2 text-center">{gi.location_detail ?? "-"}</td>
+                  <td className="px-3 py-2 text-center">{gi.rotation ?? "-"}</td>
+                  <td className="px-3 py-2 text-center">{gi.sub_location ?? "-"}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{gi.note ?? "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {tab === "member_info" && (
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 bg-gray-50">
+              <tr className="text-center text-xs text-muted-foreground">
+                <th className="min-w-[48px] px-3 py-2">일정</th>
+                <th className="min-w-[36px] px-3 py-2">순서</th>
+                <th className="min-w-[96px] px-3 py-2">이름</th>
+                <th className="min-w-[72px] px-3 py-2">항목</th>
+                <th className="min-w-[160px] px-3 py-2">값</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.memberInfos.map((mi, i) => (
+                <tr key={i} className="border-t">
+                  <td className="px-3 py-2 text-center">{mi.day_number}</td>
+                  <td className="px-3 py-2 text-center">{mi.sort_order}</td>
+                  <td className="px-3 py-2 font-medium">{mi.user_name}</td>
+                  <td className="px-3 py-2 text-center">{mi.field}</td>
+                  <td className="px-3 py-2">{mi.value}</td>
                 </tr>
               ))}
             </tbody>

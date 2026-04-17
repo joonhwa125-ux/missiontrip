@@ -64,7 +64,7 @@ export default function SettingsDropdown({ showDataManagement = false }: Props) 
               href="/setup"
               role="menuitem"
               onClick={() => setOpen(false)}
-              className="flex min-h-11 w-full items-center gap-2 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 focus-visible:bg-gray-50 focus-visible:outline-none"
+              className="flex min-h-11 w-full items-center gap-2 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 focus-visible:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900"
             >
               <DatabaseIcon className="h-4 w-4" aria-hidden />
               데이터 관리
@@ -73,7 +73,7 @@ export default function SettingsDropdown({ showDataManagement = false }: Props) 
           <button
             role="menuitem"
             onClick={handleLogout}
-            className="flex min-h-11 w-full items-center gap-2 px-4 text-sm font-medium text-red-600 hover:bg-red-50 focus-visible:bg-red-50 focus-visible:outline-none"
+            className="flex min-h-11 w-full items-center gap-2 px-4 text-sm font-medium text-red-600 hover:bg-red-50 focus-visible:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-900"
           >
             <LogOutIcon className="h-4 w-4" aria-hidden />
             로그아웃

@@ -281,6 +281,9 @@ export default function AdminView({
         checked_by_user_id: currentUser.id,
         offline_pending: false,
         is_absent: ci.is_absent,
+        absence_reason: ci.absence_reason ?? null,
+        absence_location: ci.absence_location ?? null,
+        group_id_at_checkin: null,
       }));
     setSheetCheckIns(myCheckIns);
     setCheckinSheetOpen(true);
@@ -408,7 +411,13 @@ export default function AdminView({
       const busField: "shuttle_bus" | "return_shuttle_bus" = activeSchedule.shuttle_type === "departure" ? "shuttle_bus" : "return_shuttle_bus";
       filtered = filtered.filter((m) => !!m[busField]);
     }
-    return filtered.map((m) => ({ id: m.id, name: m.name, party: m.party }));
+    return filtered.map((m) => ({
+      id: m.id,
+      name: m.name,
+      party: m.party,
+      airline: m.airline ?? null,
+      trip_role: m.trip_role ?? null,
+    }));
   }, [activeSchedule, adminMembers]);
 
   // 내 조 Sheet 보고 상태 (reportsMap에서 파생)

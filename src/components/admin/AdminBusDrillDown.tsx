@@ -226,10 +226,18 @@ function MemberRow({ member, checkin, activeSchedule, onCheckin, onAbsent, onCan
             <span className="sr-only">확인 완료</span>
           </span>
         ) : isAbsent ? (
-          <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-600">
-            <MinusIcon className="h-3 w-3" aria-hidden />
-            {COPY.absent}
-          </span>
+          <>
+            <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-600">
+              <MinusIcon className="h-3 w-3" aria-hidden />
+              {COPY.absent}
+            </span>
+            {checkin?.absence_reason && (
+              <span className="inline-block flex-shrink min-w-0 max-w-[8rem] truncate rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600">
+                {checkin.absence_reason.startsWith("기타:") ? checkin.absence_reason.slice(3).trim() : checkin.absence_reason}
+                {checkin.absence_location ? ` · ${checkin.absence_location}` : ""}
+              </span>
+            )}
+          </>
         ) : (
           <span className="flex-shrink-0 text-xs text-muted-foreground">{COPY.notChecked}</span>
         )}

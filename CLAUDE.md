@@ -184,8 +184,8 @@ if (!user.email?.endsWith(ALLOWED_DOMAIN)) {
 
 | 시트명 | 컬럼 | 예시 |
 |---|---|---|
-| 참가자 | 이름, 전화번호, 역할(조원/조장/관리자), 소속조, 배정차량 | 홍길동, 010-1234-5678, 조장, A조, 1호차 |
-| 일정 | 일차, 순서, 일정명, 장소, 예정시각 | 1, 1, 김포공항 탑승 게이트 집결, 국내선 3번 게이트, 08:30 |
+| 참가자 | 이름, 전화번호, 역할(조원/조장/관리자), 소속조, 배정차량, 출발셔틀버스, 귀가셔틀버스, 선후발 | 홍길동, 010-1234-5678, 조장, A조, 1호차, 판교 출발 1, 판교 귀가 2, 선발 |
+| 일정 | 일차, 순서, 장소, 일정명, 예정시각, 대상(전체/선발/후발), 셔틀여부(출발/귀가/빈칸) | 1, 1, 국내선 3번 게이트, 김포공항 탑승 게이트 집결, 08:30, 전체, |
 
 **이메일 자동 생성 규칙:**
 - 전원 → `{이름소문자}@linkagelab.co.kr` (역할 무관, LDAP 계정명 = 이름 컬럼)
@@ -223,7 +223,7 @@ if (!user.email?.endsWith(ALLOWED_DOMAIN)) {
 | 컬럼명 | 타입 | 제약 | 설명 |
 |---|---|---|---|
 | id | uuid | PK, default gen_random_uuid() | 조 고유 ID |
-| name | text | NOT NULL | 조 이름 (예: 1조) |
+| name | text | NOT NULL, UNIQUE | 조 이름 (예: 1조). UPSERT용 UNIQUE 제약 |
 | bus_name | text | nullable | 배정 차량 (예: 1호차) |
 | created_at | timestamptz | default now() | 생성 시각 |
 
@@ -237,6 +237,9 @@ if (!user.email?.endsWith(ALLOWED_DOMAIN)) {
 | phone | text | nullable | 전화번호 (비상연락용, 예: 010-1234-5678) |
 | role | text | CHECK IN ('member','leader','admin','admin_leader') | 참가자 / 조장 / 관리자 / 관리자+조장 |
 | group_id | uuid | FK → Groups.id, NOT NULL | 소속 조 |
+| party | text | nullable | 선발/후발 구분 (`'advance'` / `'rear'` / null) |
+| shuttle_bus | text | nullable | 출발 셔틀버스 배정 (예: 판교 출발 1) |
+| return_shuttle_bus | text | nullable | 귀가 셔틀버스 배정 |
 | created_at | timestamptz | default now() | 생성 시각 |
 
 > 비상연락: 이름 + phone + 소속 조. 장애 여부 등 개인 특성 컬럼 없음. (`docs/decisions.md` 참조)
@@ -255,6 +258,8 @@ if (!user.email?.endsWith(ALLOWED_DOMAIN)) {
 | scheduled_time | timestamptz | nullable | 예정 시각 (관리자가 실시간 변경 가능) |
 | is_active | boolean | default false, NOT NULL | 현재 진행 중 여부 |
 | activated_at | timestamptz | nullable | 활성화 시각 (로그용) |
+| scope | text | NOT NULL, default 'all' | 일정 대상 범위 (`'all'` / `'advance'` / `'rear'`) |
+| shuttle_type | text | nullable | 셔틀 타입 (`'departure'` / `'return'` / null). 셔틀 일정이면 셔틀버스 단위 체크인 |
 | created_at | timestamptz | default now() | 생성 시각 |
 
 **필수 DB 제약:**
@@ -263,6 +268,10 @@ if (!user.email?.endsWith(ALLOWED_DOMAIN)) {
 CREATE UNIQUE INDEX idx_one_active_schedule
   ON schedules (is_active)
   WHERE is_active = true;
+
+-- UPSERT용 (day_number + sort_order 조합 유일)
+ALTER TABLE schedules
+  ADD CONSTRAINT unique_schedule_position UNIQUE (day_number, sort_order);
 ```
 
 ### 3.4 Check_ins 테이블
@@ -312,7 +321,29 @@ ALTER TABLE group_reports
 
 → 동일 조의 동일 일정 중복 보고 방지. 재보고 시 `ON CONFLICT DO UPDATE`.
 
-### 3.6 일정 상태 판별 로직
+### 3.6 Shuttle_reports 테이블 (셔틀 보고 상태 영속화)
+
+> 셔틀 일정(`shuttle_type` != null)의 보고 상태를 셔틀버스 단위로 영속화한다. `group_reports`와 동일한 패턴이나 키가 `shuttle_bus`(text)이다.
+
+| 컬럼명 | 타입 | 제약 | 설명 |
+|---|---|---|---|
+| id | uuid | PK, default gen_random_uuid() | 보고 고유 ID |
+| shuttle_bus | text | NOT NULL | 셔틀버스명 (예: 판교 출발 1) |
+| schedule_id | uuid | FK → Schedules.id, NOT NULL | 해당 일정 |
+| reported_by | uuid | FK → Users.id, NOT NULL | 보고한 조장 |
+| pending_count | int | NOT NULL, default 0 | 보고 시 미완료 인원 수 |
+| reported_at | timestamptz | default now() | 보고 시각 |
+
+**필수 DB 제약:**
+
+```sql
+ALTER TABLE shuttle_reports
+  ADD CONSTRAINT unique_shuttle_report UNIQUE (shuttle_bus, schedule_id);
+```
+
+→ 동일 셔틀버스의 동일 일정 중복 보고 방지. 재보고 시 `ON CONFLICT DO UPDATE`.
+
+### 3.7 일정 상태 판별 로직
 
 > Schedules에 별도 status 컬럼을 추가하지 않는다. 기존 컬럼 조합으로 판별한다.
 
@@ -326,7 +357,7 @@ function getScheduleStatus(schedule: Schedule): ScheduleStatus {
 }
 ```
 
-### 3.7 RLS 정책 (Row Level Security)
+### 3.8 RLS 정책 (Row Level Security)
 
 > Supabase RLS를 반드시 활성화한다. 아래 정책이 없으면 인증된 사용자 누구나 모든 데이터를 조작할 수 있다.
 
@@ -337,6 +368,7 @@ ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE schedules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE check_ins ENABLE ROW LEVEL SECURITY;
 ALTER TABLE group_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE shuttle_reports ENABLE ROW LEVEL SECURITY;
 
 -- Groups: 인증된 사용자 읽기 전용
 CREATE POLICY "groups_read" ON groups FOR SELECT TO authenticated USING (true);
@@ -385,9 +417,20 @@ CREATE POLICY "reports_insert" ON group_reports FOR INSERT TO authenticated WITH
 CREATE POLICY "reports_update" ON group_reports FOR UPDATE TO authenticated USING (
   EXISTS (SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email' AND role IN ('leader', 'admin', 'admin_leader'))
 );
+
+-- Shuttle_reports: leader/admin/admin_leader 읽기·쓰기
+CREATE POLICY "shuttle_reports_read" ON shuttle_reports FOR SELECT TO authenticated USING (
+  EXISTS (SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email' AND role IN ('leader', 'admin', 'admin_leader'))
+);
+CREATE POLICY "shuttle_reports_insert" ON shuttle_reports FOR INSERT TO authenticated WITH CHECK (
+  EXISTS (SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email' AND role IN ('leader', 'admin', 'admin_leader'))
+);
+CREATE POLICY "shuttle_reports_update" ON shuttle_reports FOR UPDATE TO authenticated USING (
+  EXISTS (SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email' AND role IN ('leader', 'admin', 'admin_leader'))
+);
 ```
 
-### 3.8 RPC 함수
+### 3.9 RPC 함수
 
 ```sql
 -- 일정 활성화 (트랜잭션으로 동시 활성화 방지)
@@ -415,8 +458,8 @@ BEGIN
       (item->>'user_id')::uuid,
       (item->>'schedule_id')::uuid,
       item->>'checked_by',
-      (item->>'checked_by_user_id')::uuid,
-      (item->>'checked_at')::timestamptz
+      NULLIF(item->>'checked_by_user_id', '')::uuid,
+      COALESCE((item->>'checked_at')::timestamptz, now())
     )
     ON CONFLICT (user_id, schedule_id) DO NOTHING;
     IF FOUND THEN synced := synced + 1; END IF;
@@ -426,7 +469,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 ```
 
-### 3.9 환경 변수
+### 3.10 환경 변수
 
 ```env
 # .env.local
@@ -712,12 +755,18 @@ src/actions/
 | schedule.ts | `createSchedule(title, location, dayNumber, scheduledTime?)` | admin | 즉흥 일정 INSERT |
 | schedule.ts | `updateScheduleTime(scheduleId, scheduledTime)` | admin | 예정 시각 변경 + broadcast |
 | report.ts | `submitReport(groupId, scheduleId, pendingCount)` | leader | group_reports UPSERT + broadcast |
+| report.ts | `submitShuttleReport(shuttleBus, scheduleId, pendingCount)` | leader | shuttle_reports UPSERT + broadcast. 셔틀 일정 전용 |
 | setup.ts | `previewFromGoogleSheet(sheetId, gids)` | admin | 2개 시트(참가자, 일정) CSV fetch → 파싱 → 검증 → 미리보기 |
 | setup.ts | `previewFromCsv(usersCsv, schedulesCsv)` | admin | CSV 2개 직접 업로드 → 파싱 → 검증 → 미리보기 |
 | setup.ts | `importToDatabase(data)` | admin | 미리보기 데이터 → Groups/Users/Schedules UPSERT |
 | checkin.ts | `markAbsent(userId, scheduleId)` | leader, admin | 불참 처리 INSERT (`is_absent=true`) + broadcast. 조장은 자기 조원만 |
 | setup.ts | `updateUserRole(userId, newRole)` | admin | 조원↔조장 역할 변경 (`/setup` 데이터관리 전용). Users 테이블 `role` UPDATE |
-| setup.ts | `resetAllData()` | admin | 전체 데이터 초기화 (FK 역순 삭제) |
+| schedule.ts | `deactivateSchedule(scheduleId)` | admin | 일정 종료 (is_active=false) |
+| setup.ts | `updateSchedule(scheduleId, data)` | admin | 일정 수정 (title, location, day_number, sort_order, scheduled_time, scope, shuttle_type) |
+| setup.ts | `deleteSchedule(scheduleId)` | admin | 일정 삭제 (진행중 일정 제외) |
+| setup.ts | `updateUser(userId, data)` | admin | 참가자 수정 (이름, 전화, 역할, 소속조, 선발/후발, 셔틀) |
+| setup.ts | `deleteUser(userId)` | admin | 참가자 삭제 (본인 제외) |
+| setup.ts | `resetAllData()` | admin | 전체 데이터 초기화 (FK 역순: check_ins → group_reports → shuttle_reports → users → schedules → groups) |
 
 ### 9.2 핵심 구현 지시
 

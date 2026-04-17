@@ -57,6 +57,9 @@ export default function SetupWizard() {
       const sheetId = extractSheetId(source.usersUrl);
       const gidUsers = extractGid(source.usersUrl) ?? "0";
       const gidSchedules = extractGid(source.schedulesUrl) ?? "0";
+      // v2 옵션 GID — source에 저장되어 있으면 사용
+      const gidGroupInfo = source.groupInfoUrl ? (extractGid(source.groupInfoUrl) ?? null) : null;
+      const gidMemberInfo = source.memberInfoUrl ? (extractGid(source.memberInfoUrl) ?? null) : null;
       if (!sheetId) {
         router.replace("/setup?tab=upload");
         return;
@@ -73,6 +76,8 @@ export default function SetupWizard() {
         const res = await previewFromGoogleSheet(sheetId, {
           users: gidUsers,
           schedules: gidSchedules,
+          group_info: gidGroupInfo,
+          member_info: gidMemberInfo,
         });
         if (cancelled) return;
         if (res.ok && res.data) {

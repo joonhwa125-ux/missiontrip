@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS users (
   party       text,                                -- 선발/후발 구분 (advance | rear | null)
   shuttle_bus text,                                -- 출발 셔틀버스 배정 (예: 판교 출발 1)
   return_shuttle_bus text,                         -- 귀가 셔틀버스 배정
+  airline     text,                                -- 탑승 항공사 (제주항공, 티웨이 등)
+  trip_role   text,                                -- 여행 기간 내내 유지되는 역할 (키 수령, 가이드 등)
   created_at  timestamptz DEFAULT now()
 );
 
@@ -45,21 +47,57 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_one_active_schedule
 
 CREATE TABLE IF NOT EXISTS check_ins (
   id                  uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id             uuid        NOT NULL REFERENCES users(id),
-  schedule_id         uuid        NOT NULL REFERENCES schedules(id),
+  user_id             uuid        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  schedule_id         uuid        NOT NULL REFERENCES schedules(id) ON DELETE CASCADE,
   checked_at          timestamptz DEFAULT now(),
-  checked_by          text        NOT NULL CHECK (checked_by IN ('leader', 'admin')),
-  checked_by_user_id  uuid        REFERENCES users(id),
+  checked_by          text        NOT NULL CHECK (checked_by IN ('leader', 'admin', 'temp_leader')),
+  checked_by_user_id  uuid        REFERENCES users(id) ON DELETE SET NULL,
   offline_pending     boolean     NOT NULL DEFAULT false,
   is_absent           boolean     NOT NULL DEFAULT false,  -- 불참 처리 여부
+  absence_reason      text,                                -- 불참 사유 (숙소/근무/의료/기타)
+  absence_location    text,                                -- 부재 위치 (병원명 등, 선택)
+  group_id_at_checkin uuid        REFERENCES groups(id) ON DELETE SET NULL,
+                                                           -- 체크인 시점 조 스냅샷 (immutable)
   CONSTRAINT unique_checkin UNIQUE (user_id, schedule_id)
+);
+
+-- 일정×조 메타데이터 (층수, 순환순서, 활동장소, 관리자 메모)
+CREATE TABLE IF NOT EXISTS schedule_group_info (
+  id              uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  schedule_id     uuid        NOT NULL REFERENCES schedules(id) ON DELETE CASCADE,
+  group_id        uuid        NOT NULL REFERENCES groups(id)    ON DELETE CASCADE,
+  location_detail text,                              -- '1층', '2층', 'A홀'
+  rotation        text,                              -- '식사먼저', '투어먼저', '1그룹'
+  sub_location    text,                              -- '해먹존', '족욕존'
+  note            text,                              -- 관리자가 조장에게 전달할 메모
+  created_at      timestamptz DEFAULT now(),
+  updated_at      timestamptz DEFAULT now(),
+  updated_by      uuid        REFERENCES users(id) ON DELETE SET NULL,
+  CONSTRAINT unique_schedule_group UNIQUE (schedule_id, group_id)
+);
+
+-- 일정×사용자 메타데이터 (조 이동, 임시 권한, 사전 제외, 활동/메뉴 배정)
+CREATE TABLE IF NOT EXISTS schedule_member_info (
+  id              uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  schedule_id     uuid        NOT NULL REFERENCES schedules(id) ON DELETE CASCADE,
+  user_id         uuid        NOT NULL REFERENCES users(id)     ON DELETE CASCADE,
+  temp_group_id   uuid        REFERENCES groups(id) ON DELETE SET NULL,
+  temp_role       text        CHECK (temp_role IN ('leader', 'member')),
+  excused_reason  text,                              -- 사전 제외 사유 (숙소 휴식, 병원 동행, 근무)
+  activity        text,                              -- 활동 배정 (해먹, 숲걷기, 족욕)
+  menu            text,                              -- 개인별 메뉴 (음료, 음식, 채식)
+  note            text,                              -- 조장에게 전달할 특이사항
+  created_at      timestamptz DEFAULT now(),
+  updated_at      timestamptz DEFAULT now(),
+  updated_by      uuid        REFERENCES users(id) ON DELETE SET NULL,
+  CONSTRAINT unique_schedule_member UNIQUE (schedule_id, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS group_reports (
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  group_id      uuid        NOT NULL REFERENCES groups(id),
-  schedule_id   uuid        NOT NULL REFERENCES schedules(id),
-  reported_by   uuid        NOT NULL REFERENCES users(id),
+  group_id      uuid        NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+  schedule_id   uuid        NOT NULL REFERENCES schedules(id) ON DELETE CASCADE,
+  reported_by   uuid        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   pending_count int         NOT NULL DEFAULT 0,
   reported_at   timestamptz DEFAULT now(),
   CONSTRAINT unique_group_report UNIQUE (group_id, schedule_id)
@@ -68,8 +106,8 @@ CREATE TABLE IF NOT EXISTS group_reports (
 CREATE TABLE IF NOT EXISTS shuttle_reports (
   id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   shuttle_bus   text        NOT NULL,
-  schedule_id   uuid        NOT NULL REFERENCES schedules(id),
-  reported_by   uuid        NOT NULL REFERENCES users(id),
+  schedule_id   uuid        NOT NULL REFERENCES schedules(id) ON DELETE CASCADE,
+  reported_by   uuid        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   pending_count int         NOT NULL DEFAULT 0,
   reported_at   timestamptz DEFAULT now(),
   CONSTRAINT unique_shuttle_report UNIQUE (shuttle_bus, schedule_id)
@@ -77,12 +115,14 @@ CREATE TABLE IF NOT EXISTS shuttle_reports (
 
 -- ===== 2. RLS 활성화 =====
 
-ALTER TABLE groups          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE users           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE schedules       ENABLE ROW LEVEL SECURITY;
-ALTER TABLE check_ins       ENABLE ROW LEVEL SECURITY;
-ALTER TABLE group_reports   ENABLE ROW LEVEL SECURITY;
-ALTER TABLE shuttle_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE groups                ENABLE ROW LEVEL SECURITY;
+ALTER TABLE users                 ENABLE ROW LEVEL SECURITY;
+ALTER TABLE schedules             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE check_ins             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE group_reports         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE shuttle_reports       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE schedule_group_info   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE schedule_member_info  ENABLE ROW LEVEL SECURITY;
 
 -- ===== 3. RLS 정책 =====
 
@@ -118,6 +158,7 @@ CREATE POLICY "checkins_read" ON check_ins
     )
   );
 
+-- INSERT: 영구 권한자 OR 임시 조장 (3-way binding: schedule + is_active + temp_group)
 CREATE POLICY "checkins_insert" ON check_ins
   FOR INSERT TO authenticated WITH CHECK (
     EXISTS (
@@ -125,14 +166,73 @@ CREATE POLICY "checkins_insert" ON check_ins
       WHERE email = auth.jwt() ->> 'email'
         AND role IN ('leader', 'admin', 'admin_leader')
     )
+    OR EXISTS (
+      SELECT 1
+      FROM schedule_member_info smi
+      JOIN users     me     ON me.id = smi.user_id
+      JOIN schedules s      ON s.id  = smi.schedule_id
+      JOIN users     target ON target.id = check_ins.user_id
+      WHERE me.email = auth.jwt() ->> 'email'
+        AND smi.temp_role = 'leader'
+        AND smi.schedule_id = check_ins.schedule_id
+        AND s.is_active = true
+        AND target.group_id = smi.temp_group_id
+    )
   );
 
+-- DELETE: 영구 권한자 OR 임시 조장 (3-way binding 동일)
 CREATE POLICY "checkins_delete" ON check_ins
   FOR DELETE TO authenticated USING (
     EXISTS (
       SELECT 1 FROM users
       WHERE email = auth.jwt() ->> 'email' AND role IN ('leader', 'admin', 'admin_leader')
     )
+    OR EXISTS (
+      SELECT 1
+      FROM schedule_member_info smi
+      JOIN users     me     ON me.id = smi.user_id
+      JOIN schedules s      ON s.id  = smi.schedule_id
+      JOIN users     target ON target.id = check_ins.user_id
+      WHERE me.email = auth.jwt() ->> 'email'
+        AND smi.temp_role = 'leader'
+        AND smi.schedule_id = check_ins.schedule_id
+        AND s.is_active = true
+        AND target.group_id = smi.temp_group_id
+    )
+  );
+
+-- schedule_group_info: 읽기 전체, 쓰기 admin만
+CREATE POLICY "sgi_read" ON schedule_group_info
+  FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "sgi_write" ON schedule_group_info
+  FOR ALL TO authenticated USING (
+    EXISTS (SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email'
+            AND role IN ('admin', 'admin_leader'))
+  );
+
+-- schedule_member_info: 자기자신 + admin + 같은 조 조장 읽기, admin만 쓰기 (자가 승격 방지)
+CREATE POLICY "smi_read" ON schedule_member_info
+  FOR SELECT TO authenticated USING (
+    user_id = (SELECT id FROM users WHERE email = auth.jwt() ->> 'email')
+    OR EXISTS (
+      SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email'
+        AND role IN ('admin', 'admin_leader')
+    )
+    OR EXISTS (
+      SELECT 1
+      FROM users me
+      JOIN users target ON target.id = schedule_member_info.user_id
+      WHERE me.email = auth.jwt() ->> 'email'
+        AND me.role IN ('leader', 'admin_leader')
+        AND me.group_id = COALESCE(schedule_member_info.temp_group_id, target.group_id)
+    )
+  );
+
+CREATE POLICY "smi_write" ON schedule_member_info
+  FOR ALL TO authenticated USING (
+    EXISTS (SELECT 1 FROM users WHERE email = auth.jwt() ->> 'email'
+            AND role IN ('admin', 'admin_leader'))
   );
 
 -- Group_reports: leader/admin 읽기·쓰기
@@ -190,7 +290,7 @@ BEGIN
 END;
 $$;
 
--- 오프라인 체크인 일괄 동기화
+-- 오프라인 체크인 일괄 동기화 (불참 사유 + 그룹 스냅샷 지원)
 CREATE OR REPLACE FUNCTION sync_offline_checkins(checkins jsonb)
 RETURNS int
 LANGUAGE plpgsql
@@ -202,13 +302,20 @@ DECLARE
 BEGIN
   FOR item IN SELECT * FROM jsonb_array_elements(checkins)
   LOOP
-    INSERT INTO check_ins (user_id, schedule_id, checked_by, checked_by_user_id, checked_at)
+    INSERT INTO check_ins (
+      user_id, schedule_id, checked_by, checked_by_user_id, checked_at,
+      is_absent, absence_reason, absence_location, group_id_at_checkin
+    )
     VALUES (
       (item->>'user_id')::uuid,
       (item->>'schedule_id')::uuid,
       item->>'checked_by',
       NULLIF(item->>'checked_by_user_id', '')::uuid,
-      COALESCE((item->>'checked_at')::timestamptz, now())
+      COALESCE((item->>'checked_at')::timestamptz, now()),
+      COALESCE((item->>'is_absent')::boolean, false),
+      NULLIF(item->>'absence_reason', ''),
+      NULLIF(item->>'absence_location', ''),
+      NULLIF(item->>'group_id_at_checkin', '')::uuid
     )
     ON CONFLICT (user_id, schedule_id) DO NOTHING;
 
@@ -221,6 +328,27 @@ BEGIN
 END;
 $$;
 
+-- updated_at 자동 갱신 트리거 함수
+CREATE OR REPLACE FUNCTION set_updated_at()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_sgi_updated_at ON schedule_group_info;
+CREATE TRIGGER trg_sgi_updated_at
+  BEFORE UPDATE ON schedule_group_info
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+DROP TRIGGER IF EXISTS trg_smi_updated_at ON schedule_member_info;
+CREATE TRIGGER trg_smi_updated_at
+  BEFORE UPDATE ON schedule_member_info
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
 -- ===== 5. 성능 인덱스 =====
 
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
@@ -228,6 +356,18 @@ CREATE INDEX IF NOT EXISTS idx_users_group_id ON users(group_id);
 CREATE INDEX IF NOT EXISTS idx_checkins_schedule_id ON check_ins(schedule_id);
 CREATE INDEX IF NOT EXISTS idx_checkins_user_schedule ON check_ins(user_id, schedule_id);
 CREATE INDEX IF NOT EXISTS idx_reports_schedule ON group_reports(schedule_id);
+
+-- v2: 일정별 메타데이터 인덱스
+CREATE INDEX IF NOT EXISTS idx_smi_schedule_id   ON schedule_member_info(schedule_id);
+CREATE INDEX IF NOT EXISTS idx_smi_user_id       ON schedule_member_info(user_id);
+CREATE INDEX IF NOT EXISTS idx_smi_temp_group_id ON schedule_member_info(temp_group_id)
+  WHERE temp_group_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_smi_temp_role     ON schedule_member_info(temp_role)
+  WHERE temp_role IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_sgi_schedule_id   ON schedule_group_info(schedule_id);
+CREATE INDEX IF NOT EXISTS idx_sgi_group_id      ON schedule_group_info(group_id);
+CREATE INDEX IF NOT EXISTS idx_checkins_group_id_at_checkin
+  ON check_ins(group_id_at_checkin) WHERE group_id_at_checkin IS NOT NULL;
 
 -- ===== 6. Realtime 활성화 =====
 -- Supabase Dashboard → Database → Replication 에서

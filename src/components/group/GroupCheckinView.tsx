@@ -73,6 +73,9 @@ export default function GroupCheckinView({
         checked_by_user_id: currentUser.id,
         offline_pending: !isOnline,
         is_absent: false,
+        absence_reason: null,
+        absence_location: null,
+        group_id_at_checkin: currentUser.group_id,
       };
       setCheckIns((prev) => [...prev.filter((c) => c.user_id !== userId), temp]);
 
@@ -83,6 +86,8 @@ export default function GroupCheckinView({
           checked_by: "leader",
           checked_by_user_id: currentUser.id,
           checked_at: temp.checked_at,
+          // v2: 체크인 시점의 조 스냅샷 (과거 기록 추적용 immutable)
+          group_id_at_checkin: currentUser.group_id,
         });
         if (!saved) {
           setCheckIns((prev) => prev.filter((c) => c.id !== temp.id));
@@ -106,7 +111,7 @@ export default function GroupCheckinView({
         }
       });
     },
-    [activeSchedule, isOnline, addPending, currentUser.id, broadcastCheckin, setCheckIns, showToast]
+    [activeSchedule, isOnline, addPending, currentUser.id, currentUser.group_id, broadcastCheckin, setCheckIns, showToast]
   );
 
   const handleCancelConfirm = useCallback(async () => {
@@ -144,7 +149,7 @@ export default function GroupCheckinView({
     });
   }, [cancelTarget, activeSchedule, broadcastCheckin, setCheckIns, showToast, onReportReset, currentUser.group_id, broadcast]);
 
-  const handleAbsentConfirm = useCallback(async () => {
+  const handleAbsentConfirm = useCallback(async (reason: string | null, location: string | null) => {
     if (!absentTarget || !activeSchedule) return;
     const userId = absentTarget.id;
     setAbsentTarget(null);
@@ -157,11 +162,14 @@ export default function GroupCheckinView({
       checked_by_user_id: currentUser.id,
       offline_pending: false,
       is_absent: true,
+      absence_reason: reason,
+      absence_location: location,
+      group_id_at_checkin: currentUser.group_id,
     };
     setCheckIns((prev) => [...prev.filter((c) => c.user_id !== userId), temp]);
     startTransition(async () => {
       try {
-        const res = await markAbsent(userId, activeSchedule.id, activeSchedule.shuttle_type ?? null);
+        const res = await markAbsent(userId, activeSchedule.id, activeSchedule.shuttle_type ?? null, reason, location);
         if (res.ok) {
           await broadcastCheckin(userId, "insert", true);
         } else {
@@ -173,7 +181,7 @@ export default function GroupCheckinView({
         showToast("서버 연결에 실패했어요. 다시 시도해주세요.");
       }
     });
-  }, [absentTarget, activeSchedule, currentUser.id, broadcastCheckin, setCheckIns, showToast]);
+  }, [absentTarget, activeSchedule, currentUser.id, currentUser.group_id, broadcastCheckin, setCheckIns, showToast]);
 
   const handleReport = useCallback(async () => {
     if (!activeSchedule) return;

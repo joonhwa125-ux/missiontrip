@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import GroupView from "@/components/group/GroupView";
+import { hasActiveOrPastTempLeaderRole } from "@/lib/auth";
 import type { CheckIn, Schedule, Group, GroupParty, GroupMember, ShuttleReport } from "@/lib/types";
 
 export const metadata: Metadata = { title: "조장" };
@@ -23,7 +24,13 @@ export default async function GroupPage() {
     .eq("email", authUser.email ?? "")
     .single();
 
-  if (!currentUser || !["leader", "admin", "admin_leader"].includes(currentUser.role)) redirect("/");
+  if (!currentUser) redirect("/");
+
+  // 기본 권한: leader / admin / admin_leader
+  const isPermanentLeader = ["leader", "admin", "admin_leader"].includes(currentUser.role);
+  // v2: 임시 조장 권한 (schedule_member_info.temp_role='leader')도 접근 허용
+  const hasTempLeader = isPermanentLeader ? false : await hasActiveOrPastTempLeaderRole(currentUser.id);
+  if (!isPermanentLeader && !hasTempLeader) redirect("/");
 
   const [
     { data: group },
@@ -40,7 +47,7 @@ export default async function GroupPage() {
       .single(),
     supabase
       .from("users")
-      .select("id, name, party")
+      .select("id, name, party, airline, trip_role")
       .eq("group_id", currentUser.group_id)
       .order("name"),
     supabase
@@ -62,15 +69,27 @@ export default async function GroupPage() {
   let returnShuttleMembers: GroupMember[] = [];
   await Promise.all([
     currentUser.shuttle_bus
-      ? supabase.from("users").select("id, name, party").eq("shuttle_bus", currentUser.shuttle_bus).order("name")
+      ? supabase.from("users").select("id, name, party, airline, trip_role").eq("shuttle_bus", currentUser.shuttle_bus).order("name")
           .then(({ data: sm }) => {
-            shuttleMembers = (sm ?? []).map((m) => ({ id: m.id, name: m.name, party: (m.party as GroupParty) ?? null }));
+            shuttleMembers = (sm ?? []).map((m) => ({
+              id: m.id,
+              name: m.name,
+              party: (m.party as GroupParty) ?? null,
+              airline: m.airline ?? null,
+              trip_role: m.trip_role ?? null,
+            }));
           })
       : Promise.resolve(),
     currentUser.return_shuttle_bus
-      ? supabase.from("users").select("id, name, party").eq("return_shuttle_bus", currentUser.return_shuttle_bus).order("name")
+      ? supabase.from("users").select("id, name, party, airline, trip_role").eq("return_shuttle_bus", currentUser.return_shuttle_bus).order("name")
           .then(({ data: rm }) => {
-            returnShuttleMembers = (rm ?? []).map((m) => ({ id: m.id, name: m.name, party: (m.party as GroupParty) ?? null }));
+            returnShuttleMembers = (rm ?? []).map((m) => ({
+              id: m.id,
+              name: m.name,
+              party: (m.party as GroupParty) ?? null,
+              airline: m.airline ?? null,
+              trip_role: m.trip_role ?? null,
+            }));
           })
       : Promise.resolve(),
   ]);
@@ -103,7 +122,7 @@ export default async function GroupPage() {
     if (activeSchedule) {
       queries.push(
         Promise.all([
-          supabase.from("check_ins").select("id, user_id, schedule_id, checked_at, checked_by, checked_by_user_id, offline_pending, is_absent").eq("schedule_id", activeSchedule.id),
+          supabase.from("check_ins").select("id, user_id, schedule_id, checked_at, checked_by, checked_by_user_id, offline_pending, is_absent, absence_reason, absence_location, group_id_at_checkin").eq("schedule_id", activeSchedule.id),
           supabase.from("group_reports").select("group_id").eq("schedule_id", activeSchedule.id),
         ]).then(([{ data: allCi }, { data: allReportsData }]) => {
           const allData = allCi ?? [];
@@ -152,7 +171,13 @@ export default async function GroupPage() {
     <GroupView
       currentUser={{ id: currentUser.id, group_id: currentUser.group_id, shuttle_bus: currentUser.shuttle_bus ?? null, return_shuttle_bus: currentUser.return_shuttle_bus ?? null }}
       groupName={group?.name ?? "내 조"}
-      members={(members ?? []).map((m) => ({ ...m, party: (m.party as GroupParty) ?? null }))}
+      members={(members ?? []).map((m) => ({
+        id: m.id,
+        name: m.name,
+        party: (m.party as GroupParty) ?? null,
+        airline: m.airline ?? null,
+        trip_role: m.trip_role ?? null,
+      }))}
       shuttleMembers={shuttleMembers}
       returnShuttleMembers={returnShuttleMembers}
       activeSchedule={activeSchedule ?? null}

@@ -251,6 +251,9 @@ export default function GroupView({
               checked_by_user_id: null,
               offline_pending: false,
               is_absent: is_absent ?? false,
+              absence_reason: null,
+              absence_location: null,
+              group_id_at_checkin: null,
             },
           ];
         }

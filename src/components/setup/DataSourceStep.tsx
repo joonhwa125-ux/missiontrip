@@ -42,22 +42,46 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
   const [schedulesUrl, setSchedulesUrl] = useState<string>(
     saved?.type === "sheets" ? (saved.schedulesUrl ?? "") : ""
   );
+  // v2 optional fields
+  const [groupInfoUrl, setGroupInfoUrl] = useState<string>(
+    saved?.type === "sheets" ? (saved.groupInfoUrl ?? "") : ""
+  );
+  const [memberInfoUrl, setMemberInfoUrl] = useState<string>(
+    saved?.type === "sheets" ? (saved.memberInfoUrl ?? "") : ""
+  );
+
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const userFileRef = useRef<HTMLInputElement>(null);
   const scheduleFileRef = useRef<HTMLInputElement>(null);
+  const groupInfoFileRef = useRef<HTMLInputElement>(null);
+  const memberInfoFileRef = useRef<HTMLInputElement>(null);
+
   const [userFileName, setUserFileName] = useState<string | null>(
     saved?.type === "csv" ? (savedCsv?.userFileName ?? null) : null
   );
   const [scheduleFileName, setScheduleFileName] = useState<string | null>(
     saved?.type === "csv" ? (savedCsv?.scheduleFileName ?? null) : null
   );
+  const [groupInfoFileName, setGroupInfoFileName] = useState<string | null>(
+    saved?.type === "csv" ? (savedCsv?.groupInfoFileName ?? null) : null
+  );
+  const [memberInfoFileName, setMemberInfoFileName] = useState<string | null>(
+    saved?.type === "csv" ? (savedCsv?.memberInfoFileName ?? null) : null
+  );
+
   // 복원된 CSV 내용 (재선택 없이 업로드 가능)
   const [restoredUsersCsv, setRestoredUsersCsv] = useState<string | null>(
     saved?.type === "csv" ? (savedCsv?.usersCsv ?? null) : null
   );
   const [restoredSchedulesCsv, setRestoredSchedulesCsv] = useState<string | null>(
     saved?.type === "csv" ? (savedCsv?.schedulesCsv ?? null) : null
+  );
+  const [restoredGroupInfoCsv, setRestoredGroupInfoCsv] = useState<string | null>(
+    saved?.type === "csv" ? (savedCsv?.groupInfoCsv ?? null) : null
+  );
+  const [restoredMemberInfoCsv, setRestoredMemberInfoCsv] = useState<string | null>(
+    saved?.type === "csv" ? (savedCsv?.memberInfoCsv ?? null) : null
   );
 
   const handleGoogleSheet = () => {
@@ -81,15 +105,40 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
       return;
     }
 
+    // v2 옵션 GID (입력된 경우만 사용 — 같은 스프레드시트 검증)
+    let gidGroupInfo: string | null = null;
+    let gidMemberInfo: string | null = null;
+    if (groupInfoUrl.trim()) {
+      const sid = extractSheetId(groupInfoUrl);
+      if (!sid || sid !== sheetId1) {
+        setError("조별배정 URL은 같은 스프레드시트여야 해요");
+        return;
+      }
+      gidGroupInfo = extractGid(groupInfoUrl) ?? "0";
+    }
+    if (memberInfoUrl.trim()) {
+      const sid = extractSheetId(memberInfoUrl);
+      if (!sid || sid !== sheetId1) {
+        setError("인원별배정 URL은 같은 스프레드시트여야 해요");
+        return;
+      }
+      gidMemberInfo = extractGid(memberInfoUrl) ?? "0";
+    }
+
     setError(null);
     startTransition(async () => {
       const res = await previewFromGoogleSheet(sheetId1, {
         users: gidUsers,
         schedules: gidSchedules,
+        group_info: gidGroupInfo,
+        member_info: gidMemberInfo,
       });
       if (res.ok && res.data) {
         localStorage.setItem(SETUP_SOURCE_KEY, JSON.stringify({
-          type: "sheets", usersUrl, schedulesUrl,
+          type: "sheets",
+          usersUrl, schedulesUrl,
+          groupInfoUrl: groupInfoUrl.trim() || undefined,
+          memberInfoUrl: memberInfoUrl.trim() || undefined,
         }));
         onPreviewReady(res.data);
       } else {
@@ -101,12 +150,14 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
   const handleCsvUpload = () => {
     const userFile = userFileRef.current?.files?.[0];
     const scheduleFile = scheduleFileRef.current?.files?.[0];
+    const groupInfoFile = groupInfoFileRef.current?.files?.[0];
+    const memberInfoFile = memberInfoFileRef.current?.files?.[0];
 
-    // 새 파일이 없으면 복원된 CSV 내용으로 업로드
-    const hasNewFiles = userFile && scheduleFile;
-    const hasRestored = restoredUsersCsv && restoredSchedulesCsv;
+    // 기본 2개 파일 필수 확인
+    const hasNewBasic = userFile && scheduleFile;
+    const hasRestoredBasic = restoredUsersCsv && restoredSchedulesCsv;
 
-    if (!hasNewFiles && !hasRestored) {
+    if (!hasNewBasic && !hasRestoredBasic) {
       setError("참가자 CSV와 일정 CSV 파일을 모두 선택해주세요");
       return;
     }
@@ -115,10 +166,14 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
     startTransition(async () => {
       let usersCsv: string;
       let schedulesCsv: string;
+      let groupInfoCsv: string | undefined;
+      let memberInfoCsv: string | undefined;
       let uName: string;
       let sName: string;
+      let giName: string | null = null;
+      let miName: string | null = null;
 
-      if (hasNewFiles) {
+      if (hasNewBasic) {
         [usersCsv, schedulesCsv] = await Promise.all([
           userFile.text(),
           scheduleFile.text(),
@@ -132,14 +187,37 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
         sName = scheduleFileName ?? "일정.csv";
       }
 
-      const res = await previewFromCsv(usersCsv, schedulesCsv);
+      // v2 옵션: 새 파일 → 복원 → undefined 순서
+      if (groupInfoFile) {
+        groupInfoCsv = await groupInfoFile.text();
+        giName = groupInfoFile.name;
+      } else if (restoredGroupInfoCsv) {
+        groupInfoCsv = restoredGroupInfoCsv;
+        giName = groupInfoFileName;
+      }
+      if (memberInfoFile) {
+        memberInfoCsv = await memberInfoFile.text();
+        miName = memberInfoFile.name;
+      } else if (restoredMemberInfoCsv) {
+        memberInfoCsv = restoredMemberInfoCsv;
+        miName = memberInfoFileName;
+      }
+
+      const res = await previewFromCsv(usersCsv, schedulesCsv, groupInfoCsv, memberInfoCsv);
       if (res.ok && res.data) {
         localStorage.setItem(SETUP_SOURCE_KEY, JSON.stringify({
-          type: "csv", userFileName: uName, scheduleFileName: sName,
+          type: "csv",
+          userFileName: uName, scheduleFileName: sName,
+          groupInfoFileName: giName,
+          memberInfoFileName: miName,
         }));
         localStorage.setItem(SETUP_CSV_KEY, JSON.stringify({
           userFileName: uName, scheduleFileName: sName,
+          groupInfoFileName: giName,
+          memberInfoFileName: miName,
           usersCsv, schedulesCsv,
+          groupInfoCsv: groupInfoCsv ?? null,
+          memberInfoCsv: memberInfoCsv ?? null,
         }));
         onPreviewReady(res.data);
       } else {
@@ -211,6 +289,42 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
               className="w-full rounded-xl border px-3 py-2.5 text-sm"
             />
           </div>
+
+          {/* v2 옵션: 조별배정 / 인원별배정 */}
+          <details className="mb-4 rounded-xl bg-gray-50 px-4 py-3">
+            <summary className="cursor-pointer text-sm font-medium text-gray-700">
+              배정 정보 (선택) — 층수 · 활동 · 조 이동 · 메뉴 등
+            </summary>
+            <div className="mt-3 space-y-3">
+              <div>
+                <label htmlFor="ds-group-info-url" className="mb-1 block text-xs text-muted-foreground">
+                  조별배정 탭 URL
+                </label>
+                <input
+                  id="ds-group-info-url"
+                  type="url"
+                  value={groupInfoUrl}
+                  onChange={(e) => { setGroupInfoUrl(e.target.value); setError(null); }}
+                  placeholder="일차/순서/조/층수/순환/장소상세/메모"
+                  className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm"
+                />
+              </div>
+              <div>
+                <label htmlFor="ds-member-info-url" className="mb-1 block text-xs text-muted-foreground">
+                  인원별배정 탭 URL
+                </label>
+                <input
+                  id="ds-member-info-url"
+                  type="url"
+                  value={memberInfoUrl}
+                  onChange={(e) => { setMemberInfoUrl(e.target.value); setError(null); }}
+                  placeholder="일차/순서/이름/항목(조이동·임시역할·제외·활동·메뉴·메모)/값"
+                  className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm"
+                />
+              </div>
+            </div>
+          </details>
+
           <button
             onClick={handleGoogleSheet}
             disabled={isPending}
@@ -226,7 +340,7 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
         <section id="panel-csv" role="tabpanel" className="rounded-2xl bg-white p-5">
           <div className="mb-2">
             <label className="mb-1 block text-xs text-muted-foreground">
-              참가자 CSV (이름, 전화번호, 역할, 소속조, 배정차량, 선후발)
+              참가자 CSV (이름, 전화번호, 역할, 소속조, 배정차량, 선후발, 항공사, 여행역할)
             </label>
             <input
               ref={userFileRef}
@@ -286,6 +400,78 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
               {scheduleFileName ?? "파일 선택"}
             </button>
           </div>
+
+          {/* v2 옵션: 조별배정 / 인원별배정 */}
+          <details className="mb-3 rounded-xl bg-gray-50 px-4 py-3">
+            <summary className="cursor-pointer text-sm font-medium text-gray-700">
+              배정 정보 (선택) — 층수 · 활동 · 조 이동 · 메뉴 등
+            </summary>
+            <div className="mt-3 space-y-3">
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">
+                  조별배정 CSV (일차, 순서, 조, 층수, 순환, 장소상세, 메모)
+                </label>
+                <input
+                  ref={groupInfoFileRef}
+                  type="file"
+                  accept=".csv"
+                  aria-label="조별배정 CSV 파일 선택"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    setGroupInfoFileName(file?.name ?? null);
+                    setRestoredGroupInfoCsv(null);
+                    setError(null);
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => groupInfoFileRef.current?.click()}
+                  className={cn(
+                    "flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed px-4 py-3 text-sm transition-colors",
+                    groupInfoFileName
+                      ? "border-main-action bg-[#FEF9E7] text-foreground"
+                      : "border-gray-300 bg-white text-muted-foreground hover:border-main-action hover:bg-[#FEF9E7]"
+                  )}
+                >
+                  <UploadIcon aria-hidden />
+                  {groupInfoFileName ?? "파일 선택"}
+                </button>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-muted-foreground">
+                  인원별배정 CSV (일차, 순서, 이름, 항목, 값)
+                </label>
+                <input
+                  ref={memberInfoFileRef}
+                  type="file"
+                  accept=".csv"
+                  aria-label="인원별배정 CSV 파일 선택"
+                  className="sr-only"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    setMemberInfoFileName(file?.name ?? null);
+                    setRestoredMemberInfoCsv(null);
+                    setError(null);
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => memberInfoFileRef.current?.click()}
+                  className={cn(
+                    "flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed px-4 py-3 text-sm transition-colors",
+                    memberInfoFileName
+                      ? "border-main-action bg-[#FEF9E7] text-foreground"
+                      : "border-gray-300 bg-white text-muted-foreground hover:border-main-action hover:bg-[#FEF9E7]"
+                  )}
+                >
+                  <UploadIcon aria-hidden />
+                  {memberInfoFileName ?? "파일 선택"}
+                </button>
+              </div>
+            </div>
+          </details>
+
           <button
             onClick={handleCsvUpload}
             disabled={isPending}

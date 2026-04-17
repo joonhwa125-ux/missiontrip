@@ -2,6 +2,9 @@ import type {
   ParsedGroup,
   ParsedUser,
   ParsedSchedule,
+  ParsedGroupInfo,
+  ParsedMemberInfo,
+  ParsedMemberInfoField,
   ValidationError,
   UserRole,
   ShuttleType,
@@ -92,7 +95,7 @@ export function parseCsv(csv: string): string[][] {
 }
 
 // 참가자 행 검증 — 이름/역할/소속조 필수값 + 역할 매핑
-// 컬럼 순서: 0=이름, 1=전화번호, 2=역할, 3=소속조, 4=배정차량, 5=출발셔틀버스, 6=귀가셔틀버스, 7=선후발
+// 컬럼 순서: 0=이름, 1=전화번호, 2=역할, 3=소속조, 4=배정차량, 5=출발셔틀버스, 6=귀가셔틀버스, 7=선후발, 8=항공사, 9=여행역할
 function validateUserRow(
   row: string[],
   rowIndex: number,
@@ -107,6 +110,8 @@ function validateUserRow(
   shuttleBus?: string | null;
   returnShuttleBus?: string | null;
   party?: "advance" | "rear" | null;
+  airline?: string | null;
+  tripRole?: string | null;
   email?: string;
 } {
   const errors: ValidationError[] = [];
@@ -116,8 +121,10 @@ function validateUserRow(
   const groupName = sanitizeText(row[3] ?? "");
   const busName = row[4]?.trim() || null;
   const shuttleBus = row[5]?.trim() || null;         // col5: 출발 셔틀버스
-  const returnShuttleBus = row[6]?.trim() || null;   // col6: 귀가 셔틀버스 (신규)
-  const partyRaw = sanitizeText(row[7] ?? "");       // col7: 선후발 (기존 col6 → col7)
+  const returnShuttleBus = row[6]?.trim() || null;   // col6: 귀가 셔틀버스
+  const partyRaw = sanitizeText(row[7] ?? "");       // col7: 선후발
+  const airline = sanitizeText(row[8] ?? "") || null;       // col8: 항공사 (v2 신규)
+  const tripRole = sanitizeText(row[9] ?? "") || null;      // col9: 여행역할 (v2 신규)
   const rowNum = rowIndex + 1;
 
   if (!name) {
@@ -166,7 +173,7 @@ function validateUserRow(
     }
   }
 
-  return { errors, name, phone, role, groupName, busName, shuttleBus, returnShuttleBus, party, email };
+  return { errors, name, phone, role, groupName, busName, shuttleBus, returnShuttleBus, party, airline, tripRole, email };
 }
 
 // 일정 행 검증 — 일차 범위 + 일정명 필수 + 대상 매핑
@@ -267,6 +274,8 @@ export function parseUsersSheet(rows: string[][]): {
       party: result.party ?? null,
       shuttle_bus: result.shuttleBus ?? null,
       return_shuttle_bus: result.returnShuttleBus ?? null,
+      airline: result.airline ?? null,
+      trip_role: result.tripRole ?? null,
     });
   }
 
@@ -307,4 +316,186 @@ export function parseSchedulesSheet(rows: string[][]): {
   }
 
   return { schedules, errors };
+}
+
+// ============================================================================
+// v2: 조별배정 시트 파싱 (일정×조 메타데이터)
+// 컬럼 순서: 0=일차, 1=순서, 2=조, 3=층수, 4=순환, 5=장소상세, 6=메모
+// 모든 컬럼이 opt-in — 비어있는 셀은 해당 항목 미지정으로 처리
+// 빈 시트(헤더만 또는 전체 빈)도 정상으로 간주 (v2 기능 opt-in)
+// ============================================================================
+export function parseGroupInfoSheet(rows: string[][]): {
+  groupInfos: ParsedGroupInfo[];
+  errors: ValidationError[];
+} {
+  const groupInfos: ParsedGroupInfo[] = [];
+  const errors: ValidationError[] = [];
+  const seen = new Set<string>();  // "일차-순서-조" 중복 방지
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.every((c) => !c)) continue;
+
+    const rowNum = i + 1;
+    const dayRaw = row[0]?.trim() ?? "";
+    const dayNumber = parseInt(dayRaw.replace(/\D/g, ""), 10);
+    const sortOrderRaw = row[1]?.trim() ?? "";
+    const sortOrder = parseInt(sortOrderRaw, 10);
+    const groupName = sanitizeText(row[2] ?? "");
+    const locationDetail = sanitizeText(row[3] ?? "") || null;
+    const rotation = sanitizeText(row[4] ?? "") || null;
+    const subLocation = sanitizeText(row[5] ?? "") || null;
+    const note = row[6]?.trim() || null;
+
+    if (isNaN(dayNumber) || dayNumber < MIN_DAY_NUMBER || dayNumber > MAX_DAY_NUMBER) {
+      errors.push({ sheet: "group_info", row: rowNum, field: "일차", message: `일차는 ${MIN_DAY_NUMBER}~${MAX_DAY_NUMBER}만 가능해요` });
+      continue;
+    }
+    if (isNaN(sortOrder)) {
+      errors.push({ sheet: "group_info", row: rowNum, field: "순서", message: "순서가 숫자가 아니에요" });
+      continue;
+    }
+    if (!groupName) {
+      errors.push({ sheet: "group_info", row: rowNum, field: "조", message: "조 이름이 없어요" });
+      continue;
+    }
+    // 모든 메타데이터가 비어있으면 의미 없는 행 — 스킵 (에러 아님)
+    if (!locationDetail && !rotation && !subLocation && !note) continue;
+
+    const key = `${dayNumber}-${sortOrder}-${groupName}`;
+    if (seen.has(key)) {
+      errors.push({ sheet: "group_info", row: rowNum, field: "조", message: `같은 일정(${dayNumber}-${sortOrder})에 ${groupName} 배정이 중복됐어요` });
+      continue;
+    }
+    seen.add(key);
+
+    groupInfos.push({
+      day_number: dayNumber,
+      sort_order: sortOrder,
+      group_name: groupName,
+      location_detail: locationDetail,
+      rotation,
+      sub_location: subLocation,
+      note,
+    });
+  }
+
+  return { groupInfos, errors };
+}
+
+// ============================================================================
+// v2: 인원별배정 시트 파싱 (일정×사용자 메타데이터)
+// 컬럼 순서: 0=일차, 1=순서, 2=이름, 3=항목, 4=값
+// 항목: 조이동 / 임시역할 / 제외 / 활동 / 메뉴 / 메모
+// 임시역할 값: '조장' / '조원'만 허용
+// 조이동 값: 조 이름 (검증은 setup.ts import 단계에서 — 파서는 문자열 그대로 통과)
+// 같은 (일정, 사용자, 항목) 조합은 중복 불가
+// 빈 시트도 정상
+// ============================================================================
+const MEMBER_INFO_FIELDS: readonly ParsedMemberInfoField[] = [
+  "조이동",
+  "임시역할",
+  "제외",
+  "활동",
+  "메뉴",
+  "메모",
+] as const;
+
+const TEMP_ROLE_LABEL_MAP: Record<string, "leader" | "member"> = {
+  조장: "leader",
+  조원: "member",
+  leader: "leader",
+  member: "member",
+};
+
+export function parseMemberInfoSheet(rows: string[][]): {
+  memberInfos: ParsedMemberInfo[];
+  errors: ValidationError[];
+} {
+  const memberInfos: ParsedMemberInfo[] = [];
+  const errors: ValidationError[] = [];
+  const seen = new Set<string>();  // "일차-순서-이름-항목" 중복 방지
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.every((c) => !c)) continue;
+
+    const rowNum = i + 1;
+    const dayRaw = row[0]?.trim() ?? "";
+    const dayNumber = parseInt(dayRaw.replace(/\D/g, ""), 10);
+    const sortOrderRaw = row[1]?.trim() ?? "";
+    const sortOrder = parseInt(sortOrderRaw, 10);
+    const userName = sanitizeText(row[2] ?? "");
+    const fieldRaw = sanitizeText(row[3] ?? "");
+    const value = sanitizeText(row[4] ?? "");
+
+    if (isNaN(dayNumber) || dayNumber < MIN_DAY_NUMBER || dayNumber > MAX_DAY_NUMBER) {
+      errors.push({ sheet: "member_info", row: rowNum, field: "일차", message: `일차는 ${MIN_DAY_NUMBER}~${MAX_DAY_NUMBER}만 가능해요` });
+      continue;
+    }
+    if (isNaN(sortOrder)) {
+      errors.push({ sheet: "member_info", row: rowNum, field: "순서", message: "순서가 숫자가 아니에요" });
+      continue;
+    }
+    if (!userName) {
+      errors.push({ sheet: "member_info", row: rowNum, field: "이름", message: "이름이 없어요" });
+      continue;
+    }
+    if (!fieldRaw) {
+      errors.push({ sheet: "member_info", row: rowNum, field: "항목", message: "항목이 없어요" });
+      continue;
+    }
+    if (!MEMBER_INFO_FIELDS.includes(fieldRaw as ParsedMemberInfoField)) {
+      errors.push({
+        sheet: "member_info",
+        row: rowNum,
+        field: "항목",
+        message: `항목은 ${MEMBER_INFO_FIELDS.join("/")} 중 하나여야 해요 (입력값: "${fieldRaw}")`,
+      });
+      continue;
+    }
+    if (!value) {
+      errors.push({ sheet: "member_info", row: rowNum, field: "값", message: "값이 비어있어요" });
+      continue;
+    }
+    const field = fieldRaw as ParsedMemberInfoField;
+
+    // 임시역할은 '조장'/'조원'만 허용
+    if (field === "임시역할" && !TEMP_ROLE_LABEL_MAP[value]) {
+      errors.push({
+        sheet: "member_info",
+        row: rowNum,
+        field: "값",
+        message: `임시역할은 '조장' 또는 '조원'만 가능해요 (입력값: "${value}")`,
+      });
+      continue;
+    }
+
+    const key = `${dayNumber}-${sortOrder}-${userName}-${field}`;
+    if (seen.has(key)) {
+      errors.push({
+        sheet: "member_info",
+        row: rowNum,
+        field: "항목",
+        message: `같은 일정(${dayNumber}-${sortOrder})의 ${userName}에 대해 '${field}' 배정이 중복됐어요`,
+      });
+      continue;
+    }
+    seen.add(key);
+
+    memberInfos.push({
+      day_number: dayNumber,
+      sort_order: sortOrder,
+      user_name: userName,
+      field,
+      value,
+    });
+  }
+
+  return { memberInfos, errors };
+}
+
+// 내부 import용: '조장' → 'leader' 매핑 헬퍼
+export function mapTempRoleLabel(value: string): "leader" | "member" | null {
+  return TEMP_ROLE_LABEL_MAP[value] ?? null;
 }

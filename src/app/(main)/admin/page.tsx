@@ -52,7 +52,7 @@ export default async function AdminPage() {
     .filter((s) => s.activated_at || s.is_active)
     .map((s) => s.id);
 
-  type CiRow = { schedule_id: string; user_id: string; is_absent: boolean; checked_at: string };
+  type CiRow = { schedule_id: string; user_id: string; is_absent: boolean; checked_at: string; absence_reason: string | null; absence_location: string | null };
   type RpRow = { schedule_id: string; group_id: string; pending_count: number; reported_at: string };
   type ShRpRow = { schedule_id: string; shuttle_bus: string; pending_count: number; reported_at: string };
 
@@ -70,7 +70,7 @@ export default async function AdminPage() {
     const [{ data: allCi }, { data: allRp }, { data: allShRp }] = await Promise.all([
       supabase
         .from("check_ins")
-        .select("schedule_id, user_id, is_absent, checked_at")
+        .select("schedule_id, user_id, is_absent, checked_at, absence_reason, absence_location")
         .in("schedule_id", activatedIds),
       supabase
         .from("group_reports")
@@ -87,6 +87,8 @@ export default async function AdminPage() {
         user_id: ci.user_id,
         is_absent: ci.is_absent ?? false,
         checked_at: ci.checked_at,
+        absence_reason: ci.absence_reason ?? null,
+        absence_location: ci.absence_location ?? null,
       });
     }
     for (const rp of allRp ?? []) {
