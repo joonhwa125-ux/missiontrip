@@ -10,7 +10,17 @@ import { filterMembersByScope } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import GroupFeedView from "./GroupFeedView";
 import GroupCheckinView from "./GroupCheckinView";
-import type { Schedule, CheckIn, Group, GroupMember, GroupMemberBrief } from "@/lib/types";
+import type {
+  Schedule,
+  CheckIn,
+  Group,
+  GroupMember,
+  GroupMemberBrief,
+  BriefingData,
+  EffectiveRosterClient,
+  ScheduleMemberInfo,
+  ScheduleGroupInfo,
+} from "@/lib/types";
 
 type Member = GroupMember;
 
@@ -30,6 +40,9 @@ interface Props {
   scheduleCounts: Record<string, number>;
   scheduleAbsentCounts: Record<string, number>;
   initialReported: boolean;
+  briefing: BriefingData | null;
+  /** v2 Phase F: 활성 일정의 effective roster (non-shuttle일 때만 null 아님) */
+  effectiveRoster: EffectiveRosterClient | null;
 }
 
 type ViewMode = "feed" | "checkin";
@@ -50,6 +63,8 @@ export default function GroupView({
   scheduleCounts,
   scheduleAbsentCounts,
   initialReported,
+  briefing,
+  effectiveRoster,
 }: Props) {
   const router = useRouter();
   const [view, setView] = useState<ViewMode>("feed");
@@ -57,12 +72,17 @@ export default function GroupView({
   const [checkIns, setCheckIns] = useState<CheckIn[]>(initialCheckIns);
   const [allCheckInsState, setAllCheckInsState] = useState(allCheckIns);
   const [allReportsState, setAllReportsState] = useState(initialReports);
+  // Phase G 후속 fix: briefing을 state로 lift → onMemberUpdated 시 클라이언트 refetch로
+  //                  0-flash 업데이트. 서버 router.refresh()도 병행되지만 briefingState가
+  //                  먼저 최신화되어 깜빡임 해소.
+  const [briefingState, setBriefingState] = useState<BriefingData | null>(briefing);
 
   // prop→state 동기화 (router.refresh() 시 서버에서 새 props가 올 때 state도 갱신)
   const prevSchedulesRef = useRef(initialSchedules);
   const prevCheckInsRef = useRef(initialCheckIns);
   const prevAllCheckInsRef = useRef(allCheckIns);
   const prevAllReportsRef = useRef(initialReports);
+  const prevBriefingRef = useRef(briefing);
 
   if (prevSchedulesRef.current !== initialSchedules) {
     prevSchedulesRef.current = initialSchedules;
@@ -85,6 +105,10 @@ export default function GroupView({
     if (initialReports.length > 0 || allReportsState.length === 0) {
       setAllReportsState(initialReports);
     }
+  }
+  if (prevBriefingRef.current !== briefing) {
+    prevBriefingRef.current = briefing;
+    if (briefing) setBriefingState(briefing);
   }
   // reported 초기값: DB 보고 이력 AND 현재 전원 확인 완료 시에만 true
   // → 세션 중 체크인한 경우 수동 보고 필수
@@ -138,6 +162,70 @@ export default function GroupView({
 
   // 백그라운드 복귀 시 타겟 fetch (router.refresh() 대신 — 0-flash 방지)
   useVisibilityRefresh(fetchLatestCheckIns);
+
+  // Phase G 후속 fix: 브리핑 데이터 타겟 fetch — schedule_group_info + schedule_member_info만 조회
+  // onMemberUpdated에서 router.refresh보다 먼저 호출되어 클라이언트가 즉시 최신 브리핑을 표시.
+  // RLS는 permanent leader/admin 기준으로 설계되어 있으므로 해당 역할에서는 정상 동작한다
+  // (temp_leader edge case는 병행 router.refresh로 커버됨).
+  const fetchLatestBriefing = useCallback(async () => {
+    if (!briefingState) return; // 초기 null일 때는 스킵 (서버 props 도착 후 sync)
+    const supabase = createClient();
+    await supabase.auth.getSession();
+
+    const baseMemberIds = members.map((m) => m.id);
+    const [sgiRes, smiByUserRes, smiByTempRes] = await Promise.all([
+      supabase
+        .from("schedule_group_info")
+        .select("id, schedule_id, group_id, location_detail, rotation, sub_location, note, created_at, updated_at, updated_by")
+        .eq("group_id", currentUser.group_id),
+      baseMemberIds.length > 0
+        ? supabase
+            .from("schedule_member_info")
+            .select("id, schedule_id, user_id, temp_group_id, temp_role, excused_reason, activity, menu, note, created_at, updated_at, updated_by")
+            .in("user_id", baseMemberIds)
+        : Promise.resolve({ data: [] as ScheduleMemberInfo[] }),
+      supabase
+        .from("schedule_member_info")
+        .select("id, schedule_id, user_id, temp_group_id, temp_role, excused_reason, activity, menu, note, created_at, updated_at, updated_by")
+        .eq("temp_group_id", currentUser.group_id),
+    ]);
+
+    const smiById = new Map<string, ScheduleMemberInfo>();
+    for (const row of (smiByUserRes.data ?? []) as ScheduleMemberInfo[]) smiById.set(row.id, row);
+    for (const row of (smiByTempRes.data ?? []) as ScheduleMemberInfo[]) smiById.set(row.id, row);
+    const smiRows = Array.from(smiById.values());
+    const sgiRows = (sgiRes.data ?? []) as ScheduleGroupInfo[];
+
+    // 브리핑에 등장하는 일정만 scheduleSummaries에 포함 (서버 로직과 동일)
+    const briefingScheduleIds = new Set<string>();
+    for (const s of sgiRows) briefingScheduleIds.add(s.schedule_id);
+    for (const s of smiRows) briefingScheduleIds.add(s.schedule_id);
+    const newScheduleSummaries = schedules
+      .filter((s) => briefingScheduleIds.has(s.id))
+      .map((s) => ({
+        schedule_id: s.id,
+        title: s.title,
+        location: s.location,
+        day_number: s.day_number,
+        sort_order: s.sort_order,
+        scheduled_time: s.scheduled_time,
+      }))
+      .sort((a, b) => a.day_number - b.day_number || a.sort_order - b.sort_order);
+
+    setBriefingState((prev) => {
+      if (!prev) return prev;
+      // RLS/네트워크 빈 응답 방어: 기존에 데이터가 있었고 이번 응답만 빈 경우 덮어쓰지 않음
+      const prevHadData = prev.groupInfos.length > 0 || prev.memberInfos.length > 0;
+      if (sgiRows.length === 0 && smiRows.length === 0 && prevHadData) return prev;
+      return {
+        ...prev,
+        groupInfos: sgiRows,
+        memberInfos: smiRows,
+        scheduleSummaries: newScheduleSummaries,
+        cachedAt: new Date().toISOString(),
+      };
+    });
+  }, [members, currentUser.group_id, schedules, briefingState]);
 
   // 일정 전환 시 체크인 상태 리셋 + 최신 데이터 fetch (key prop 제거 대응)
   const prevScheduleIdRef = useRef(currentSchedule?.id);
@@ -197,7 +285,12 @@ export default function GroupView({
       }
       router.refresh();
     },
-    onMemberUpdated: () => router.refresh(),
+    onMemberUpdated: () => {
+      // Phase G 후속 fix: 브리핑은 클라이언트에서 즉시 refetch → 깜빡임 방지.
+      //                  effectiveRoster / shuttleMembers 등은 서버 refresh로 커버.
+      fetchLatestBriefing();
+      router.refresh();
+    },
     onScheduleUpdated: ({ schedule_id, scheduled_time }) => {
       setSchedules((prev) =>
         prev.map((s) => (s.id === schedule_id ? { ...s, scheduled_time } : s))
@@ -278,17 +371,50 @@ export default function GroupView({
   }, [checkIns, members]);
 
   // 셔틀 일정: 해당 버스 인원 / 일반 일정: 조 인원 scope 필터
+  // Phase F: non-shuttle 일정이면서 effectiveRoster가 주어진 경우, base 대신 roster의 activeMembers 사용
+  //         (이동OUT 제외 + 이동IN 포함, 제외 인원도 포함 — 아래에서 별도 분리)
   const effectiveMembers = useMemo(() => {
     if (currentSchedule?.shuttle_type === "departure") return shuttleMembers;
     if (currentSchedule?.shuttle_type === "return") return returnShuttleMembers;
-    return filterMembersByScope(members, currentSchedule?.scope ?? "all");
-  }, [currentSchedule?.shuttle_type, currentSchedule?.scope, members, shuttleMembers, returnShuttleMembers]);
+    const rosterSource = effectiveRoster?.activeMembers ?? members;
+    return filterMembersByScope(rosterSource, currentSchedule?.scope ?? "all");
+  }, [currentSchedule?.shuttle_type, currentSchedule?.scope, members, shuttleMembers, returnShuttleMembers, effectiveRoster]);
+
+  // Phase F: 제외 인원 (scope 필터 적용) — 체크인 카운트에서 제외하고 별도 섹션에 표시
+  const scopedExcused = useMemo(() => {
+    if (!effectiveRoster || currentSchedule?.shuttle_type) return [];
+    return filterMembersByScope(effectiveRoster.excusedMembers, currentSchedule?.scope ?? "all");
+  }, [effectiveRoster, currentSchedule?.scope, currentSchedule?.shuttle_type]);
+
+  // Phase F: main roster = effectiveMembers - 제외
+  const excusedIdSet = useMemo(() => new Set(scopedExcused.map((m) => m.id)), [scopedExcused]);
+  const mainMembers = useMemo(
+    () => effectiveMembers.filter((m) => !excusedIdSet.has(m.id)),
+    [effectiveMembers, excusedIdSet]
+  );
+
+  // Phase F: transferredIn 배지용 (user_id → origin_group_name)
+  const transferredInMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (!effectiveRoster) return map;
+    for (const t of effectiveRoster.transferredIn) map.set(t.id, t.origin_group_name);
+    return map;
+  }, [effectiveRoster]);
+
+  // Phase F: memberInfoMap — 섹션 헤더 그루핑 (activity/excused_reason 조회용)
+  const memberInfoMap = useMemo(() => {
+    const map = new Map<string, ScheduleMemberInfo>();
+    if (!effectiveRoster) return map;
+    for (const info of effectiveRoster.memberInfos) map.set(info.user_id, info);
+    return map;
+  }, [effectiveRoster]);
 
   // 체크인 취소 시 reported 자동 리셋 — 전원 미완료가 되면 보고 무효화
+  // Phase F: 제외 인원은 보고 완료 판정에서 제외 (mainMembers 기준)
   const checkinComplete = useMemo(() => {
     const ids = new Set(checkIns.map((c) => c.user_id));
-    return effectiveMembers.length > 0 && effectiveMembers.every((m) => ids.has(m.id));
-  }, [checkIns, effectiveMembers]);
+    return mainMembers.length > 0 && mainMembers.every((m) => ids.has(m.id));
+  }, [checkIns, mainMembers]);
 
   useEffect(() => {
     const wasComplete = prevCheckinCompleteRef.current;
@@ -360,12 +486,19 @@ export default function GroupView({
           allMembers={allMembers}
           allReports={allReportsState}
           onEnterCheckin={handleEnterCheckin}
+          groupId={currentUser.group_id}
+          userId={currentUser.id}
+          groupName={groupName}
+          briefing={briefingState}
         />
       ) : (
         <GroupCheckinView
           currentUser={currentUser}
           groupName={groupName}
-          members={effectiveMembers}
+          members={mainMembers}
+          excusedMembers={scopedExcused}
+          transferredInMap={transferredInMap}
+          memberInfoMap={memberInfoMap}
           activeSchedule={currentSchedule}
           checkIns={checkIns}
           setCheckIns={setCheckIns}

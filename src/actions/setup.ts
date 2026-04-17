@@ -769,6 +769,185 @@ function validateLeaderCount(
   return errors;
 }
 
+// ============================================================================
+// v2 Phase G: 단일 행 schedule_group_info / schedule_member_info CRUD
+// — 관리자 데이터관리 UI에서 직접 편집/삭제/되돌리기 용
+// — 벌크 UPSERT 헬퍼(`upsertScheduleGroupInfo` / `upsertScheduleMemberInfo`)와 분리
+// ============================================================================
+
+/**
+ * 단일 조별 배정 upsert. 신규 생성 + 기존 수정 + Undo 재삽입 모두 커버.
+ *
+ * - id가 주어지면 해당 id로 UPDATE 시도
+ * - id가 없으면 (schedule_id, group_id) 유일키로 UPSERT
+ * - 모든 payload 필드가 null이면 의미 없는 행이므로 거부
+ */
+export async function updateScheduleGroupInfo(
+  scheduleId: string,
+  groupId: string,
+  payload: {
+    location_detail: string | null;
+    rotation: string | null;
+    sub_location: string | null;
+    note: string | null;
+  },
+  existingId?: string | null
+): Promise<ActionResult<{ id: string }>> {
+  const admin = await requireAdmin();
+  if (!admin) return { ok: false, error: "관리자 권한이 필요해요" };
+
+  const supabase = createServiceClient();
+
+  const normalized = {
+    schedule_id: scheduleId,
+    group_id: groupId,
+    location_detail: payload.location_detail?.trim() || null,
+    rotation: payload.rotation?.trim() || null,
+    sub_location: payload.sub_location?.trim() || null,
+    note: payload.note?.trim() || null,
+    updated_by: admin.id,
+  };
+
+  const hasContent =
+    normalized.location_detail ||
+    normalized.rotation ||
+    normalized.sub_location ||
+    normalized.note;
+  if (!hasContent) {
+    return { ok: false, error: "최소 한 개 항목은 입력해주세요" };
+  }
+
+  if (existingId) {
+    const { data, error } = await supabase
+      .from("schedule_group_info")
+      .update(normalized)
+      .eq("id", existingId)
+      .select("id")
+      .single();
+    if (error) return { ok: false, error: "조별 배정 수정 중 오류가 발생했어요" };
+    revalidateMainPaths();
+    return { ok: true, data: { id: data.id } };
+  }
+
+  const { data, error } = await supabase
+    .from("schedule_group_info")
+    .upsert(normalized, { onConflict: "schedule_id,group_id" })
+    .select("id")
+    .single();
+  if (error) return { ok: false, error: "조별 배정 저장 중 오류가 발생했어요" };
+
+  revalidateMainPaths();
+  return { ok: true, data: { id: data.id } };
+}
+
+/** 단일 조별 배정 삭제 */
+export async function deleteScheduleGroupInfo(
+  id: string
+): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  if (!admin) return { ok: false, error: "관리자 권한이 필요해요" };
+
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .from("schedule_group_info")
+    .delete()
+    .eq("id", id);
+  if (error) return { ok: false, error: "조별 배정 삭제 중 오류가 발생했어요" };
+
+  revalidateMainPaths();
+  return { ok: true };
+}
+
+/**
+ * 단일 인원별 배정 upsert. 신규 생성 + 기존 수정 + Undo 재삽입 모두 커버.
+ * payload의 temp_role은 'leader'/'member'만 허용.
+ */
+export async function updateScheduleMemberInfo(
+  scheduleId: string,
+  userId: string,
+  payload: {
+    temp_group_id: string | null;
+    temp_role: "leader" | "member" | null;
+    excused_reason: string | null;
+    activity: string | null;
+    menu: string | null;
+    note: string | null;
+  },
+  existingId?: string | null
+): Promise<ActionResult<{ id: string }>> {
+  const admin = await requireAdmin();
+  if (!admin) return { ok: false, error: "관리자 권한이 필요해요" };
+
+  if (payload.temp_role && payload.temp_role !== "leader" && payload.temp_role !== "member") {
+    return { ok: false, error: "유효하지 않은 임시 역할이에요" };
+  }
+
+  const supabase = createServiceClient();
+
+  const normalized = {
+    schedule_id: scheduleId,
+    user_id: userId,
+    temp_group_id: payload.temp_group_id || null,
+    temp_role: payload.temp_role,
+    excused_reason: payload.excused_reason?.trim() || null,
+    activity: payload.activity?.trim() || null,
+    menu: payload.menu?.trim() || null,
+    note: payload.note?.trim() || null,
+    updated_by: admin.id,
+  };
+
+  const hasContent =
+    normalized.temp_group_id ||
+    normalized.temp_role ||
+    normalized.excused_reason ||
+    normalized.activity ||
+    normalized.menu ||
+    normalized.note;
+  if (!hasContent) {
+    return { ok: false, error: "최소 한 개 항목은 입력해주세요" };
+  }
+
+  if (existingId) {
+    const { data, error } = await supabase
+      .from("schedule_member_info")
+      .update(normalized)
+      .eq("id", existingId)
+      .select("id")
+      .single();
+    if (error) return { ok: false, error: "인원별 배정 수정 중 오류가 발생했어요" };
+    revalidateMainPaths();
+    return { ok: true, data: { id: data.id } };
+  }
+
+  const { data, error } = await supabase
+    .from("schedule_member_info")
+    .upsert(normalized, { onConflict: "schedule_id,user_id" })
+    .select("id")
+    .single();
+  if (error) return { ok: false, error: "인원별 배정 저장 중 오류가 발생했어요" };
+
+  revalidateMainPaths();
+  return { ok: true, data: { id: data.id } };
+}
+
+/** 단일 인원별 배정 삭제 */
+export async function deleteScheduleMemberInfo(
+  id: string
+): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  if (!admin) return { ok: false, error: "관리자 권한이 필요해요" };
+
+  const supabase = createServiceClient();
+  const { error } = await supabase
+    .from("schedule_member_info")
+    .delete()
+    .eq("id", id);
+  if (error) return { ok: false, error: "인원별 배정 삭제 중 오류가 발생했어요" };
+
+  revalidateMainPaths();
+  return { ok: true };
+}
+
 // 조장 ↔ 조원 역할 변경 (admin 전용)
 export async function updateUserRole(
   userId: string,

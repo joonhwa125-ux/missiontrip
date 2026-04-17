@@ -1,0 +1,641 @@
+"use client";
+
+import { useCallback, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { PlusIcon } from "@/components/ui/icons";
+import UndoSnackbar from "@/components/common/UndoSnackbar";
+import ScheduleGroupInfoEditDialog, {
+  type ScheduleGroupInfoFormValues,
+} from "./ScheduleGroupInfoEditDialog";
+import ScheduleMemberInfoEditDialog, {
+  type ScheduleMemberInfoFormValues,
+} from "./ScheduleMemberInfoEditDialog";
+import {
+  updateScheduleGroupInfo,
+  deleteScheduleGroupInfo,
+  updateScheduleMemberInfo,
+  deleteScheduleMemberInfo,
+} from "@/actions/setup";
+import { useBroadcast } from "@/hooks/useRealtime";
+import { CHANNEL_GLOBAL, EVENT_MEMBER_UPDATED } from "@/lib/constants";
+import { cn } from "@/lib/utils";
+import type {
+  Schedule,
+  ScheduleGroupInfo,
+  ScheduleMemberInfo,
+} from "@/lib/types";
+
+interface SimpleGroup {
+  id: string;
+  name: string;
+}
+
+interface SimpleUser {
+  id: string;
+  name: string;
+  group_id: string;
+}
+
+interface Props {
+  schedules: Schedule[];
+  groups: SimpleGroup[];
+  users: SimpleUser[];
+  groupInfos: ScheduleGroupInfo[];
+  memberInfos: ScheduleMemberInfo[];
+}
+
+type Section = "group_info" | "member_info";
+
+interface UndoState {
+  message: string;
+  restore: () => Promise<void>;
+}
+
+function scheduleLabel(s: Schedule): string {
+  return `${s.day_number}-${s.sort_order} · ${s.title}`;
+}
+
+export default function AssignmentManagementView({
+  schedules,
+  groups,
+  users,
+  groupInfos,
+  memberInfos,
+}: Props) {
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+  const [section, setSection] = useState<Section>("group_info");
+  const { broadcast } = useBroadcast();
+
+  // Phase H: 배정 CRUD 후 조장/관리자 페이지에 "member_updated" 실시간 전파.
+  //          GroupView는 fetchLatestBriefing + router.refresh 병행 처리(0-flash),
+  //          AdminView는 router.refresh로 현황 갱신.
+  const broadcastMemberUpdate = useCallback(() => {
+    // 실패해도 UI 흐름엔 영향 없음 — 로그만 조용히 소실
+    void broadcast(CHANNEL_GLOBAL, EVENT_MEMBER_UPDATED, {});
+  }, [broadcast]);
+
+  // 다이얼로그 상태
+  const [sgiDialog, setSgiDialog] = useState<
+    | { mode: "create" }
+    | { mode: "edit"; id: string; initial: ScheduleGroupInfoFormValues }
+    | null
+  >(null);
+  const [smiDialog, setSmiDialog] = useState<
+    | { mode: "create" }
+    | { mode: "edit"; id: string; initial: ScheduleMemberInfoFormValues }
+    | null
+  >(null);
+
+  const [deleteSgiId, setDeleteSgiId] = useState<string | null>(null);
+  const [deleteSmiId, setDeleteSmiId] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [undo, setUndo] = useState<UndoState | null>(null);
+
+  // 조회용 맵 — 테이블 렌더링에서 이름 조회
+  const scheduleMap = useMemo(
+    () => new Map(schedules.map((s) => [s.id, s])),
+    [schedules]
+  );
+  const groupMap = useMemo(
+    () => new Map(groups.map((g) => [g.id, g])),
+    [groups]
+  );
+  const userMap = useMemo(
+    () => new Map(users.map((u) => [u.id, u])),
+    [users]
+  );
+
+  // 일정 ↑ 일차/순서, 조/이름 순 정렬
+  const sortedGroupInfos = useMemo(() => {
+    return [...groupInfos].sort((a, b) => {
+      const sa = scheduleMap.get(a.schedule_id);
+      const sb = scheduleMap.get(b.schedule_id);
+      const dayDiff = (sa?.day_number ?? 0) - (sb?.day_number ?? 0);
+      if (dayDiff !== 0) return dayDiff;
+      const orderDiff = (sa?.sort_order ?? 0) - (sb?.sort_order ?? 0);
+      if (orderDiff !== 0) return orderDiff;
+      const ga = groupMap.get(a.group_id)?.name ?? "";
+      const gb = groupMap.get(b.group_id)?.name ?? "";
+      return ga.localeCompare(gb, "ko");
+    });
+  }, [groupInfos, scheduleMap, groupMap]);
+
+  const sortedMemberInfos = useMemo(() => {
+    return [...memberInfos].sort((a, b) => {
+      const sa = scheduleMap.get(a.schedule_id);
+      const sb = scheduleMap.get(b.schedule_id);
+      const dayDiff = (sa?.day_number ?? 0) - (sb?.day_number ?? 0);
+      if (dayDiff !== 0) return dayDiff;
+      const orderDiff = (sa?.sort_order ?? 0) - (sb?.sort_order ?? 0);
+      if (orderDiff !== 0) return orderDiff;
+      const ua = userMap.get(a.user_id)?.name ?? "";
+      const ub = userMap.get(b.user_id)?.name ?? "";
+      return ua.localeCompare(ub, "ko");
+    });
+  }, [memberInfos, scheduleMap, userMap]);
+
+  // 공통 실행 헬퍼 — startTransition + 에러 처리 + refresh + member_updated broadcast
+  // Phase H: 성공 시 자동으로 broadcastMemberUpdate 호출 → 조장/관리자 페이지 실시간 반영
+  const run = useCallback(
+    (
+      action: () => Promise<{ ok: boolean; error?: string }>,
+      onSuccess?: () => void
+    ) => {
+      startTransition(async () => {
+        const result = await action();
+        if (!result.ok) {
+          setErrorMsg(result.error ?? "오류가 발생했어요");
+          return;
+        }
+        setErrorMsg(null);
+        onSuccess?.();
+        router.refresh();
+        broadcastMemberUpdate();
+      });
+    },
+    [router, broadcastMemberUpdate]
+  );
+
+  // ==========================================================================
+  // SGI (조별) 핸들러
+  // ==========================================================================
+  const handleSgiSave = (values: ScheduleGroupInfoFormValues) => {
+    const existingId =
+      sgiDialog?.mode === "edit" ? sgiDialog.id : null;
+    run(
+      () =>
+        updateScheduleGroupInfo(
+          values.schedule_id,
+          values.group_id,
+          {
+            location_detail: values.location_detail,
+            rotation: values.rotation,
+            sub_location: values.sub_location,
+            note: values.note,
+          },
+          existingId
+        ),
+      () => setSgiDialog(null)
+    );
+  };
+
+  const confirmDeleteSgi = () => {
+    const target = groupInfos.find((g) => g.id === deleteSgiId);
+    if (!target) {
+      setDeleteSgiId(null);
+      return;
+    }
+    // Undo용 스냅샷 (되돌리기 시 그대로 upsert)
+    const restorePayload: ScheduleGroupInfoFormValues = {
+      schedule_id: target.schedule_id,
+      group_id: target.group_id,
+      location_detail: target.location_detail,
+      rotation: target.rotation,
+      sub_location: target.sub_location,
+      note: target.note,
+    };
+    const scheduleName =
+      scheduleMap.get(target.schedule_id)?.title ?? "일정";
+    const groupName = groupMap.get(target.group_id)?.name ?? "조";
+
+    run(
+      () => deleteScheduleGroupInfo(target.id),
+      () => {
+        setDeleteSgiId(null);
+        setUndo({
+          message: `${groupName} · ${scheduleName} 조별 배정을 삭제했어요`,
+          restore: async () => {
+            const res = await updateScheduleGroupInfo(
+              restorePayload.schedule_id,
+              restorePayload.group_id,
+              {
+                location_detail: restorePayload.location_detail,
+                rotation: restorePayload.rotation,
+                sub_location: restorePayload.sub_location,
+                note: restorePayload.note,
+              }
+            );
+            if (!res.ok) {
+              setErrorMsg(res.error ?? "되돌리기에 실패했어요");
+            } else {
+              router.refresh();
+              broadcastMemberUpdate();
+            }
+          },
+        });
+      }
+    );
+  };
+
+  // ==========================================================================
+  // SMI (인원별) 핸들러
+  // ==========================================================================
+  const handleSmiSave = (values: ScheduleMemberInfoFormValues) => {
+    const existingId = smiDialog?.mode === "edit" ? smiDialog.id : null;
+    run(
+      () =>
+        updateScheduleMemberInfo(
+          values.schedule_id,
+          values.user_id,
+          {
+            temp_group_id: values.temp_group_id,
+            temp_role: values.temp_role,
+            excused_reason: values.excused_reason,
+            activity: values.activity,
+            menu: values.menu,
+            note: values.note,
+          },
+          existingId
+        ),
+      () => setSmiDialog(null)
+    );
+  };
+
+  const confirmDeleteSmi = () => {
+    const target = memberInfos.find((m) => m.id === deleteSmiId);
+    if (!target) {
+      setDeleteSmiId(null);
+      return;
+    }
+    const restorePayload: ScheduleMemberInfoFormValues = {
+      schedule_id: target.schedule_id,
+      user_id: target.user_id,
+      temp_group_id: target.temp_group_id,
+      temp_role: target.temp_role,
+      excused_reason: target.excused_reason,
+      activity: target.activity,
+      menu: target.menu,
+      note: target.note,
+    };
+    const userName = userMap.get(target.user_id)?.name ?? "참가자";
+    const scheduleName =
+      scheduleMap.get(target.schedule_id)?.title ?? "일정";
+
+    run(
+      () => deleteScheduleMemberInfo(target.id),
+      () => {
+        setDeleteSmiId(null);
+        setUndo({
+          message: `${userName} · ${scheduleName} 인원별 배정을 삭제했어요`,
+          restore: async () => {
+            const res = await updateScheduleMemberInfo(
+              restorePayload.schedule_id,
+              restorePayload.user_id,
+              {
+                temp_group_id: restorePayload.temp_group_id,
+                temp_role: restorePayload.temp_role,
+                excused_reason: restorePayload.excused_reason,
+                activity: restorePayload.activity,
+                menu: restorePayload.menu,
+                note: restorePayload.note,
+              }
+            );
+            if (!res.ok) {
+              setErrorMsg(res.error ?? "되돌리기에 실패했어요");
+            } else {
+              router.refresh();
+              broadcastMemberUpdate();
+            }
+          },
+        });
+      }
+    );
+  };
+
+  // ==========================================================================
+  // 렌더링
+  // ==========================================================================
+  return (
+    <div>
+      {/* 에러 배너 */}
+      {errorMsg && (
+        <div
+          role="alert"
+          className="mb-3 flex items-center justify-between rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
+          <span>{errorMsg}</span>
+          <button
+            onClick={() => setErrorMsg(null)}
+            className="ml-3 min-h-11 min-w-11 rounded-lg"
+            aria-label="오류 닫기"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* 섹션 서브탭 (조별 / 인원별) */}
+      <div
+        role="tablist"
+        aria-label="배정 종류"
+        className="mb-4 flex gap-1 rounded-xl bg-gray-100 p-1"
+      >
+        {(
+          [
+            { key: "group_info", label: `조별 (${groupInfos.length})` },
+            { key: "member_info", label: `인원별 (${memberInfos.length})` },
+          ] as const
+        ).map((t) => (
+          <button
+            key={t.key}
+            role="tab"
+            aria-selected={section === t.key}
+            onClick={() => setSection(t.key)}
+            className={cn(
+              "min-h-11 flex-1 rounded-lg text-sm font-medium transition-colors",
+              section === t.key
+                ? "bg-white font-bold shadow-sm"
+                : "text-muted-foreground"
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 조별 배정 섹션 */}
+      {section === "group_info" && (
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              일정×조 메타데이터 (층수/순환/장소/메모)
+            </p>
+            <button
+              onClick={() => setSgiDialog({ mode: "create" })}
+              className="flex min-h-11 items-center gap-1 rounded-xl bg-main-action px-3 text-sm font-bold"
+              aria-label="조별 배정 추가"
+              disabled={schedules.length === 0 || groups.length === 0}
+            >
+              <PlusIcon className="h-4 w-4" aria-hidden />
+              추가
+            </button>
+          </div>
+          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+            <table className="min-w-[720px] w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr className="text-center text-xs text-muted-foreground whitespace-nowrap">
+                  <th className="min-w-[140px] px-2 py-2">일정</th>
+                  <th className="min-w-[64px] px-2 py-2">조</th>
+                  <th className="min-w-[64px] px-2 py-2">층</th>
+                  <th className="min-w-[80px] px-2 py-2">순서</th>
+                  <th className="min-w-[80px] px-2 py-2">장소</th>
+                  <th className="min-w-[120px] px-2 py-2">메모</th>
+                  <th className="min-w-[96px] px-2 py-2">편집</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedGroupInfos.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
+                      등록된 조별 배정이 없어요
+                    </td>
+                  </tr>
+                )}
+                {sortedGroupInfos.map((g) => {
+                  const s = scheduleMap.get(g.schedule_id);
+                  const group = groupMap.get(g.group_id);
+                  return (
+                    <tr key={g.id} className="border-t border-gray-100">
+                      <td className="px-2 py-2 text-xs">
+                        {s ? scheduleLabel(s) : "(삭제된 일정)"}
+                      </td>
+                      <td className="px-2 py-2 text-center text-xs">{group?.name ?? "-"}</td>
+                      <td className="px-2 py-2 text-center text-xs">{g.location_detail ?? "-"}</td>
+                      <td className="px-2 py-2 text-center text-xs">{g.rotation ?? "-"}</td>
+                      <td className="px-2 py-2 text-center text-xs">{g.sub_location ?? "-"}</td>
+                      <td className="px-2 py-2 text-xs truncate max-w-[200px]">{g.note ?? "-"}</td>
+                      <td className="px-2 py-2">
+                        <div className="flex justify-center gap-2 whitespace-nowrap">
+                          <button
+                            onClick={() =>
+                              setSgiDialog({
+                                mode: "edit",
+                                id: g.id,
+                                initial: {
+                                  schedule_id: g.schedule_id,
+                                  group_id: g.group_id,
+                                  location_detail: g.location_detail,
+                                  rotation: g.rotation,
+                                  sub_location: g.sub_location,
+                                  note: g.note,
+                                },
+                              })
+                            }
+                            className="min-h-11 rounded-lg bg-gray-100 px-2 text-xs font-medium"
+                            aria-label="조별 배정 수정"
+                          >
+                            수정
+                          </button>
+                          <button
+                            onClick={() => setDeleteSgiId(g.id)}
+                            className="min-h-11 rounded-lg bg-red-50 px-2 text-xs font-medium text-red-600"
+                            aria-label="조별 배정 삭제"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* 인원별 배정 섹션 */}
+      {section === "member_info" && (
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              일정×참가자 메타데이터 (조이동/임시역할/제외/활동/메뉴/메모)
+            </p>
+            <button
+              onClick={() => setSmiDialog({ mode: "create" })}
+              className="flex min-h-11 items-center gap-1 rounded-xl bg-main-action px-3 text-sm font-bold"
+              aria-label="인원별 배정 추가"
+              disabled={schedules.length === 0 || users.length === 0}
+            >
+              <PlusIcon className="h-4 w-4" aria-hidden />
+              추가
+            </button>
+          </div>
+          <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
+            <table className="min-w-[900px] w-full text-sm">
+              <thead className="bg-gray-50">
+                <tr className="text-center text-xs text-muted-foreground whitespace-nowrap">
+                  <th className="min-w-[140px] px-2 py-2">일정</th>
+                  <th className="min-w-[64px] px-2 py-2">이름</th>
+                  <th className="min-w-[72px] px-2 py-2">조이동</th>
+                  <th className="min-w-[56px] px-2 py-2">임시역할</th>
+                  <th className="min-w-[88px] px-2 py-2">제외</th>
+                  <th className="min-w-[72px] px-2 py-2">활동</th>
+                  <th className="min-w-[72px] px-2 py-2">메뉴</th>
+                  <th className="min-w-[120px] px-2 py-2">메모</th>
+                  <th className="min-w-[96px] px-2 py-2">편집</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedMemberInfos.length === 0 && (
+                  <tr>
+                    <td colSpan={9} className="py-8 text-center text-sm text-muted-foreground">
+                      등록된 인원별 배정이 없어요
+                    </td>
+                  </tr>
+                )}
+                {sortedMemberInfos.map((m) => {
+                  const s = scheduleMap.get(m.schedule_id);
+                  const user = userMap.get(m.user_id);
+                  const tempGroup = m.temp_group_id
+                    ? groupMap.get(m.temp_group_id)
+                    : null;
+                  return (
+                    <tr key={m.id} className="border-t border-gray-100">
+                      <td className="px-2 py-2 text-xs">
+                        {s ? scheduleLabel(s) : "(삭제된 일정)"}
+                      </td>
+                      <td className="px-2 py-2 text-xs font-medium">{user?.name ?? "-"}</td>
+                      <td className="px-2 py-2 text-center text-xs">{tempGroup?.name ?? "-"}</td>
+                      <td className="px-2 py-2 text-center text-xs">
+                        {m.temp_role === "leader" ? "조장" : m.temp_role === "member" ? "조원" : "-"}
+                      </td>
+                      <td className="px-2 py-2 text-xs truncate max-w-[140px]">{m.excused_reason ?? "-"}</td>
+                      <td className="px-2 py-2 text-center text-xs">{m.activity ?? "-"}</td>
+                      <td className="px-2 py-2 text-center text-xs">{m.menu ?? "-"}</td>
+                      <td className="px-2 py-2 text-xs truncate max-w-[200px]">{m.note ?? "-"}</td>
+                      <td className="px-2 py-2">
+                        <div className="flex justify-center gap-2 whitespace-nowrap">
+                          <button
+                            onClick={() =>
+                              setSmiDialog({
+                                mode: "edit",
+                                id: m.id,
+                                initial: {
+                                  schedule_id: m.schedule_id,
+                                  user_id: m.user_id,
+                                  temp_group_id: m.temp_group_id,
+                                  temp_role: m.temp_role,
+                                  excused_reason: m.excused_reason,
+                                  activity: m.activity,
+                                  menu: m.menu,
+                                  note: m.note,
+                                },
+                              })
+                            }
+                            className="min-h-11 rounded-lg bg-gray-100 px-2 text-xs font-medium"
+                            aria-label="인원별 배정 수정"
+                          >
+                            수정
+                          </button>
+                          <button
+                            onClick={() => setDeleteSmiId(m.id)}
+                            className="min-h-11 rounded-lg bg-red-50 px-2 text-xs font-medium text-red-600"
+                            aria-label="인원별 배정 삭제"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* 다이얼로그 */}
+      {sgiDialog && (
+        <ScheduleGroupInfoEditDialog
+          mode={sgiDialog.mode}
+          schedules={schedules}
+          groups={groups}
+          initial={sgiDialog.mode === "edit" ? sgiDialog.initial : undefined}
+          onSave={handleSgiSave}
+          onClose={() => setSgiDialog(null)}
+        />
+      )}
+      {smiDialog && (
+        <ScheduleMemberInfoEditDialog
+          mode={smiDialog.mode}
+          schedules={schedules}
+          groups={groups}
+          users={users}
+          initial={smiDialog.mode === "edit" ? smiDialog.initial : undefined}
+          onSave={handleSmiSave}
+          onClose={() => setSmiDialog(null)}
+        />
+      )}
+
+      {/* 삭제 확인 */}
+      <Dialog open={!!deleteSgiId} onOpenChange={(o) => !o && setDeleteSgiId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>조별 배정을 삭제할까요?</DialogTitle>
+            <DialogDescription>
+              조장 화면의 브리핑에서 해당 항목이 사라져요. 5초 안에 되돌릴 수 있어요.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <button className="min-h-11 rounded-xl bg-gray-100 px-4 text-sm font-medium">
+                취소
+              </button>
+            </DialogClose>
+            <button
+              onClick={confirmDeleteSgi}
+              className="min-h-11 rounded-xl bg-red-500 px-4 text-sm font-bold text-white"
+            >
+              삭제
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteSmiId} onOpenChange={(o) => !o && setDeleteSmiId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>인원별 배정을 삭제할까요?</DialogTitle>
+            <DialogDescription>
+              해당 참가자의 이 일정 배정 정보가 사라져요. 5초 안에 되돌릴 수 있어요.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <button className="min-h-11 rounded-xl bg-gray-100 px-4 text-sm font-medium">
+                취소
+              </button>
+            </DialogClose>
+            <button
+              onClick={confirmDeleteSmi}
+              className="min-h-11 rounded-xl bg-red-500 px-4 text-sm font-bold text-white"
+            >
+              삭제
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Undo 스낵바 */}
+      {undo && (
+        <UndoSnackbar
+          message={undo.message}
+          onUndo={undo.restore}
+          onClose={() => setUndo(null)}
+        />
+      )}
+    </div>
+  );
+}

@@ -51,6 +51,10 @@ service-account*.json
 
 # claude code
 .claude/agent-memory/
+.claude/settings.local.json
+
+# build artifacts
+build.log
 
 # OS
 Thumbs.db

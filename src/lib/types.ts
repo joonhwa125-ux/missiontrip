@@ -221,6 +221,53 @@ export interface ScheduleGroupInfo {
   updated_by: string | null;
 }
 
+/**
+ * 조장 브리핑 데이터 (v2 Phase E)
+ * — 내 조 한정 메타데이터 묶음. 서버에서 조립 후 props로 전달되고,
+ *   `useBriefingCache`가 localStorage에 사본을 유지하여 오프라인에서도 조회 가능.
+ */
+export interface BriefingData {
+  /** 조원 중 trip_role 혹은 airline 이 설정된 레코드 (여행 내내 유지되는 역할) */
+  roleAssignments: Array<{
+    user_id: string;
+    name: string;
+    trip_role: string | null;
+    airline: string | null;
+  }>;
+  /** 내 조 기준 schedule_group_info 레코드 */
+  groupInfos: ScheduleGroupInfo[];
+  /** 내 조원(이동IN 포함) 기준 schedule_member_info 레코드 */
+  memberInfos: ScheduleMemberInfo[];
+  /** 브리핑 렌더링 시 일정 정보 조회용 맵 — 서버에서 조립 */
+  scheduleSummaries: Array<{
+    schedule_id: string;
+    title: string;
+    location: string | null;
+    day_number: number;
+    sort_order: number;
+    scheduled_time: string | null;
+  }>;
+  /** user_id → name 매핑 (member_info 렌더 시 필요) */
+  userNameMap: Record<string, string>;
+  /** group_id → group name 매핑 (조이동 칩 렌더 시 필요 — Phase G 후속 fix) */
+  groupNameMap: Record<string, string>;
+  /** 캐시 기준 시각 (ISO). localStorage 저장 시점 확인용 */
+  cachedAt: string;
+}
+
+/**
+ * v2 Phase F: 서버→클라이언트 직렬화용 effective roster.
+ * `EffectiveRoster`의 `memberInfoMap` (Map) 을 `memberInfos` (배열) 로 교체한 변형.
+ * Map 은 Server Component → Client Component 경계에서 직렬화 불가하므로 별도 정의.
+ */
+export interface EffectiveRosterClient {
+  activeMembers: GroupMember[];
+  excusedMembers: GroupMember[];
+  transferredIn: Array<GroupMember & { origin_group_name: string }>;
+  /** user_id → ScheduleMemberInfo 매핑을 위한 raw 배열 (클라이언트에서 Map으로 재조립) */
+  memberInfos: ScheduleMemberInfo[];
+}
+
 /** 조장 화면에서 사용하는 effective roster 결과 */
 export interface EffectiveRoster {
   /** 체크인 대상 — 기본 조원 - 이동OUT + 이동IN (제외 인원 포함) */

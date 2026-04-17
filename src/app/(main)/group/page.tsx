@@ -3,7 +3,20 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import GroupView from "@/components/group/GroupView";
 import { hasActiveOrPastTempLeaderRole } from "@/lib/auth";
-import type { CheckIn, Schedule, Group, GroupParty, GroupMember, ShuttleReport } from "@/lib/types";
+import { getEffectiveRoster } from "@/lib/roster";
+import type {
+  CheckIn,
+  Schedule,
+  Group,
+  GroupParty,
+  GroupMember,
+  ShuttleReport,
+  BriefingData,
+  ScheduleMemberInfo,
+  ScheduleGroupInfo,
+  EffectiveRoster,
+  EffectiveRosterClient,
+} from "@/lib/types";
 
 export const metadata: Metadata = { title: "조장" };
 
@@ -99,6 +112,8 @@ export default async function GroupPage() {
   let allReports: { group_id: string }[] = [];
   let initialReported = false;
   let shuttleReports: ShuttleReport[] = [];
+  // Phase F: 활성 일정의 effective roster (non-shuttle일 때만 계산)
+  let effectiveRoster: EffectiveRoster | null = null;
   const scheduleCounts: Record<string, number> = {};
   const scheduleAbsentCounts: Record<string, number> = {};
 
@@ -118,20 +133,41 @@ export default async function GroupPage() {
   if (activeSchedule || (completedScheduleIds.length > 0 && members?.length)) {
     const queries: Promise<void>[] = [];
 
-    // (1) 활성 일정 체크인 + 보고
+    // (1) 활성 일정 체크인 + 보고 + effective roster (Phase F, non-shuttle만)
     if (activeSchedule) {
       queries.push(
-        Promise.all([
-          supabase.from("check_ins").select("id, user_id, schedule_id, checked_at, checked_by, checked_by_user_id, offline_pending, is_absent, absence_reason, absence_location, group_id_at_checkin").eq("schedule_id", activeSchedule.id),
-          supabase.from("group_reports").select("group_id").eq("schedule_id", activeSchedule.id),
-        ]).then(([{ data: allCi }, { data: allReportsData }]) => {
+        (async () => {
+          const baseRosterMembers: GroupMember[] = (members ?? []).map((m) => ({
+            id: m.id,
+            name: m.name,
+            party: (m.party as GroupParty) ?? null,
+            airline: m.airline ?? null,
+            trip_role: m.trip_role ?? null,
+          }));
+          const [rosterResult, { data: allCi }, { data: allReportsData }] = await Promise.all([
+            !activeSchedule.shuttle_type && baseRosterMembers.length > 0
+              ? getEffectiveRoster({
+                  scheduleId: activeSchedule.id,
+                  groupId: currentUser.group_id,
+                  baseMembers: baseRosterMembers,
+                  allGroups: (allGroups ?? []) as Group[],
+                })
+              : Promise.resolve(null),
+            supabase.from("check_ins").select("id, user_id, schedule_id, checked_at, checked_by, checked_by_user_id, offline_pending, is_absent, absence_reason, absence_location, group_id_at_checkin").eq("schedule_id", activeSchedule.id),
+            supabase.from("group_reports").select("group_id").eq("schedule_id", activeSchedule.id),
+          ]);
+
+          effectiveRoster = rosterResult;
           const allData = allCi ?? [];
           allCheckIns = allData.map((ci) => ({ user_id: ci.user_id, is_absent: ci.is_absent }));
-          const memberIds = new Set(members?.map((m) => m.id) ?? []);
-          checkIns = allData.filter((ci) => memberIds.has(ci.user_id)) as CheckIn[];
+          // Phase F: roster 적용 시 transferredIn 포함/transferredOut 제외된 id 집합 사용
+          const rosterIds = rosterResult
+            ? new Set(rosterResult.activeMembers.map((m) => m.id))
+            : new Set(members?.map((m) => m.id) ?? []);
+          checkIns = allData.filter((ci) => rosterIds.has(ci.user_id)) as CheckIn[];
           allReports = allReportsData ?? [];
           initialReported = allReports.some((r) => r.group_id === currentUser.group_id);
-        })
+        })()
       );
     }
 
@@ -167,6 +203,94 @@ export default async function GroupPage() {
     await Promise.all(queries);
   }
 
+  // ============================================================================
+  // v2 Phase E: 조장 브리핑 데이터 조립
+  // — schedule_group_info (내 조) + schedule_member_info (내 조원 OR 우리 조로 이동/임시권한)
+  // — 결과가 비어있어도 BriefingData 객체는 유지 (GroupFeedView가 카운트 0이면 배너 숨김)
+  // ============================================================================
+  const baseMemberIds = (members ?? []).map((m) => m.id);
+  const [{ data: sgiRows }, byUserSmiRes, byTempSmiRes] = await Promise.all([
+    supabase
+      .from("schedule_group_info")
+      .select("id, schedule_id, group_id, location_detail, rotation, sub_location, note, created_at, updated_at, updated_by")
+      .eq("group_id", currentUser.group_id),
+    baseMemberIds.length > 0
+      ? supabase
+          .from("schedule_member_info")
+          .select("id, schedule_id, user_id, temp_group_id, temp_role, excused_reason, activity, menu, note, created_at, updated_at, updated_by")
+          .in("user_id", baseMemberIds)
+      : Promise.resolve({ data: [] as ScheduleMemberInfo[] }),
+    supabase
+      .from("schedule_member_info")
+      .select("id, schedule_id, user_id, temp_group_id, temp_role, excused_reason, activity, menu, note, created_at, updated_at, updated_by")
+      .eq("temp_group_id", currentUser.group_id),
+  ]);
+
+  const smiById = new Map<string, ScheduleMemberInfo>();
+  for (const row of (byUserSmiRes.data ?? []) as ScheduleMemberInfo[]) smiById.set(row.id, row);
+  for (const row of (byTempSmiRes.data ?? []) as ScheduleMemberInfo[]) smiById.set(row.id, row);
+  const smiRows = Array.from(smiById.values());
+
+  // userNameMap: 브리핑 시트에서 이름 렌더링에 사용
+  const relevantUserIds = new Set<string>(baseMemberIds);
+  for (const smi of smiRows) relevantUserIds.add(smi.user_id);
+  const userNameMap: Record<string, string> = {};
+  for (const m of allMembers ?? []) {
+    if (relevantUserIds.has(m.id)) userNameMap[m.id] = m.name;
+  }
+
+  // 브리핑에 등장하는 일정만 scheduleSummaries에 포함 (바텀시트 렌더 최소화)
+  const briefingScheduleIds = new Set<string>();
+  for (const s of (sgiRows ?? []) as ScheduleGroupInfo[]) briefingScheduleIds.add(s.schedule_id);
+  for (const s of smiRows) briefingScheduleIds.add(s.schedule_id);
+  const scheduleSummaries = ((schedules ?? []) as Schedule[])
+    .filter((s) => briefingScheduleIds.has(s.id))
+    .map((s) => ({
+      schedule_id: s.id,
+      title: s.title,
+      location: s.location,
+      day_number: s.day_number,
+      sort_order: s.sort_order,
+      scheduled_time: s.scheduled_time,
+    }))
+    .sort((a, b) => a.day_number - b.day_number || a.sort_order - b.sort_order);
+
+  const roleAssignments = (members ?? [])
+    .filter((m) => m.trip_role || m.airline)
+    .map((m) => ({
+      user_id: m.id,
+      name: m.name,
+      trip_role: m.trip_role ?? null,
+      airline: m.airline ?? null,
+    }));
+
+  // group_id → name 매핑 (temp_group_id 칩 렌더 시 필요)
+  const groupNameMap: Record<string, string> = {};
+  for (const g of (allGroups ?? []) as Group[]) groupNameMap[g.id] = g.name;
+
+  const briefing: BriefingData = {
+    roleAssignments,
+    groupInfos: (sgiRows ?? []) as ScheduleGroupInfo[],
+    memberInfos: smiRows,
+    scheduleSummaries,
+    userNameMap,
+    groupNameMap,
+    cachedAt: new Date().toISOString(),
+  };
+
+  // Phase F: Map을 배열로 바꾼 클라이언트-직렬화용 roster
+  // NOTE: `let effectiveRoster = null`가 closure 내부 할당을 TS가 추적하지 못해
+  //        narrowing되는 이슈를 피하려 명시적 타입 캐스트 후 사용
+  const roster = effectiveRoster as EffectiveRoster | null;
+  const effectiveRosterClient: EffectiveRosterClient | null = roster
+    ? {
+        activeMembers: roster.activeMembers,
+        excusedMembers: roster.excusedMembers,
+        transferredIn: roster.transferredIn,
+        memberInfos: Array.from(roster.memberInfoMap.values()),
+      }
+    : null;
+
   return (
     <GroupView
       currentUser={{ id: currentUser.id, group_id: currentUser.group_id, shuttle_bus: currentUser.shuttle_bus ?? null, return_shuttle_bus: currentUser.return_shuttle_bus ?? null }}
@@ -190,6 +314,8 @@ export default async function GroupPage() {
       scheduleCounts={scheduleCounts}
       scheduleAbsentCounts={scheduleAbsentCounts}
       initialReported={initialReported}
+      briefing={briefing}
+      effectiveRoster={effectiveRosterClient}
     />
   );
 }

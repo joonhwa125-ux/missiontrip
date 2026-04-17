@@ -19,7 +19,7 @@ import {
   EVENT_REPORT_INVALIDATED,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import type { Schedule, CheckIn, GroupMember } from "@/lib/types";
+import type { Schedule, CheckIn, GroupMember, ScheduleMemberInfo } from "@/lib/types";
 
 type Member = GroupMember;
 
@@ -37,6 +37,83 @@ interface Props {
   reported: boolean;
   onReported: () => void;
   onReportReset: () => void;
+  /** v2 Phase F: 사전 제외된 조원 (dim 섹션, 체크인 불필요) */
+  excusedMembers?: Member[];
+  /** v2 Phase F: 다른 조에서 합류한 조원 (user_id → 원래 조명) — 합류 배지용 */
+  transferredInMap?: Map<string, string>;
+  /** v2 Phase F: user_id → 이 일정의 member_info (activity/excused_reason/note 등) */
+  memberInfoMap?: Map<string, ScheduleMemberInfo>;
+}
+
+/** 섹션 그루핑 키 — 동일 키의 조원들을 한 섹션에 묶는다 */
+type SectionGroup = {
+  key: string;
+  label: string | null;
+  members: Member[];
+};
+
+/** 조원을 (미확인 → 불참 → 완료) 순으로 정렬 */
+function sortByStatus(
+  ms: Member[],
+  checkedIds: Set<string>,
+  absentIds: Set<string>
+): Member[] {
+  return [...ms].sort((a, b) => {
+    const aChecked = checkedIds.has(a.id);
+    const bChecked = checkedIds.has(b.id);
+    const aAbsent = absentIds.has(a.id);
+    const bAbsent = absentIds.has(b.id);
+    const aOrder = aChecked ? (aAbsent ? 1 : 2) : 0;
+    const bOrder = bChecked ? (bAbsent ? 1 : 2) : 0;
+    return aOrder - bOrder;
+  });
+}
+
+/**
+ * 섹션 그루핑 결정:
+ *  1) 이 일정에 activity 메타가 하나라도 있으면 activity 기준 그루핑 (식사/투어 등)
+ *  2) 그게 아니면 airline이 2개 이상이면 airline 기준 그루핑 (항공편 분리)
+ *  3) 둘 다 해당 안 되면 섹션 없는 flat 리스트 반환
+ */
+function buildSections(
+  members: Member[],
+  memberInfoMap: Map<string, ScheduleMemberInfo> | undefined
+): SectionGroup[] {
+  if (memberInfoMap && memberInfoMap.size > 0) {
+    const activityPresent = members.some(
+      (m) => !!memberInfoMap.get(m.id)?.activity?.trim()
+    );
+    if (activityPresent) {
+      const buckets = new Map<string, Member[]>();
+      for (const m of members) {
+        const key = memberInfoMap.get(m.id)?.activity?.trim() || "미지정";
+        const arr = buckets.get(key) ?? [];
+        arr.push(m);
+        buckets.set(key, arr);
+      }
+      return Array.from(buckets.entries())
+        .sort(([a], [b]) => (a === "미지정" ? 1 : b === "미지정" ? -1 : a.localeCompare(b, "ko")))
+        .map(([key, ms]) => ({ key, label: key, members: ms }));
+    }
+  }
+
+  const distinctAirlines = new Set(
+    members.filter((m) => !!m.airline?.trim()).map((m) => m.airline!.trim())
+  );
+  if (distinctAirlines.size >= 2) {
+    const buckets = new Map<string, Member[]>();
+    for (const m of members) {
+      const key = m.airline?.trim() || "항공사 미지정";
+      const arr = buckets.get(key) ?? [];
+      arr.push(m);
+      buckets.set(key, arr);
+    }
+    return Array.from(buckets.entries())
+      .sort(([a], [b]) => (a === "항공사 미지정" ? 1 : b === "항공사 미지정" ? -1 : a.localeCompare(b, "ko")))
+      .map(([key, ms]) => ({ key, label: `✈ ${key}`, members: ms }));
+  }
+
+  return [{ key: "__flat__", label: null, members }];
 }
 
 export default function GroupCheckinView({
@@ -52,6 +129,9 @@ export default function GroupCheckinView({
   reported,
   onReported,
   onReportReset,
+  excusedMembers = [],
+  transferredInMap,
+  memberInfoMap,
 }: Props) {
   const [cancelTarget, setCancelTarget] = useState<{ member: Member; isAbsent: boolean } | null>(null);
   const [absentTarget, setAbsentTarget] = useState<Member | null>(null);
@@ -257,23 +337,34 @@ export default function GroupCheckinView({
   }, [activeSchedule, members, checkIns, currentUser.group_id, currentUser.shuttle_bus, currentUser.return_shuttle_bus, broadcast, isOnline, addPendingReport, showToast, onReported]);
 
   // CR-005: checkIns → 불참/확인/미확인 정확히 분리
+  //         Phase F: 제외 인원은 members에서 이미 빠져있으므로 별도 고려 불필요
   const checkedIds = useMemo(() => new Set(checkIns.map((c) => c.user_id)), [checkIns]);
   const absentIds = useMemo(() => new Set(checkIns.filter((c) => c.is_absent).map((c) => c.user_id)), [checkIns]);
-  const checkedCount = useMemo(() => checkIns.filter((c) => !c.is_absent).length, [checkIns]);
-  // 미확인 = 체크인도 불참도 아닌 순수 미처리 인원
+  // 미확인 = 체크인도 불참도 아닌 순수 미처리 인원 (제외 인원은 이미 빠져 있음)
   const uncheckedCount = members.filter((m) => !checkedIds.has(m.id)).length;
   const allComplete = members.length > 0 && uncheckedCount === 0;
-  // 정렬: 미확인 → 불참 → 완료
-  const sorted = [...members].sort((a, b) => {
-    const aChecked = checkedIds.has(a.id);
-    const bChecked = checkedIds.has(b.id);
-    const aAbsent = absentIds.has(a.id);
-    const bAbsent = absentIds.has(b.id);
-    // 미확인(0) < 불참(1) < 완료(2)
-    const aOrder = aChecked ? (aAbsent ? 1 : 2) : 0;
-    const bOrder = bChecked ? (bAbsent ? 1 : 2) : 0;
-    return aOrder - bOrder;
-  });
+
+  // 상단 카운트용 "처리된 인원 수" = 탑승 + 불참 (members 한정)
+  const processedCount = useMemo(() => {
+    const memberIdSet = new Set(members.map((m) => m.id));
+    return checkIns.filter((c) => memberIdSet.has(c.user_id)).length;
+  }, [checkIns, members]);
+
+  // 정렬: 미확인 → 불참 → 완료 (이니셜 원 행용 — 전체 flat 정렬)
+  const sorted = useMemo(
+    () => sortByStatus(members, checkedIds, absentIds),
+    [members, checkedIds, absentIds]
+  );
+
+  // Phase F: 섹션 그루핑 (activity or airline)
+  const sections = useMemo(
+    () =>
+      buildSections(members, memberInfoMap).map((s) => ({
+        ...s,
+        members: sortByStatus(s.members, checkedIds, absentIds),
+      })),
+    [members, memberInfoMap, checkedIds, absentIds]
+  );
 
   return (
     <div className="flex flex-1 flex-col">
@@ -290,9 +381,12 @@ export default function GroupCheckinView({
                 <p className="text-sm text-muted-foreground">{groupName}</p>
                 {members.length > 0 && (
                   <span className="text-sm" aria-live="polite">
-                    <span className="font-bold text-[#1A1A1A]">{checkedCount + absentIds.size}</span>
+                    <span className="font-bold text-[#1A1A1A]">{processedCount}</span>
                     <span className="text-[#888780]">/</span>
                     <span className="font-medium text-[#1A1A1A]">{members.length}명</span>
+                    {excusedMembers.length > 0 && (
+                      <span className="ml-1 text-xs text-stone-500">(제외 {excusedMembers.length})</span>
+                    )}
                   </span>
                 )}
               </div>
@@ -323,9 +417,12 @@ export default function GroupCheckinView({
             </div>
             {members.length > 0 && (
               <span className="flex-shrink-0 pr-4 text-sm" aria-live="polite">
-                <span className="font-bold text-[#1A1A1A]">{checkedCount + absentIds.size}</span>
+                <span className="font-bold text-[#1A1A1A]">{processedCount}</span>
                 <span className="text-[#888780]">/</span>
                 <span className="font-medium text-[#1A1A1A]">{members.length}명</span>
+                {excusedMembers.length > 0 && (
+                  <span className="ml-1 text-xs text-stone-500">(제외 {excusedMembers.length})</span>
+                )}
               </span>
             )}
           </div>
@@ -400,24 +497,58 @@ export default function GroupCheckinView({
       )}
 
       {/* 조원 카드 리스트 — 전원 완료 시에도 취소 가능하도록 항상 표시 */}
-      <ul
-        className="flex flex-col gap-2 px-4 pb-28 pt-3"
-        aria-label="조원 탑승 현황"
-      >
-        {sorted.map((m) => (
-          <MemberCard
-            key={m.id}
-            user={m}
-            checkIn={checkIns.find((c) => c.user_id === m.id) ?? null}
-            onCheckin={handleCheckin}
-            onCancel={(m) => {
-              const ci = checkIns.find((c) => c.user_id === m.id);
-              setCancelTarget({ member: m, isAbsent: ci?.is_absent ?? false });
-            }}
-            onAbsent={setAbsentTarget}
-          />
+      {/*  Phase F: 섹션 그루핑 (activity 또는 airline), 단일 섹션이면 헤더 없이 flat */}
+      <div className="px-4 pb-28 pt-3" aria-label="조원 탑승 현황">
+        {sections.map((section, idx) => (
+          <section key={section.key} className={idx > 0 ? "mt-4" : undefined}>
+            {section.label && (
+              <h3 className="mb-1.5 px-1 text-xs font-semibold uppercase tracking-wide text-stone-500">
+                {section.label}
+              </h3>
+            )}
+            <ul className="flex flex-col gap-2">
+              {section.members.map((m) => (
+                <MemberCard
+                  key={m.id}
+                  user={m}
+                  checkIn={checkIns.find((c) => c.user_id === m.id) ?? null}
+                  joinedFrom={transferredInMap?.get(m.id) ?? null}
+                  onCheckin={handleCheckin}
+                  onCancel={(mm) => {
+                    const ci = checkIns.find((c) => c.user_id === mm.id);
+                    setCancelTarget({ member: mm, isAbsent: ci?.is_absent ?? false });
+                  }}
+                  onAbsent={setAbsentTarget}
+                />
+              ))}
+            </ul>
+          </section>
         ))}
-      </ul>
+
+        {/* Phase F: 사전 제외 섹션 — dim 스타일, 체크인 버튼 없음 */}
+        {excusedMembers.length > 0 && (
+          <section className="mt-5" aria-labelledby="excused-section-heading">
+            <h3
+              id="excused-section-heading"
+              className="mb-1.5 flex items-center gap-2 px-1 text-xs font-semibold uppercase tracking-wide text-stone-500"
+            >
+              제외
+              <span className="rounded-full bg-stone-200 px-2 py-0.5 text-[0.6875rem] font-medium text-stone-700">
+                {excusedMembers.length}명
+              </span>
+            </h3>
+            <ul className="flex flex-col gap-2 opacity-70">
+              {excusedMembers.map((m) => (
+                <ExcusedMemberCard
+                  key={m.id}
+                  member={m}
+                  reason={memberInfoMap?.get(m.id)?.excused_reason ?? null}
+                />
+              ))}
+            </ul>
+          </section>
+        )}
+      </div>
 
       {/* CR-006+016: 보고 버튼 + 오프라인 배너를 하나의 fixed 컨테이너로 통합 */}
       <div className="fixed bottom-0 left-1/2 w-full max-w-lg -translate-x-1/2 border-t bg-white px-4 py-3 pb-safe">
@@ -436,7 +567,7 @@ export default function GroupCheckinView({
             className="flex w-full items-center justify-center gap-2 min-h-11 rounded-xl border border-[#EBE8E3] bg-app-bg py-4 text-base font-medium text-muted-foreground"
           >
             <CheckIcon className="h-5 w-5 text-complete-check" aria-hidden />
-            {COPY.reportButtonDone(checkedCount + absentIds.size, members.length)}
+            {COPY.reportButtonDone(processedCount, members.length)}
           </button>
         ) : (
           <button
@@ -467,5 +598,30 @@ export default function GroupCheckinView({
         onConfirm={handleAbsentConfirm}
       />
     </div>
+  );
+}
+
+/** Phase F: 사전 제외 조원 카드 — dim 스타일, 체크인 버튼 없음. "기타: ..." prefix 제거 */
+function ExcusedMemberCard({ member, reason }: { member: Member; reason: string | null }) {
+  const shortReason = reason
+    ? reason.startsWith("기타:")
+      ? reason.slice(3).trim()
+      : reason
+    : null;
+  return (
+    <li className="flex min-h-[4rem] items-center justify-between rounded-2xl border border-stone-200 bg-stone-50 px-4">
+      <div className="flex items-center gap-2 flex-wrap min-w-0">
+        <p className="text-base font-medium text-stone-500 truncate">{member.name}</p>
+        <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-stone-200 px-2 py-0.5 text-xs font-medium text-stone-600">
+          <MinusIcon className="h-3 w-3" aria-hidden />
+          제외
+        </span>
+        {shortReason && (
+          <span className="inline-block max-w-[10rem] truncate rounded-full bg-white px-2 py-0.5 text-xs text-stone-500">
+            {shortReason}
+          </span>
+        )}
+      </div>
+    </li>
   );
 }

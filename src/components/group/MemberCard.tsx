@@ -13,9 +13,11 @@ interface Props {
   onCheckin: (userId: string) => void;
   onCancel: (user: Member) => void;
   onAbsent: (user: Member) => void;
+  /** v2 Phase F: 다른 조에서 합류한 조원이면 원래 조명 — "합류" 배지 표시 */
+  joinedFrom?: string | null;
 }
 
-export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsent }: Props) {
+export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsent, joinedFrom }: Props) {
   const isAbsent = checkIn?.is_absent === true;
   const isChecked = checkIn && !isAbsent;
   // v2: 불참 사유 표시용 — "기타: ..." 형식이면 prefix 제거하고 본문만 노출
@@ -36,8 +38,16 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
           : "border-[#E0DDD8] bg-white"
       )}
     >
-      <div className={cn("min-w-0", (isChecked || isAbsent) && "flex items-center gap-2 flex-wrap")}>
+      <div className={cn("min-w-0", (isChecked || isAbsent || joinedFrom) && "flex items-center gap-2 flex-wrap")}>
         <p className={cn("min-w-0 text-base font-medium truncate", (isChecked || isAbsent) && "text-muted-foreground")}>{user.name}</p>
+        {joinedFrom && (
+          <span
+            className="inline-flex flex-shrink-0 items-center gap-0.5 rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-800"
+            aria-label={`${joinedFrom}에서 합류`}
+          >
+            ⇢ {joinedFrom}
+          </span>
+        )}
         {isChecked ? (
           <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-600">
             <CheckIcon className="h-3 w-3" aria-hidden />

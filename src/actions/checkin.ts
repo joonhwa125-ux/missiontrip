@@ -68,12 +68,20 @@ async function getEffectiveGroupId(
 }
 
 /**
- * 조장의 자기 조원/버스 접근 권한 검증. 실패 시 ActionResult 반환, 통과 시 null
+ * 조장의 자기 조원/버스 접근 권한 검증.
+ *
+ * **반환값 계약**:
+ *  - `{ error }`: 권한 없음 / 유효하지 않음 → 호출자는 그대로 return
+ *  - `{ targetGroupId }`: 통과. 일반 일정이면 타겟의 effective group(= 체크인 스냅샷용 값)
+ *                        셔틀/admin 경로에서는 null
  *
  * v2 변경:
- * - scheduleId 파라미터 추가 (일반 일정에서 effective group 계산에 사용)
- * - 일반 일정 검증 시 actor/target의 effective group 비교
- * - 셔틀 일정은 기존 로직 유지 (temp_group_id는 셔틀 일정 대상이 아님)
+ *  - scheduleId 파라미터 추가 (일반 일정에서 effective group 계산에 사용)
+ *  - 일반 일정 검증 시 **actor는 원래 그룹**, **target은 effective group** 비교
+ *    (Checkpoint 2 보안 수정: 영구 조장이 smi.temp_group_id로 타 조 조원에 접근하는 경로 차단)
+ *  - targetGroupId를 반환해 호출자가 `group_id_at_checkin` 스냅샷 / 보고 무효화에 재활용
+ *    (Checkpoint 2 퍼포먼스 수정: `getEffectiveGroupId(target)` 중복 호출 1건 제거)
+ *  - 셔틀 일정은 기존 로직 유지 (temp_group_id는 셔틀 일정 대상이 아님)
  */
 async function validateGroupAccess(
   supabase: ReturnType<typeof createServiceClient>,
@@ -81,12 +89,18 @@ async function validateGroupAccess(
   targetUserId: string,
   scheduleId: string,
   shuttleType: ShuttleType | null = null
-): Promise<ActionResult | null> {
-  if (isAdminRole(actor.role)) return null;
+): Promise<{ error: ActionResult } | { targetGroupId: string | null }> {
+  if (isAdminRole(actor.role)) {
+    // admin은 그룹 제한 없음. 일반 일정이면 스냅샷용 타겟 그룹 계산
+    const targetGroupId = shuttleType
+      ? null
+      : await getEffectiveGroupId(supabase, targetUserId, scheduleId);
+    return { targetGroupId };
+  }
 
   if (shuttleType === "departure") {
     if (!actor.shuttle_bus) {
-      return { ok: false, error: "셔틀 담당 조장만 처리할 수 있어요" };
+      return { error: { ok: false, error: "셔틀 담당 조장만 처리할 수 있어요" } };
     }
     const { data } = await supabase
       .from("users")
@@ -94,14 +108,14 @@ async function validateGroupAccess(
       .eq("id", targetUserId)
       .single();
     if (data?.shuttle_bus !== actor.shuttle_bus) {
-      return { ok: false, error: "내 버스 탑승자만 처리할 수 있어요" };
+      return { error: { ok: false, error: "내 버스 탑승자만 처리할 수 있어요" } };
     }
-    return null;
+    return { targetGroupId: null };
   }
 
   if (shuttleType === "return") {
     if (!actor.return_shuttle_bus) {
-      return { ok: false, error: "귀가 셔틀 담당 조장만 처리할 수 있어요" };
+      return { error: { ok: false, error: "귀가 셔틀 담당 조장만 처리할 수 있어요" } };
     }
     const { data } = await supabase
       .from("users")
@@ -109,22 +123,28 @@ async function validateGroupAccess(
       .eq("id", targetUserId)
       .single();
     if (data?.return_shuttle_bus !== actor.return_shuttle_bus) {
-      return { ok: false, error: "내 버스 탑승자만 처리할 수 있어요" };
+      return { error: { ok: false, error: "내 버스 탑승자만 처리할 수 있어요" } };
     }
-    return null;
+    return { targetGroupId: null };
   }
 
   // v2: 일반 일정 — effective group 기준 비교
-  const actorGroupId = await getEffectiveGroupId(supabase, actor.id, scheduleId);
+  // 보안: 영구 조장(permanent leader)은 **본인의 원래 그룹**만 유효 권한 범위.
+  //       자신의 smi.temp_group_id가 다른 조로 설정되어 있어도 그 조 멤버는 건드릴 수 없다.
+  //       (leader 권한을 다른 조로 이전하려면 해당 조 멤버 중 한 명에게 smi.temp_role='leader' 지정)
+  //       temp_leader(role=member + smi.temp_role=leader)만 smi.temp_group_id 기반 범위를 사용.
+  const actorGroupId = canCheckin(actor.role)
+    ? actor.group_id
+    : await getEffectiveGroupId(supabase, actor.id, scheduleId);
   const targetGroupId = await getEffectiveGroupId(supabase, targetUserId, scheduleId);
 
   if (!actorGroupId || !targetGroupId) {
-    return { ok: false, error: "사용자 정보를 찾을 수 없어요" };
+    return { error: { ok: false, error: "사용자 정보를 찾을 수 없어요" } };
   }
   if (actorGroupId !== targetGroupId) {
-    return { ok: false, error: "자기 조원만 처리할 수 있어요" };
+    return { error: { ok: false, error: "자기 조원만 처리할 수 있어요" } };
   }
-  return null;
+  return { targetGroupId };
 }
 
 // 체크인 INSERT (조장/관리자 대리 체크인)
@@ -142,8 +162,8 @@ export async function createCheckin(
   const allowed = await canActorCheckin(supabase, actor, scheduleId);
   if (!allowed) return { ok: false, error: "권한이 없어요" };
 
-  const denied = await validateGroupAccess(supabase, actor, userId, scheduleId, shuttleType);
-  if (denied) return denied;
+  const access = await validateGroupAccess(supabase, actor, userId, scheduleId, shuttleType);
+  if ("error" in access) return access.error;
 
   // v2: checked_by — admin / temp_leader / leader 구분
   const checkedBy: CheckedBy = isAdminRole(actor.role)
@@ -153,9 +173,8 @@ export async function createCheckin(
     : "temp_leader";
 
   // v2: group_id_at_checkin — 체크인 시점의 조 스냅샷 (immutable 기록)
-  const targetGroupAtCheckin = shuttleType
-    ? null  // 셔틀 체크인은 조 개념이 다름 — null 저장
-    : await getEffectiveGroupId(supabase, userId, scheduleId);
+  //     셔틀은 null, 일반 일정은 validateGroupAccess가 이미 계산한 값 재사용
+  const targetGroupAtCheckin = access.targetGroupId;
 
   const { error } = await supabase.from("check_ins").upsert(
     {
@@ -190,8 +209,8 @@ export async function deleteCheckin(
   const allowed = await canActorCheckin(supabase, actor, scheduleId);
   if (!allowed) return { ok: false, error: "권한이 없어요" };
 
-  const denied = await validateGroupAccess(supabase, actor, userId, scheduleId, shuttleType);
-  if (denied) return denied;
+  const access = await validateGroupAccess(supabase, actor, userId, scheduleId, shuttleType);
+  if ("error" in access) return access.error;
 
   const { error } = await supabase
     .from("check_ins")
@@ -226,13 +245,12 @@ export async function deleteCheckin(
         .eq("schedule_id", scheduleId);
     }
   } else {
-    // 일반 일정: group_reports 무효화 (v2: effective group 기준)
-    const targetGroupId = await getEffectiveGroupId(supabase, userId, scheduleId);
-    if (targetGroupId) {
+    // 일반 일정: group_reports 무효화 (v2: effective group 기준 — validateGroupAccess가 이미 계산)
+    if (access.targetGroupId) {
       await supabase
         .from("group_reports")
         .delete()
-        .eq("group_id", targetGroupId)
+        .eq("group_id", access.targetGroupId)
         .eq("schedule_id", scheduleId);
     }
   }
@@ -269,8 +287,8 @@ export async function markAbsent(
   const allowed = await canActorCheckin(supabase, actor, scheduleId);
   if (!allowed) return { ok: false, error: "권한이 없어요" };
 
-  const denied = await validateGroupAccess(supabase, actor, userId, scheduleId, shuttleType);
-  if (denied) return denied;
+  const access = await validateGroupAccess(supabase, actor, userId, scheduleId, shuttleType);
+  if ("error" in access) return access.error;
 
   const checkedBy: CheckedBy = isAdminRole(actor.role)
     ? "admin"
@@ -278,10 +296,11 @@ export async function markAbsent(
     ? "leader"
     : "temp_leader";
 
-  const targetGroupAtCheckin = shuttleType
-    ? null
-    : await getEffectiveGroupId(supabase, userId, scheduleId);
+  const targetGroupAtCheckin = access.targetGroupId;
 
+  // Checkpoint 2 수정: ignoreDuplicates=true로 기존 체크인(정상/불참 모두) 덮어쓰기 방지.
+  // UI에서는 체크인된 유저에 "불참" 버튼이 노출되지 않지만, 서버 레이어에서도 방어.
+  // 모드 전환(정상→불참)이 필요하면 취소 후 불참 처리 2단계로 수행해야 한다.
   const { error } = await supabase.from("check_ins").upsert(
     {
       user_id: userId,
@@ -293,7 +312,7 @@ export async function markAbsent(
       absence_location: sanitizedLocation,
       group_id_at_checkin: targetGroupAtCheckin,
     },
-    { onConflict: "user_id,schedule_id" }
+    { onConflict: "user_id,schedule_id", ignoreDuplicates: true }
   );
 
   if (error) {

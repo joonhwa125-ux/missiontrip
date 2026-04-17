@@ -7,7 +7,14 @@ import { isAdminRole } from "@/lib/constants";
 import SetupWizard from "@/components/setup/SetupWizard";
 import SetupPageTabs from "@/components/setup/SetupPageTabs";
 import CurrentDataView from "@/components/setup/CurrentDataView";
-import type { Schedule, Group, UserRole, GroupParty } from "@/lib/types";
+import type {
+  Schedule,
+  Group,
+  UserRole,
+  GroupParty,
+  ScheduleGroupInfo,
+  ScheduleMemberInfo,
+} from "@/lib/types";
 
 export const metadata: Metadata = { title: "데이터 관리" };
 
@@ -34,13 +41,21 @@ export default async function SetupPage() {
 
   // 현재 DB 데이터 조회 (서비스 클라이언트 — RLS 우회)
   const service = createServiceClient();
-  const [schedulesRes, usersRes, groupsRes] = await Promise.all([
+  const [schedulesRes, usersRes, groupsRes, sgiRes, smiRes] = await Promise.all([
     service.from("schedules").select("id, title, location, day_number, sort_order, scheduled_time, scope, is_active, shuttle_type, activated_at, created_at").order("day_number").order("sort_order"),
     service
       .from("users")
       .select("id, name, email, phone, role, group_id, party, shuttle_bus, return_shuttle_bus")
       .order("name"),
     service.from("groups").select("id, name, bus_name").order("name"),
+    // v2 Phase G: 조별 배정
+    service
+      .from("schedule_group_info")
+      .select("id, schedule_id, group_id, location_detail, rotation, sub_location, note, created_at, updated_at, updated_by"),
+    // v2 Phase G: 인원별 배정
+    service
+      .from("schedule_member_info")
+      .select("id, schedule_id, user_id, temp_group_id, temp_role, excused_reason, activity, menu, note, created_at, updated_at, updated_by"),
   ]);
 
   const schedules = (schedulesRes.data ?? []) as Schedule[];
@@ -56,6 +71,8 @@ export default async function SetupPage() {
     shuttle_bus: string | null;
     return_shuttle_bus: string | null;
   }[];
+  const groupInfos = (sgiRes.data ?? []) as ScheduleGroupInfo[];
+  const memberInfos = (smiRes.data ?? []) as ScheduleMemberInfo[];
 
   const hasData = schedules.length > 0 || setupUsers.length > 0;
 
@@ -70,6 +87,8 @@ export default async function SetupPage() {
             users={setupUsers}
             groups={groups}
             currentUserId={dbUser.id}
+            groupInfos={groupInfos}
+            memberInfos={memberInfos}
           />
         }
       />

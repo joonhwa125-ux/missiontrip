@@ -18,7 +18,14 @@ import { useBroadcast } from "@/hooks/useRealtime";
 import { useToast } from "@/hooks/useToast";
 import ScheduleEditDialog from "./ScheduleEditDialog";
 import UserEditDialog from "./UserEditDialog";
-import type { Schedule, UserRole, GroupParty } from "@/lib/types";
+import AssignmentManagementView from "./AssignmentManagementView";
+import type {
+  Schedule,
+  UserRole,
+  GroupParty,
+  ScheduleGroupInfo,
+  ScheduleMemberInfo,
+} from "@/lib/types";
 
 type SetupUser = {
   id: string;
@@ -39,13 +46,24 @@ interface Props {
   users: SetupUser[];
   groups: SetupGroup[];
   currentUserId: string;
+  /** v2 Phase G: 조별 배정 (schedule_group_info) */
+  groupInfos?: ScheduleGroupInfo[];
+  /** v2 Phase G: 인원별 배정 (schedule_member_info) */
+  memberInfos?: ScheduleMemberInfo[];
 }
 
-export default function CurrentDataView({ schedules, users, groups, currentUserId }: Props) {
+export default function CurrentDataView({
+  schedules,
+  users,
+  groups,
+  currentUserId,
+  groupInfos = [],
+  memberInfos = [],
+}: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const { broadcast } = useBroadcast();
-  const [tab, setTab] = useState<"schedules" | "users">("schedules");
+  const [tab, setTab] = useState<"schedules" | "users" | "assignments">("schedules");
   const [editSchedule, setEditSchedule] = useState<Schedule | null>(null);
   const [editUser, setEditUser] = useState<SetupUser | null>(null);
   const [deleteScheduleTarget, setDeleteScheduleTarget] = useState<Schedule | null>(null);
@@ -108,7 +126,7 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
 
       {/* 서브 탭 — DataSourceStep과 동일한 segment control */}
       <div role="tablist" aria-label="데이터 종류" className="mb-4 flex gap-1 rounded-xl bg-gray-100 p-1">
-        {(["schedules", "users"] as const).map((t) => (
+        {(["schedules", "users", "assignments"] as const).map((t) => (
           <button
             key={t}
             role="tab"
@@ -121,7 +139,11 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
                 : "text-muted-foreground"
             )}
           >
-            {t === "schedules" ? `일정 (${schedules.length}개)` : `참가자 (${users.length}명)`}
+            {t === "schedules"
+              ? `일정 (${schedules.length}개)`
+              : t === "users"
+                ? `참가자 (${users.length}명)`
+                : `배정 (${groupInfos.length + memberInfos.length}건)`}
           </button>
         ))}
       </div>
@@ -210,6 +232,17 @@ export default function CurrentDataView({ schedules, users, groups, currentUserI
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* 배정 관리 (v2 Phase G) */}
+      {tab === "assignments" && (
+        <AssignmentManagementView
+          schedules={schedules}
+          groups={groups}
+          users={users.map((u) => ({ id: u.id, name: u.name, group_id: u.group_id }))}
+          groupInfos={groupInfos}
+          memberInfos={memberInfos}
+        />
       )}
 
       {/* 일정 수정 모달 */}
