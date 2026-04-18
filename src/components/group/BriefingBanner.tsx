@@ -16,18 +16,14 @@ interface Props {
  * - 닫기 기능 없음 — 브리핑은 하루 내내 참조 대상이라 dismiss 개념 부적합
  */
 export default function BriefingBanner({ roleCount, specialCount, onOpen }: Props) {
-  if (roleCount === 0 && specialCount === 0) return null;
-
-  const parts: string[] = [];
-  if (roleCount > 0) parts.push(`역할 ${roleCount}건`);
-  if (specialCount > 0) parts.push(`특이사항 ${specialCount}건`);
-  const summary = parts.join(" · ");
+  const total = roleCount + specialCount;
+  if (total === 0) return null;
 
   return (
     <div
       className={cn(
-        "rounded-xl border border-indigo-200",
-        "bg-indigo-50 text-sm text-indigo-900 shadow-sm"
+        "rounded-xl border border-stone-200",
+        "bg-white text-sm text-stone-900 shadow-sm"
       )}
       role="region"
       aria-label="조장 브리핑"
@@ -36,14 +32,17 @@ export default function BriefingBanner({ roleCount, specialCount, onOpen }: Prop
         type="button"
         onClick={onOpen}
         className={cn(
-          "flex min-h-11 w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left",
-          "outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+          "flex min-h-11 w-full items-center justify-between gap-2 rounded-xl px-4 py-3 text-left",
+          "outline-none focus-visible:ring-2 focus-visible:ring-stone-400"
         )}
-        aria-label={`브리핑 열기: ${summary}`}
+        aria-label={`오늘의 브리핑 열기 · ${total}건`}
       >
-        <span className="flex flex-col">
-          <span className="text-xs font-semibold text-indigo-700">오늘의 브리핑</span>
-          <span className="text-sm font-medium text-indigo-900">{summary}</span>
+        <span className="text-sm font-semibold text-stone-900">오늘의 브리핑</span>
+        <span
+          className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-stone-900 px-1.5 text-xs font-bold text-white"
+          aria-hidden="true"
+        >
+          {total}
         </span>
       </button>
     </div>

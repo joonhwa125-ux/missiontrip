@@ -190,7 +190,7 @@ export default function BriefingSheet({
           </DialogHeader>
         </div>
 
-        <div className="flex-1 space-y-6 overflow-y-auto px-5 py-4 text-sm">
+        <div className="flex-1 space-y-6 overflow-y-auto px-5 pb-4 pt-2 text-sm">
           {!hasAnyContent && (
             <p className="py-10 text-center text-sm text-muted-foreground">
               이 일차에 등록된 브리핑 항목이 없어요
@@ -284,24 +284,26 @@ export default function BriefingSheet({
                       )}
                     </header>
 
-                    {/* 조 단위 정보 */}
+                    {/* 조 단위 정보 — 멤버 정보와 동일한 bg-stone-50 컨테이너 패턴 */}
                     {block.groupInfo && (
-                      <div className="mb-2 space-y-1.5">
-                        <div className="flex flex-wrap gap-1">
-                          {block.groupInfo.location_detail && (
-                            <Chip label="층" value={block.groupInfo.location_detail} tone="info" />
-                          )}
-                          {block.groupInfo.rotation && (
-                            <Chip label="순서" value={block.groupInfo.rotation} tone="info" />
-                          )}
-                          {block.groupInfo.sub_location && (
-                            <Chip label="장소" value={block.groupInfo.sub_location} tone="info" />
-                          )}
-                        </div>
+                      <div className="mb-2 space-y-1.5 rounded-lg bg-stone-50 px-3 py-2">
+                        {(block.groupInfo.location_detail ||
+                          block.groupInfo.rotation ||
+                          block.groupInfo.sub_location) && (
+                          <div className="flex flex-wrap gap-1">
+                            {block.groupInfo.location_detail && (
+                              <Chip label="층" value={block.groupInfo.location_detail} tone="info" />
+                            )}
+                            {block.groupInfo.rotation && (
+                              <Chip label="순서" value={block.groupInfo.rotation} tone="info" />
+                            )}
+                            {block.groupInfo.sub_location && (
+                              <Chip label="장소" value={block.groupInfo.sub_location} tone="info" />
+                            )}
+                          </div>
+                        )}
                         {block.groupInfo.note && (
-                          <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                            {block.groupInfo.note}
-                          </p>
+                          <p className="text-xs text-stone-600">{block.groupInfo.note}</p>
                         )}
                       </div>
                     )}
