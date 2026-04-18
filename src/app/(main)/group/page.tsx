@@ -54,7 +54,7 @@ export default async function GroupPage() {
   // Phase J: active schedule을 먼저 조회 — effective group 결정에 필요
   const { data: activeSchedule } = await supabase
     .from("schedules")
-    .select("id, title, location, day_number, sort_order, scheduled_time, scope, is_active, shuttle_type, activated_at, created_at")
+    .select("id, title, location, day_number, sort_order, scheduled_time, scope, is_active, shuttle_type, airline_leg, activated_at, created_at")
     .eq("is_active", true)
     .maybeSingle();
 
@@ -88,12 +88,12 @@ export default async function GroupPage() {
       .single(),
     supabase
       .from("users")
-      .select("id, name, party, airline, trip_role")
+      .select("id, name, party, airline, return_airline, trip_role")
       .eq("group_id", effectiveGroupId)
       .order("name"),
     supabase
       .from("schedules")
-      .select("id, title, location, day_number, sort_order, scheduled_time, scope, is_active, shuttle_type, activated_at, created_at")
+      .select("id, title, location, day_number, sort_order, scheduled_time, scope, is_active, shuttle_type, airline_leg, activated_at, created_at")
       .order("day_number")
       .order("sort_order"),
     supabase.from("groups").select("id, name, bus_name").order("name"),
@@ -105,25 +105,27 @@ export default async function GroupPage() {
   let returnShuttleMembers: GroupMember[] = [];
   await Promise.all([
     currentUser.shuttle_bus
-      ? supabase.from("users").select("id, name, party, airline, trip_role").eq("shuttle_bus", currentUser.shuttle_bus).order("name")
+      ? supabase.from("users").select("id, name, party, airline, return_airline, trip_role").eq("shuttle_bus", currentUser.shuttle_bus).order("name")
           .then(({ data: sm }) => {
             shuttleMembers = (sm ?? []).map((m) => ({
               id: m.id,
               name: m.name,
               party: (m.party as GroupParty) ?? null,
               airline: m.airline ?? null,
+              return_airline: m.return_airline ?? null,
               trip_role: m.trip_role ?? null,
             }));
           })
       : Promise.resolve(),
     currentUser.return_shuttle_bus
-      ? supabase.from("users").select("id, name, party, airline, trip_role").eq("return_shuttle_bus", currentUser.return_shuttle_bus).order("name")
+      ? supabase.from("users").select("id, name, party, airline, return_airline, trip_role").eq("return_shuttle_bus", currentUser.return_shuttle_bus).order("name")
           .then(({ data: rm }) => {
             returnShuttleMembers = (rm ?? []).map((m) => ({
               id: m.id,
               name: m.name,
               party: (m.party as GroupParty) ?? null,
               airline: m.airline ?? null,
+              return_airline: m.return_airline ?? null,
               trip_role: m.trip_role ?? null,
             }));
           })
@@ -165,6 +167,7 @@ export default async function GroupPage() {
             name: m.name,
             party: (m.party as GroupParty) ?? null,
             airline: m.airline ?? null,
+            return_airline: m.return_airline ?? null,
             trip_role: m.trip_role ?? null,
           }));
           const [rosterResult, { data: allCi }, { data: allReportsData }] = await Promise.all([
@@ -263,10 +266,14 @@ export default async function GroupPage() {
     if (relevantUserIds.has(m.id)) userNameMap[m.id] = m.name;
   }
 
-  // 브리핑에 등장하는 일정만 scheduleSummaries에 포함 (바텀시트 렌더 최소화)
+  // 브리핑에 등장하는 일정 — sgi/smi 레코드가 있는 일정 + airline_leg가 있는 비행 일정
+  //  (비행 일정은 sgi/smi 없어도 항공사 섹션 트리거를 위해 포함해야 함)
   const briefingScheduleIds = new Set<string>();
   for (const s of (sgiRows ?? []) as ScheduleGroupInfo[]) briefingScheduleIds.add(s.schedule_id);
   for (const s of smiRows) briefingScheduleIds.add(s.schedule_id);
+  for (const s of (schedules ?? []) as Schedule[]) {
+    if (s.airline_leg) briefingScheduleIds.add(s.id);
+  }
   const scheduleSummaries = ((schedules ?? []) as Schedule[])
     .filter((s) => briefingScheduleIds.has(s.id))
     .map((s) => ({
@@ -276,16 +283,18 @@ export default async function GroupPage() {
       day_number: s.day_number,
       sort_order: s.sort_order,
       scheduled_time: s.scheduled_time,
+      airline_leg: s.airline_leg,
     }))
     .sort((a, b) => a.day_number - b.day_number || a.sort_order - b.sort_order);
 
   const roleAssignments = (members ?? [])
-    .filter((m) => m.trip_role || m.airline)
+    .filter((m) => m.trip_role || m.airline || m.return_airline)
     .map((m) => ({
       user_id: m.id,
       name: m.name,
       trip_role: m.trip_role ?? null,
       airline: m.airline ?? null,
+      return_airline: m.return_airline ?? null,
     }));
 
   // group_id → name 매핑 (temp_group_id 칩 렌더 시 필요)
@@ -324,6 +333,7 @@ export default async function GroupPage() {
         name: m.name,
         party: (m.party as GroupParty) ?? null,
         airline: m.airline ?? null,
+        return_airline: m.return_airline ?? null,
         trip_role: m.trip_role ?? null,
       }))}
       shuttleMembers={shuttleMembers}

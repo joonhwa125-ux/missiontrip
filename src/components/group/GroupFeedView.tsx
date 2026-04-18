@@ -76,20 +76,6 @@ export default function GroupFeedView({
   const [briefingOpen, setBriefingOpen] = useState(false);
   const { briefing: cachedBriefing, isFromCache } = useBriefingCache(groupId, briefing);
 
-  // 배너 카운트 — 역할/특이사항
-  const { roleCount, specialCount } = useMemo(() => {
-    if (!cachedBriefing) return { roleCount: 0, specialCount: 0 };
-    const rc = cachedBriefing.roleAssignments.length;
-    const sgSpecials = cachedBriefing.groupInfos.filter(
-      (g) => !!(g.location_detail || g.rotation || g.sub_location || g.note)
-    ).length;
-    const smSpecials = cachedBriefing.memberInfos.filter(
-      (m) =>
-        !!(m.note || m.excused_reason || m.activity || m.menu || m.temp_role || m.temp_group_id)
-    ).length;
-    return { roleCount: rc, specialCount: sgSpecials + smSpecials };
-  }, [cachedBriefing]);
-
   // scope 필터: 셔틀 일정은 버스 배정자만, 일반 일정은 조내 party 기준
   const hasAdvance = members.some((m) => m.party === "advance");
   const hasRear = members.some((m) => m.party === "rear");
@@ -110,6 +96,53 @@ export default function GroupFeedView({
   const daySchedules = sortSchedulesByStatus(
     mySchedules.filter((s) => s.day_number === selectedDay)
   );
+
+  // 배너 카운트 — 선택된 일차 기준으로 필터링.
+  // 카운트 0이면 배너 자체 숨김 (일차별 빈 상태 자연 대응).
+  //  - trip_role: 1일차에만 카운트 (BriefingSheet 규칙과 동일)
+  //  - 항공사: 해당 일차에 airline_leg=outbound/return 일정 있을 때만 카운트
+  //  - 특이사항: 해당 일차에 속한 sgi/smi만
+  const { roleCount, specialCount } = useMemo(() => {
+    if (!cachedBriefing) return { roleCount: 0, specialCount: 0 };
+
+    const daySchedulesInBriefing = cachedBriefing.scheduleSummaries.filter(
+      (s) => s.day_number === selectedDay
+    );
+    const dayScheduleIds = new Set(daySchedulesInBriefing.map((s) => s.schedule_id));
+    const hasOutbound = daySchedulesInBriefing.some((s) => s.airline_leg === "outbound");
+    const hasReturn = daySchedulesInBriefing.some((s) => s.airline_leg === "return");
+
+    const tripRoles = selectedDay === 1
+      ? cachedBriefing.roleAssignments.filter((r) => r.trip_role).length
+      : 0;
+    const outboundAirlines = hasOutbound
+      ? new Set(
+          cachedBriefing.roleAssignments
+            .filter((r) => r.airline)
+            .map((r) => r.airline)
+        ).size
+      : 0;
+    const returnAirlines = hasReturn
+      ? new Set(
+          cachedBriefing.roleAssignments
+            .filter((r) => r.return_airline)
+            .map((r) => r.return_airline)
+        ).size
+      : 0;
+    const rc = tripRoles + outboundAirlines + returnAirlines;
+
+    const sgSpecials = cachedBriefing.groupInfos.filter(
+      (g) =>
+        dayScheduleIds.has(g.schedule_id) &&
+        !!(g.location_detail || g.rotation || g.sub_location || g.note)
+    ).length;
+    const smSpecials = cachedBriefing.memberInfos.filter(
+      (m) =>
+        dayScheduleIds.has(m.schedule_id) &&
+        !!(m.note || m.excused_reason || m.activity || m.menu || m.temp_role || m.temp_group_id)
+    ).length;
+    return { roleCount: rc, specialCount: sgSpecials + smSpecials };
+  }, [cachedBriefing, selectedDay]);
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -196,6 +229,7 @@ export default function GroupFeedView({
           groupName={groupName}
           briefing={cachedBriefing}
           isFromCache={isFromCache}
+          selectedDay={selectedDay}
         />
       )}
 

@@ -184,8 +184,12 @@ if (!user.email?.endsWith(ALLOWED_DOMAIN)) {
 
 | 시트명 | 컬럼 | 예시 |
 |---|---|---|
-| 참가자 | 이름, 전화번호, 역할(조원/조장/관리자), 소속조, 배정차량, 출발셔틀버스, 귀가셔틀버스, 선후발 | 홍길동, 010-1234-5678, 조장, A조, 1호차, 판교 출발 1, 판교 귀가 2, 선발 |
-| 일정 | 일차, 순서, 장소, 일정명, 예정시각, 대상(전체/선발/후발), 셔틀여부(출발/귀가/빈칸) | 1, 1, 국내선 3번 게이트, 김포공항 탑승 게이트 집결, 08:30, 전체, |
+| 참가자 | 이름, 전화번호, 역할(조원/조장/관리자), 소속조, 배정차량, 출발셔틀버스, 귀가셔틀버스, 선후발, 항공사(가는편), 항공사(오는편), 여행역할 | 홍길동, 010-1234-5678, 조장, A조, 1호차, 판교 출발 1, 판교 귀가 2, 선발, 제주, 티웨이, 키 수령 |
+| 일정 | 일차, 순서, 장소, 일정명, 예정시각, 대상(전체/선발/후발), 셔틀여부(출발/귀가/빈칸), 항공구간(가는편/오는편/빈칸) | 1, 1, 국내선 3번 게이트, 김포공항 탑승 게이트 집결, 08:30, 전체, , 가는편 |
+
+**항공사 컬럼 값:** 제주 / 티웨이 / 현지 합류 등 자유 텍스트(약칭 권장). 가는편·오는편에 서로 다른 값 가능.
+
+**항공구간 컬럼:** 해당 일정이 비행편 집결 일정임을 표시. 값이 있는 일정의 일차에만 브리핑 카드의 "가는편/오는편 항공사" 섹션이 렌더링됨. 어떤 일차든 허용(중간 일차 비행 대응).
 
 **이메일 자동 생성 규칙:**
 - 전원 → `{이름소문자}@linkagelab.co.kr` (역할 무관, LDAP 계정명 = 이름 컬럼)
@@ -240,6 +244,9 @@ if (!user.email?.endsWith(ALLOWED_DOMAIN)) {
 | party | text | nullable | 선발/후발 구분 (`'advance'` / `'rear'` / null) |
 | shuttle_bus | text | nullable | 출발 셔틀버스 배정 (예: 판교 출발 1) |
 | return_shuttle_bus | text | nullable | 귀가 셔틀버스 배정 |
+| airline | text | nullable | 가는편 항공사 (제주/티웨이/현지 합류 등 자유 텍스트) |
+| return_airline | text | nullable | 오는편 항공사 (제주/티웨이/현지 합류 등 자유 텍스트) |
+| trip_role | text | nullable | 여행 내내 유지되는 역할 (키 수령, 가이드 등). 1일차 브리핑에만 노출 |
 | created_at | timestamptz | default now() | 생성 시각 |
 
 > 비상연락: 이름 + phone + 소속 조. 장애 여부 등 개인 특성 컬럼 없음. (`docs/decisions.md` 참조)
@@ -260,6 +267,7 @@ if (!user.email?.endsWith(ALLOWED_DOMAIN)) {
 | activated_at | timestamptz | nullable | 활성화 시각 (로그용) |
 | scope | text | NOT NULL, default 'all' | 일정 대상 범위 (`'all'` / `'advance'` / `'rear'`) |
 | shuttle_type | text | nullable | 셔틀 타입 (`'departure'` / `'return'` / null). 셔틀 일정이면 셔틀버스 단위 체크인 |
+| airline_leg | text | nullable, CHECK IN ('outbound', 'return') | 항공 구간 (`'outbound'`=가는편 / `'return'`=오는편 / null=비행 아님). 해당 일차 브리핑에 항공사 섹션 트리거 |
 | created_at | timestamptz | default now() | 생성 시각 |
 
 **필수 DB 제약:**
@@ -516,6 +524,16 @@ NEXT_PUBLIC_TIMEZONE=Asia/Seoul               # 모든 시각 표시 KST 기준
 - Realtime으로 `schedule_activated`, `schedule_updated` 수신 시 자동 갱신
 
 > 조장은 일정 피드에서 **확인만** 가능. 일정 활성화, 시간 변경 등 조작은 관리자 전용.
+
+**조장 브리핑 배너 (일차 탭 바로 아래):**
+- 선택된 일차에 해당하는 정보만 카운트 · 렌더링. 카운트 0이면 배너 자체 숨김 (일차별 빈 상태 자연 대응)
+- 배너 탭 → `BriefingSheet` 바텀시트 오픈 (해당 일차 정보만 섹션별로 표시)
+- 섹션 노출 규칙:
+  - **여행 역할 (`trip_role`)**: 1일차 탭에서만 노출 (출발 당일 리마인드용)
+  - **가는편 항공사**: 해당 일차에 `schedules.airline_leg='outbound'`인 일정이 있으면 노출. 항공사별 인원 그룹핑
+  - **오는편 항공사**: 해당 일차에 `schedules.airline_leg='return'`인 일정이 있으면 노출
+  - **일정별 안내 (`schedule_group_info` / `schedule_member_info`)**: 해당 일차의 일정만 (층수/순환/활동/메뉴/메모/조이동/임시역할)
+- 일차 하드코딩 없음 — `airline_leg`가 지정된 어느 일차든 자동 렌더 (중간 일차 비행 시나리오 대응)
 
 #### 4.2.2 체크인 화면 (드릴다운)
 

@@ -104,7 +104,7 @@ export async function getEffectiveRoster(params: {
   if (transferredInUserIds.length > 0) {
     const { data: transferInUsers } = await supabase
       .from("users")
-      .select("id, name, party, airline, trip_role, group_id")
+      .select("id, name, party, airline, return_airline, trip_role, group_id")
       .in("id", transferredInUserIds);
 
     transferredIn = (transferInUsers ?? []).map((u) => ({
@@ -112,6 +112,7 @@ export async function getEffectiveRoster(params: {
       name: u.name,
       party: (u.party as "advance" | "rear" | null) ?? null,
       airline: u.airline ?? null,
+      return_airline: u.return_airline ?? null,
       trip_role: u.trip_role ?? null,
       origin_group_name: groupNameMap.get(u.group_id) ?? "다른 조",
     }));
@@ -131,6 +132,7 @@ export async function getEffectiveRoster(params: {
       name: t.name,
       party: t.party,
       airline: t.airline,
+      return_airline: t.return_airline,
       trip_role: t.trip_role,
     }));
   const excusedMembers = [...excusedFromBase, ...excusedFromTransferIn];
@@ -144,6 +146,7 @@ export async function getEffectiveRoster(params: {
       name: t.name,
       party: t.party,
       airline: t.airline,
+      return_airline: t.return_airline,
       trip_role: t.trip_role,
     })),
   ];

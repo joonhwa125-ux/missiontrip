@@ -430,6 +430,7 @@ export default function AdminView({
       name: m.name,
       party: m.party,
       airline: m.airline ?? null,
+      return_airline: m.return_airline ?? null,
       trip_role: m.trip_role ?? null,
     }));
   }, [activeSchedule, adminMembers]);

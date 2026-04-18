@@ -21,6 +21,8 @@ interface Props {
   groupName: string;
   briefing: BriefingData;
   isFromCache: boolean;
+  /** 현재 조장 화면에서 선택된 일차. 이 일차의 정보만 노출. */
+  selectedDay: number;
 }
 
 type ScheduleSummary = BriefingData["scheduleSummaries"][number];
@@ -72,14 +74,71 @@ function Chip({ label, value, tone = "neutral" }: { label: string; value: string
   );
 }
 
+/**
+ * 항공사별 인원 그룹핑 (삽입 순서 보존)
+ * @returns Map<airline, 이름 배열>
+ */
+function groupByAirline(
+  entries: Array<{ name: string; airline: string | null }>
+): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  for (const e of entries) {
+    if (!e.airline) continue;
+    const arr = map.get(e.airline) ?? [];
+    arr.push(e.name);
+    map.set(e.airline, arr);
+  }
+  return map;
+}
+
 export default function BriefingSheet({
   open,
   onClose,
   groupName,
   briefing,
   isFromCache,
+  selectedDay,
 }: Props) {
-  // 일정별 상세 블록 조립 — 일차/정렬 순서 유지
+  // 해당 일차의 항공 구간 판정 — schedules.airline_leg 기반 (일차 하드코딩 없음)
+  const { hasOutboundFlight, hasReturnFlight } = useMemo(() => {
+    const daySchedules = briefing.scheduleSummaries.filter(
+      (s) => s.day_number === selectedDay
+    );
+    return {
+      hasOutboundFlight: daySchedules.some((s) => s.airline_leg === "outbound"),
+      hasReturnFlight: daySchedules.some((s) => s.airline_leg === "return"),
+    };
+  }, [briefing.scheduleSummaries, selectedDay]);
+
+  // trip_role은 1일차에만 노출 (여행 전체 역할이므로 출발 당일 리마인드용)
+  const showTripRole = selectedDay === 1;
+
+  const tripRoles = useMemo(() => {
+    if (!showTripRole) return [];
+    return briefing.roleAssignments.filter((r) => r.trip_role);
+  }, [briefing.roleAssignments, showTripRole]);
+
+  const outboundAirlineGroups = useMemo(
+    () =>
+      hasOutboundFlight
+        ? groupByAirline(
+            briefing.roleAssignments.map((r) => ({ name: r.name, airline: r.airline }))
+          )
+        : new Map<string, string[]>(),
+    [briefing.roleAssignments, hasOutboundFlight]
+  );
+
+  const returnAirlineGroups = useMemo(
+    () =>
+      hasReturnFlight
+        ? groupByAirline(
+            briefing.roleAssignments.map((r) => ({ name: r.name, airline: r.return_airline }))
+          )
+        : new Map<string, string[]>(),
+    [briefing.roleAssignments, hasReturnFlight]
+  );
+
+  // 일정별 상세 블록 조립 — 선택된 일차에 속한 일정만
   const scheduleBlocks: ScheduleBlock[] = useMemo(() => {
     const sgByScheduleId = new Map<string, ScheduleGroupInfo>();
     for (const sgi of briefing.groupInfos) {
@@ -94,8 +153,8 @@ export default function BriefingSheet({
       smByScheduleId.set(smi.schedule_id, arr);
     }
 
-    // scheduleSummaries는 서버에서 (day_number, sort_order) 오름차순 정렬 가정
     return briefing.scheduleSummaries
+      .filter((s) => s.day_number === selectedDay)
       .map<ScheduleBlock>((schedule) => ({
         schedule,
         groupInfo: sgByScheduleId.get(schedule.schedule_id) ?? null,
@@ -107,29 +166,22 @@ export default function BriefingSheet({
           .sort((a, b) => a.name.localeCompare(b.name, "ko")),
       }))
       .filter((block) => block.groupInfo !== null || block.memberInfos.length > 0);
-  }, [briefing]);
+  }, [briefing, selectedDay]);
 
-  // 일차 별로 block 그룹핑 (렌더용)
-  const blocksByDay = useMemo(() => {
-    const map = new Map<number, ScheduleBlock[]>();
-    for (const block of scheduleBlocks) {
-      const day = block.schedule.day_number;
-      const arr = map.get(day) ?? [];
-      arr.push(block);
-      map.set(day, arr);
-    }
-    return Array.from(map.entries()).sort(([a], [b]) => a - b);
-  }, [scheduleBlocks]);
-
-  const hasRoles = briefing.roleAssignments.length > 0;
+  const hasTripRoles = tripRoles.length > 0;
+  const hasOutboundAirlines = outboundAirlineGroups.size > 0;
+  const hasReturnAirlines = returnAirlineGroups.size > 0;
   const hasDetails = scheduleBlocks.length > 0;
+  const hasAnyContent = hasTripRoles || hasOutboundAirlines || hasReturnAirlines || hasDetails;
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="flex max-h-[85vh] w-[calc(100%-2rem)] max-w-lg flex-col overflow-hidden p-0">
         <div className="flex-shrink-0 border-b border-stone-100 px-5 pb-3 pt-4">
           <DialogHeader className="text-left">
-            <DialogTitle className="text-base">{groupName} 브리핑</DialogTitle>
+            <DialogTitle className="text-base">
+              {groupName} 브리핑 · {selectedDay}일차
+            </DialogTitle>
             <DialogDescription className="text-xs">
               {isFromCache
                 ? "오프라인 캐시 기준 · 연결되면 최신으로 업데이트돼요"
@@ -139,20 +191,20 @@ export default function BriefingSheet({
         </div>
 
         <div className="flex-1 space-y-6 overflow-y-auto px-5 py-4 text-sm">
-          {!hasRoles && !hasDetails && (
+          {!hasAnyContent && (
             <p className="py-10 text-center text-sm text-muted-foreground">
-              등록된 브리핑 항목이 없어요
+              이 일차에 등록된 브리핑 항목이 없어요
             </p>
           )}
 
-          {/* 1. 여행 역할 */}
-          {hasRoles && (
+          {/* 1. 여행 역할 (1일차만) */}
+          {hasTripRoles && (
             <section aria-labelledby="briefing-roles">
               <h3 id="briefing-roles" className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
                 여행 역할
               </h3>
               <ul className="space-y-1.5">
-                {briefing.roleAssignments.map((r) => (
+                {tripRoles.map((r) => (
                   <li
                     key={r.user_id}
                     className="flex flex-wrap items-center gap-2 rounded-lg bg-stone-50 px-3 py-2"
@@ -163,110 +215,137 @@ export default function BriefingSheet({
                         {r.trip_role}
                       </span>
                     )}
-                    {r.airline && (
-                      <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-800">
-                        ✈︎ {r.airline}
-                      </span>
-                    )}
                   </li>
                 ))}
               </ul>
             </section>
           )}
 
-          {/* 2. 일정별 상세 (일차 헤더 포함) */}
+          {/* 2. 가는편 항공사 (해당 일차에 outbound 일정 있을 때) */}
+          {hasOutboundAirlines && (
+            <section aria-labelledby="briefing-outbound">
+              <h3 id="briefing-outbound" className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
+                가는편 항공사
+              </h3>
+              <ul className="space-y-1.5">
+                {Array.from(outboundAirlineGroups.entries()).map(([airline, names]) => (
+                  <li key={airline} className="rounded-lg bg-sky-50 px-3 py-2">
+                    <div className="mb-0.5 flex items-baseline gap-2">
+                      <span className="text-sm font-semibold text-sky-900">✈︎ {airline}</span>
+                      <span className="text-xs text-sky-700">{names.length}명</span>
+                    </div>
+                    <p className="text-xs text-stone-700">{names.join(", ")}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* 3. 오는편 항공사 (해당 일차에 return 일정 있을 때) */}
+          {hasReturnAirlines && (
+            <section aria-labelledby="briefing-return">
+              <h3 id="briefing-return" className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
+                오는편 항공사
+              </h3>
+              <ul className="space-y-1.5">
+                {Array.from(returnAirlineGroups.entries()).map(([airline, names]) => (
+                  <li key={airline} className="rounded-lg bg-sky-50 px-3 py-2">
+                    <div className="mb-0.5 flex items-baseline gap-2">
+                      <span className="text-sm font-semibold text-sky-900">✈︎ {airline}</span>
+                      <span className="text-xs text-sky-700">{names.length}명</span>
+                    </div>
+                    <p className="text-xs text-stone-700">{names.join(", ")}</p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* 4. 일정별 상세 (선택 일차의 일정만) */}
           {hasDetails && (
             <section aria-labelledby="briefing-details">
               <h3 id="briefing-details" className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
                 일정별 안내
               </h3>
-              <div className="space-y-4">
-                {blocksByDay.map(([day, blocks]) => (
-                  <div key={day}>
-                    <p className="mb-2 text-xs font-semibold text-stone-600">{day}일차</p>
-                    <div className="space-y-3">
-                      {blocks.map((block) => (
-                        <article
-                          key={block.schedule.schedule_id}
-                          className="rounded-xl border border-stone-200 bg-white p-3"
-                        >
-                          <header className="mb-2 flex items-baseline justify-between gap-2">
-                            <h4 className="text-sm font-semibold text-stone-900">
-                              {block.schedule.title}
-                            </h4>
-                            {block.schedule.scheduled_time && (
-                              <span className="flex-shrink-0 text-xs text-stone-500">
-                                {formatTime(block.schedule.scheduled_time)}
-                              </span>
-                            )}
-                          </header>
+              <div className="space-y-3">
+                {scheduleBlocks.map((block) => (
+                  <article
+                    key={block.schedule.schedule_id}
+                    className="rounded-xl border border-stone-200 bg-white p-3"
+                  >
+                    <header className="mb-2 flex items-baseline justify-between gap-2">
+                      <h4 className="text-sm font-semibold text-stone-900">
+                        {block.schedule.title}
+                      </h4>
+                      {block.schedule.scheduled_time && (
+                        <span className="flex-shrink-0 text-xs text-stone-500">
+                          {formatTime(block.schedule.scheduled_time)}
+                        </span>
+                      )}
+                    </header>
 
-                          {/* 조 단위 정보 */}
-                          {block.groupInfo && (
-                            <div className="mb-2 space-y-1.5">
-                              <div className="flex flex-wrap gap-1">
-                                {block.groupInfo.location_detail && (
-                                  <Chip label="층" value={block.groupInfo.location_detail} tone="info" />
-                                )}
-                                {block.groupInfo.rotation && (
-                                  <Chip label="순서" value={block.groupInfo.rotation} tone="info" />
-                                )}
-                                {block.groupInfo.sub_location && (
-                                  <Chip label="장소" value={block.groupInfo.sub_location} tone="info" />
-                                )}
-                              </div>
-                              {block.groupInfo.note && (
-                                <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                                  {block.groupInfo.note}
-                                </p>
+                    {/* 조 단위 정보 */}
+                    {block.groupInfo && (
+                      <div className="mb-2 space-y-1.5">
+                        <div className="flex flex-wrap gap-1">
+                          {block.groupInfo.location_detail && (
+                            <Chip label="층" value={block.groupInfo.location_detail} tone="info" />
+                          )}
+                          {block.groupInfo.rotation && (
+                            <Chip label="순서" value={block.groupInfo.rotation} tone="info" />
+                          )}
+                          {block.groupInfo.sub_location && (
+                            <Chip label="장소" value={block.groupInfo.sub_location} tone="info" />
+                          )}
+                        </div>
+                        {block.groupInfo.note && (
+                          <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                            {block.groupInfo.note}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 인원별 정보 */}
+                    {block.memberInfos.length > 0 && (
+                      <ul className="space-y-1.5">
+                        {block.memberInfos.map(({ info, name }) => (
+                          <li
+                            key={info.id}
+                            className="rounded-lg bg-stone-50 px-3 py-2"
+                          >
+                            <div className="mb-1 flex flex-wrap items-center gap-1.5">
+                              <span className="text-sm font-medium text-stone-900">{name}</span>
+                              {info.excused_reason && (
+                                <span className="rounded-full bg-stone-200 px-2 py-0.5 text-[0.6875rem] font-medium text-stone-700">
+                                  제외 · {info.excused_reason}
+                                </span>
+                              )}
+                              {info.temp_group_id && (
+                                <Chip
+                                  label="조이동"
+                                  value={briefing.groupNameMap[info.temp_group_id] ?? "다른 조"}
+                                  tone="warn"
+                                />
+                              )}
+                              {info.temp_role === "leader" && (
+                                <Chip label="임시역할" value="조장" tone="warn" />
+                              )}
+                              {info.activity && (
+                                <Chip label="활동" value={info.activity} />
+                              )}
+                              {info.menu && (
+                                <Chip label="메뉴" value={info.menu} />
                               )}
                             </div>
-                          )}
-
-                          {/* 인원별 정보 */}
-                          {block.memberInfos.length > 0 && (
-                            <ul className="space-y-1.5">
-                              {block.memberInfos.map(({ info, name }) => (
-                                <li
-                                  key={info.id}
-                                  className="rounded-lg bg-stone-50 px-3 py-2"
-                                >
-                                  <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                                    <span className="text-sm font-medium text-stone-900">{name}</span>
-                                    {info.excused_reason && (
-                                      <span className="rounded-full bg-stone-200 px-2 py-0.5 text-[0.6875rem] font-medium text-stone-700">
-                                        제외 · {info.excused_reason}
-                                      </span>
-                                    )}
-                                    {/* Phase G 후속 fix: 조이동 정보를 보내는 쪽 조장에게도 노출 */}
-                                    {info.temp_group_id && (
-                                      <Chip
-                                        label="조이동"
-                                        value={briefing.groupNameMap[info.temp_group_id] ?? "다른 조"}
-                                        tone="warn"
-                                      />
-                                    )}
-                                    {info.temp_role === "leader" && (
-                                      <Chip label="임시역할" value="조장" tone="warn" />
-                                    )}
-                                    {info.activity && (
-                                      <Chip label="활동" value={info.activity} />
-                                    )}
-                                    {info.menu && (
-                                      <Chip label="메뉴" value={info.menu} />
-                                    )}
-                                  </div>
-                                  {info.note && (
-                                    <p className="text-xs text-stone-600">{info.note}</p>
-                                  )}
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </article>
-                      ))}
-                    </div>
-                  </div>
+                            {info.note && (
+                              <p className="text-xs text-stone-600">{info.note}</p>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </article>
                 ))}
               </div>
             </section>

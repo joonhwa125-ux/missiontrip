@@ -37,6 +37,9 @@ type SetupUser = {
   party: GroupParty | null;
   shuttle_bus: string | null;
   return_shuttle_bus: string | null;
+  airline: string | null;
+  return_airline: string | null;
+  trip_role: string | null;
 };
 
 type SetupGroup = { id: string; name: string; bus_name: string | null };

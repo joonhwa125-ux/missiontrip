@@ -9,7 +9,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import type { Schedule, ScheduleScope, ShuttleType } from "@/lib/types";
+import type { Schedule, ScheduleScope, ShuttleType, AirlineLeg } from "@/lib/types";
 
 interface Props {
   schedule: Schedule;
@@ -21,6 +21,7 @@ interface Props {
     scheduled_time: string | null;
     scope: ScheduleScope;
     shuttle_type: ShuttleType | null;
+    airline_leg: AirlineLeg | null;
   }) => void;
   onClose: () => void;
 }
@@ -56,6 +57,7 @@ export default function ScheduleEditDialog({ schedule, onSave, onClose }: Props)
     scheduled_time: isoToDatetimeLocal(schedule.scheduled_time),
     scope: schedule.scope,
     shuttle_type: schedule.shuttle_type,
+    airline_leg: schedule.airline_leg,
   });
 
   const set = useCallback(
@@ -74,6 +76,7 @@ export default function ScheduleEditDialog({ schedule, onSave, onClose }: Props)
       scheduled_time: datetimeLocalToIso(form.scheduled_time),
       scope: form.scope,
       shuttle_type: form.shuttle_type,
+      airline_leg: form.airline_leg,
     });
   };
 
@@ -168,6 +171,22 @@ export default function ScheduleEditDialog({ schedule, onSave, onClose }: Props)
               <option value="departure">출발 셔틀</option>
               <option value="return">귀가 셔틀</option>
             </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">항공 구간</label>
+            <select
+              value={form.airline_leg ?? ""}
+              onChange={(e) => set("airline_leg", (e.target.value as AirlineLeg) || null)}
+              className={INPUT_CLASS}
+              aria-label="항공 구간"
+            >
+              <option value="">없음 (비행 일정 아님)</option>
+              <option value="outbound">가는편</option>
+              <option value="return">오는편</option>
+            </select>
+            <p className="mt-1 text-[0.6875rem] text-muted-foreground">
+              비행 일정으로 지정하면 해당 일차 브리핑 카드에 항공사 섹션이 노출돼요
+            </p>
           </div>
           <DialogFooter className="pt-2">
             <button

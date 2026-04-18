@@ -205,9 +205,13 @@ export default function GroupView({
     const sgiRows = (sgiRes.data ?? []) as ScheduleGroupInfo[];
 
     // 브리핑에 등장하는 일정만 scheduleSummaries에 포함 (서버 로직과 동일)
+    // airline_leg이 있는 비행 일정도 포함 (항공사 섹션 트리거)
     const briefingScheduleIds = new Set<string>();
     for (const s of sgiRows) briefingScheduleIds.add(s.schedule_id);
     for (const s of smiRows) briefingScheduleIds.add(s.schedule_id);
+    for (const s of schedules) {
+      if (s.airline_leg) briefingScheduleIds.add(s.id);
+    }
     const newScheduleSummaries = schedules
       .filter((s) => briefingScheduleIds.has(s.id))
       .map((s) => ({
@@ -217,6 +221,7 @@ export default function GroupView({
         day_number: s.day_number,
         sort_order: s.sort_order,
         scheduled_time: s.scheduled_time,
+        airline_leg: s.airline_leg,
       }))
       .sort((a, b) => a.day_number - b.day_number || a.sort_order - b.sort_order);
 
@@ -277,6 +282,7 @@ export default function GroupView({
           scope: scope ?? "all",
           is_active: true,
           shuttle_type: shuttle_type ?? null,
+          airline_leg: prev?.airline_leg ?? null,
           activated_at: new Date().toISOString(),
           created_at: prev?.created_at ?? new Date().toISOString(),
         }));

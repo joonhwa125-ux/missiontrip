@@ -16,6 +16,7 @@ import type {
   ValidationError,
   ScheduleScope,
   ShuttleType,
+  AirlineLeg,
   UserRole,
   GroupParty,
 } from "@/lib/types";
@@ -233,7 +234,7 @@ async function upsertUsers(
     name: string; email: string; phone: string | null;
     role: string; group_id: string; party: string | null;
     shuttle_bus: string | null; return_shuttle_bus: string | null;
-    airline: string | null; trip_role: string | null;
+    airline: string | null; return_airline: string | null; trip_role: string | null;
   }[] = [];
 
   for (const u of users) {
@@ -247,6 +248,7 @@ async function upsertUsers(
       shuttle_bus: u.shuttle_bus ?? null,
       return_shuttle_bus: u.return_shuttle_bus ?? null,
       airline: u.airline ?? null,
+      return_airline: u.return_airline ?? null,
       trip_role: u.trip_role ?? null,
     });
   }
@@ -270,6 +272,7 @@ async function upsertSchedules(
     sort_order: s.sort_order,
     scope: s.scope,
     shuttle_type: s.shuttle_type,
+    airline_leg: s.airline_leg,
     scheduled_time: s.scheduled_time ? parseKSTTime(s.scheduled_time) : null,
   }));
 
@@ -566,6 +569,7 @@ export async function updateSchedule(
     scheduled_time: string | null;
     scope: ScheduleScope;
     shuttle_type: ShuttleType | null;
+    airline_leg: AirlineLeg | null;
   }
 ): Promise<ActionResult> {
   const admin = await requireAdmin();
@@ -578,6 +582,8 @@ export async function updateSchedule(
   const VALID_SCOPES: ScheduleScope[] = ["all", "advance", "rear"];
   if (!VALID_SCOPES.includes(data.scope))
     return { ok: false, error: "유효하지 않은 대상이에요" };
+  if (data.airline_leg !== null && data.airline_leg !== "outbound" && data.airline_leg !== "return")
+    return { ok: false, error: "항공 구간은 가는편/오는편/없음만 가능해요" };
 
   const supabase = createServiceClient();
   const { error } = await supabase
@@ -639,6 +645,7 @@ export async function updateUser(
     shuttle_bus: string | null;
     return_shuttle_bus: string | null;
     airline?: string | null;
+    return_airline?: string | null;
     trip_role?: string | null;
   }
 ): Promise<ActionResult> {

@@ -7,6 +7,8 @@ export type ScheduleStatus = "active" | "completed" | "waiting";
 export type GroupParty = "advance" | "rear";
 export type ScheduleScope = "all" | "advance" | "rear";
 export type ShuttleType = "departure" | "return";
+/** 항공 구간 — 일정이 비행편임을 표시 (outbound=가는편, return=오는편, null=비행 아님) */
+export type AirlineLeg = "outbound" | "return";
 
 /** 불참 사유 기본 항목 — '기타'는 `기타: {자유텍스트}` 형태로 저장 */
 export type AbsenceReasonCategory = "숙소" | "근무" | "의료" | "기타";
@@ -32,6 +34,7 @@ export interface User {
   shuttle_bus: string | null;
   return_shuttle_bus: string | null;
   airline: string | null;
+  return_airline: string | null;
   trip_role: string | null;
   created_at: string;
 }
@@ -40,10 +43,10 @@ export interface UserWithGroup extends User {
   groups: Group;
 }
 
-/** 조장 화면용 멤버 (id, name, party, airline, trip_role) */
+/** 조장 화면용 멤버 (id, name, party, airline, return_airline, trip_role) */
 export type GroupMember = Pick<
   User,
-  "id" | "name" | "party" | "airline" | "trip_role"
+  "id" | "name" | "party" | "airline" | "return_airline" | "trip_role"
 >;
 
 /** 전체 현황용 멤버 (id, group_id, party, name, role) */
@@ -66,6 +69,7 @@ export interface AdminMember {
   shuttle_bus?: string | null;
   return_shuttle_bus?: string | null;
   airline?: string | null;
+  return_airline?: string | null;
   trip_role?: string | null;
 }
 
@@ -79,6 +83,7 @@ export interface Schedule {
   scope: ScheduleScope;
   is_active: boolean;
   shuttle_type: ShuttleType | null;
+  airline_leg: AirlineLeg | null;
   activated_at: string | null;
   created_at: string;
 }
@@ -233,18 +238,20 @@ export interface ScheduleGroupInfo {
  *   `useBriefingCache`가 localStorage에 사본을 유지하여 오프라인에서도 조회 가능.
  */
 export interface BriefingData {
-  /** 조원 중 trip_role 혹은 airline 이 설정된 레코드 (여행 내내 유지되는 역할) */
+  /** 조원 중 trip_role / airline / return_airline 중 하나라도 설정된 레코드 */
   roleAssignments: Array<{
     user_id: string;
     name: string;
     trip_role: string | null;
     airline: string | null;
+    return_airline: string | null;
   }>;
   /** 내 조 기준 schedule_group_info 레코드 */
   groupInfos: ScheduleGroupInfo[];
   /** 내 조원(이동IN 포함) 기준 schedule_member_info 레코드 */
   memberInfos: ScheduleMemberInfo[];
-  /** 브리핑 렌더링 시 일정 정보 조회용 맵 — 서버에서 조립 */
+  /** 브리핑 렌더링 시 일정 정보 조회용 맵 — 서버에서 조립.
+   *  `airline_leg`가 null이 아닌 일정은 해당 일차에 항공사 섹션 트리거 */
   scheduleSummaries: Array<{
     schedule_id: string;
     title: string;
@@ -252,6 +259,7 @@ export interface BriefingData {
     day_number: number;
     sort_order: number;
     scheduled_time: string | null;
+    airline_leg: AirlineLeg | null;
   }>;
   /** user_id → name 매핑 (member_info 렌더 시 필요) */
   userNameMap: Record<string, string>;
@@ -307,6 +315,7 @@ export interface ParsedUser {
   shuttle_bus?: string | null;
   return_shuttle_bus?: string | null;
   airline?: string | null;
+  return_airline?: string | null;
   trip_role?: string | null;
 }
 
@@ -318,6 +327,7 @@ export interface ParsedSchedule {
   scheduled_time: string | null;
   scope: ScheduleScope;
   shuttle_type: ShuttleType | null;
+  airline_leg: AirlineLeg | null;
 }
 
 /** v2: 일정×조 배정 파싱 레코드 — Google Sheets "조별배정" 시트 */

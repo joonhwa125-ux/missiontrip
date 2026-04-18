@@ -21,6 +21,9 @@ type SetupUser = {
   party: GroupParty | null;
   shuttle_bus: string | null;
   return_shuttle_bus: string | null;
+  airline: string | null;
+  return_airline: string | null;
+  trip_role: string | null;
 };
 
 type SetupGroup = { id: string; name: string };
@@ -36,6 +39,9 @@ interface Props {
     party: GroupParty | null;
     shuttle_bus: string | null;
     return_shuttle_bus: string | null;
+    airline: string | null;
+    return_airline: string | null;
+    trip_role: string | null;
   }) => void;
   onClose: () => void;
 }
@@ -65,6 +71,9 @@ export default function UserEditDialog({ user, groups, onSave, onClose }: Props)
     party: user.party ?? ("" as GroupParty | ""),
     shuttle_bus: user.shuttle_bus ?? "",
     return_shuttle_bus: user.return_shuttle_bus ?? "",
+    airline: user.airline ?? "",
+    return_airline: user.return_airline ?? "",
+    trip_role: user.trip_role ?? "",
   });
 
   const set = useCallback(
@@ -83,6 +92,9 @@ export default function UserEditDialog({ user, groups, onSave, onClose }: Props)
       party: (form.party as GroupParty) || null,
       shuttle_bus: form.shuttle_bus.trim() || null,
       return_shuttle_bus: form.return_shuttle_bus.trim() || null,
+      airline: form.airline.trim() || null,
+      return_airline: form.return_airline.trim() || null,
+      trip_role: form.trip_role.trim() || null,
     });
   };
 
@@ -176,6 +188,38 @@ export default function UserEditDialog({ user, groups, onSave, onClose }: Props)
               placeholder="예: 성수1 (없으면 비워두세요)"
               className={INPUT_CLASS}
               aria-label="귀가 셔틀버스"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">항공사(가는편)</label>
+              <input
+                value={form.airline}
+                onChange={(e) => set("airline", e.target.value)}
+                placeholder="제주 / 티웨이 / 현지 합류"
+                className={INPUT_CLASS}
+                aria-label="가는편 항공사"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">항공사(오는편)</label>
+              <input
+                value={form.return_airline}
+                onChange={(e) => set("return_airline", e.target.value)}
+                placeholder="제주 / 티웨이 / 현지 합류"
+                className={INPUT_CLASS}
+                aria-label="오는편 항공사"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">여행 역할</label>
+            <input
+              value={form.trip_role}
+              onChange={(e) => set("trip_role", e.target.value)}
+              placeholder="예: 키 수령, 가이드 (없으면 비워두세요)"
+              className={INPUT_CLASS}
+              aria-label="여행 역할"
             />
           </div>
           <DialogFooter className="pt-2">

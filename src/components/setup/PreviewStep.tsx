@@ -106,12 +106,15 @@ export default function PreviewStep({
       )}
 
       {/* v2 배정 정보 요약 */}
-      {(hasGroupInfo || hasMemberInfo || data.users.some((u) => u.airline || u.trip_role)) && (
+      {(hasGroupInfo || hasMemberInfo || data.users.some((u) => u.airline || u.return_airline || u.trip_role)) && (
         <div className="rounded-xl bg-white p-3">
           <p className="mb-1 text-xs font-medium text-muted-foreground">v2 배정 정보</p>
           <div className="flex flex-wrap gap-1.5 text-xs text-muted-foreground">
             {data.users.some((u) => u.airline) && (
-              <span>항공사 {data.users.filter((u) => u.airline).length}명</span>
+              <span>가는편 항공사 {data.users.filter((u) => u.airline).length}명</span>
+            )}
+            {data.users.some((u) => u.return_airline) && (
+              <span>· 오는편 항공사 {data.users.filter((u) => u.return_airline).length}명</span>
             )}
             {data.users.some((u) => u.trip_role) && (
               <span>· 여행역할 {data.users.filter((u) => u.trip_role).length}명</span>
@@ -195,7 +198,8 @@ export default function PreviewStep({
                 <th className="min-w-[120px] px-3 py-2">출발셔틀</th>
                 <th className="min-w-[120px] px-3 py-2">귀가셔틀</th>
                 <th className="min-w-[64px] px-3 py-2">구분</th>
-                <th className="min-w-[96px] px-3 py-2">항공사</th>
+                <th className="min-w-[96px] px-3 py-2">가는편</th>
+                <th className="min-w-[96px] px-3 py-2">오는편</th>
                 <th className="min-w-[120px] px-3 py-2">여행역할</th>
               </tr>
             </thead>
@@ -220,6 +224,7 @@ export default function PreviewStep({
                   <td className="px-3 py-2 text-center">{u.return_shuttle_bus ?? "-"}</td>
                   <td className="px-3 py-2 text-center">{u.party ? (SCOPE_LABEL[u.party] ?? "-") : "-"}</td>
                   <td className="px-3 py-2 text-center">{u.airline ?? "-"}</td>
+                  <td className="px-3 py-2 text-center">{u.return_airline ?? "-"}</td>
                   <td className="px-3 py-2 text-center">{u.trip_role ?? "-"}</td>
                 </tr>
                 );
@@ -238,6 +243,7 @@ export default function PreviewStep({
                 <th className="min-w-[56px] px-3 py-2">예정 시간</th>
                 <th className="min-w-[48px] px-3 py-2">구분</th>
                 <th className="min-w-[72px] px-3 py-2">셔틀</th>
+                <th className="min-w-[72px] px-3 py-2">항공</th>
               </tr>
             </thead>
             <tbody>
@@ -253,6 +259,9 @@ export default function PreviewStep({
                   </td>
                   <td className="px-3 py-2 text-center">
                     {s.shuttle_type === "departure" ? "출발" : s.shuttle_type === "return" ? "귀가" : "-"}
+                  </td>
+                  <td className="px-3 py-2 text-center">
+                    {s.airline_leg === "outbound" ? "가는편" : s.airline_leg === "return" ? "오는편" : "-"}
                   </td>
                 </tr>
               ))}

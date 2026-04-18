@@ -8,6 +8,7 @@ import type {
   ValidationError,
   UserRole,
   ShuttleType,
+  AirlineLeg,
 } from "@/lib/types";
 import {
   ALLOWED_EMAIL_DOMAIN,
@@ -95,7 +96,8 @@ export function parseCsv(csv: string): string[][] {
 }
 
 // 참가자 행 검증 — 이름/역할/소속조 필수값 + 역할 매핑
-// 컬럼 순서: 0=이름, 1=전화번호, 2=역할, 3=소속조, 4=배정차량, 5=출발셔틀버스, 6=귀가셔틀버스, 7=선후발, 8=항공사, 9=여행역할
+// 컬럼 순서: 0=이름, 1=전화번호, 2=역할, 3=소속조, 4=배정차량, 5=출발셔틀버스, 6=귀가셔틀버스,
+//           7=선후발, 8=항공사(가는편), 9=항공사(오는편), 10=여행역할
 function validateUserRow(
   row: string[],
   rowIndex: number,
@@ -111,6 +113,7 @@ function validateUserRow(
   returnShuttleBus?: string | null;
   party?: "advance" | "rear" | null;
   airline?: string | null;
+  returnAirline?: string | null;
   tripRole?: string | null;
   email?: string;
 } {
@@ -120,11 +123,12 @@ function validateUserRow(
   const roleRaw = sanitizeText(row[2] ?? "");
   const groupName = sanitizeText(row[3] ?? "");
   const busName = row[4]?.trim() || null;
-  const shuttleBus = row[5]?.trim() || null;         // col5: 출발 셔틀버스
-  const returnShuttleBus = row[6]?.trim() || null;   // col6: 귀가 셔틀버스
-  const partyRaw = sanitizeText(row[7] ?? "");       // col7: 선후발
-  const airline = sanitizeText(row[8] ?? "") || null;       // col8: 항공사 (v2 신규)
-  const tripRole = sanitizeText(row[9] ?? "") || null;      // col9: 여행역할 (v2 신규)
+  const shuttleBus = row[5]?.trim() || null;               // col5: 출발 셔틀버스
+  const returnShuttleBus = row[6]?.trim() || null;         // col6: 귀가 셔틀버스
+  const partyRaw = sanitizeText(row[7] ?? "");             // col7: 선후발
+  const airline = sanitizeText(row[8] ?? "") || null;      // col8: 항공사(가는편)
+  const returnAirline = sanitizeText(row[9] ?? "") || null;// col9: 항공사(오는편)
+  const tripRole = sanitizeText(row[10] ?? "") || null;    // col10: 여행역할
   const rowNum = rowIndex + 1;
 
   if (!name) {
@@ -173,11 +177,12 @@ function validateUserRow(
     }
   }
 
-  return { errors, name, phone, role, groupName, busName, shuttleBus, returnShuttleBus, party, airline, tripRole, email };
+  return { errors, name, phone, role, groupName, busName, shuttleBus, returnShuttleBus, party, airline, returnAirline, tripRole, email };
 }
 
 // 일정 행 검증 — 일차 범위 + 일정명 필수 + 대상 매핑
-// 컬럼 순서: 0=일차, 1=순서, 2=장소, 3=일정명, 4=예정시각, 5=대상, 6=셔틀여부(출발/귀가/빈칸)
+// 컬럼 순서: 0=일차, 1=순서, 2=장소, 3=일정명, 4=예정시각, 5=대상,
+//           6=셔틀여부(출발/귀가/빈칸), 7=항공구간(가는편/오는편/빈칸)
 function validateScheduleRow(
   row: string[],
   rowIndex: number
@@ -190,6 +195,7 @@ function validateScheduleRow(
   scheduledTime?: string | null;
   scope?: "all" | "advance" | "rear";
   shuttleType?: ShuttleType | null;
+  airlineLeg?: AirlineLeg | null;
 } {
   const errors: ValidationError[] = [];
   const rowNum = rowIndex + 1;
@@ -201,6 +207,7 @@ function validateScheduleRow(
   const scheduledTime = row[4]?.trim() || null;
   const scopeRaw = sanitizeText(row[5] ?? "");
   const shuttleRaw = sanitizeText(row[6] ?? "");
+  const airlineLegRaw = sanitizeText(row[7] ?? "");
   const shuttleNorm = shuttleRaw.toLowerCase();
   let shuttleType: ShuttleType | null = null;
   let shuttleInvalid = false;
@@ -214,6 +221,17 @@ function validateScheduleRow(
 
   if (shuttleInvalid) {
     errors.push({ sheet: "schedules", row: rowNum, field: "셔틀여부", message: "셔틀여부는 '출발' 또는 '귀가'만 가능해요" });
+    return { errors };
+  }
+
+  let airlineLeg: AirlineLeg | null = null;
+  const airlineLegNorm = airlineLegRaw.toLowerCase();
+  if (["가는편", "가는", "outbound", "out"].includes(airlineLegNorm)) {
+    airlineLeg = "outbound";
+  } else if (["오는편", "오는", "return", "ret"].includes(airlineLegNorm)) {
+    airlineLeg = "return";
+  } else if (!["", "-"].includes(airlineLegNorm)) {
+    errors.push({ sheet: "schedules", row: rowNum, field: "항공구간", message: "항공구간은 '가는편' 또는 '오는편'만 가능해요" });
     return { errors };
   }
 
@@ -233,10 +251,11 @@ function validateScheduleRow(
     return { errors };
   }
 
-  return { errors, dayNumber, sortOrder: isNaN(sortOrder) ? rowIndex : sortOrder, location, title, scheduledTime, scope, shuttleType };
+  return { errors, dayNumber, sortOrder: isNaN(sortOrder) ? rowIndex : sortOrder, location, title, scheduledTime, scope, shuttleType, airlineLeg };
 }
 
-// 참가자 시트 파싱 (8컬럼: 이름, 전화번호, 역할, 소속조, 배정차량, 출발셔틀버스, 귀가셔틀버스, 선후발)
+// 참가자 시트 파싱 (11컬럼: 이름, 전화번호, 역할, 소속조, 배정차량, 출발셔틀버스, 귀가셔틀버스,
+// 선후발, 항공사(가는편), 항공사(오는편), 여행역할)
 // 이메일은 이름 기반 자동 생성 (전원: name@도메인)
 // groups는 소속조 고유값에서 자동 추출, bus_name은 배정차량 열에서 매핑, party는 유저별
 export function parseUsersSheet(rows: string[][]): {
@@ -275,6 +294,7 @@ export function parseUsersSheet(rows: string[][]): {
       shuttle_bus: result.shuttleBus ?? null,
       return_shuttle_bus: result.returnShuttleBus ?? null,
       airline: result.airline ?? null,
+      return_airline: result.returnAirline ?? null,
       trip_role: result.tripRole ?? null,
     });
   }
@@ -287,7 +307,7 @@ export function parseUsersSheet(rows: string[][]): {
   return { users, groups, errors };
 }
 
-// 일정 시트 파싱 (7컬럼: 일차, 순서, 장소, 일정명, 예정시각, 대상, 셔틀여부)
+// 일정 시트 파싱 (8컬럼: 일차, 순서, 장소, 일정명, 예정시각, 대상, 셔틀여부, 항공구간)
 export function parseSchedulesSheet(rows: string[][]): {
   schedules: ParsedSchedule[];
   errors: ValidationError[];
@@ -312,6 +332,7 @@ export function parseSchedulesSheet(rows: string[][]): {
       scheduled_time: result.scheduledTime ?? null,
       scope: result.scope,
       shuttle_type: result.shuttleType ?? null,
+      airline_leg: result.airlineLeg ?? null,
     });
   }
 

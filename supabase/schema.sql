@@ -20,8 +20,9 @@ CREATE TABLE IF NOT EXISTS users (
   party       text,                                -- 선발/후발 구분 (advance | rear | null)
   shuttle_bus text,                                -- 출발 셔틀버스 배정 (예: 판교 출발 1)
   return_shuttle_bus text,                         -- 귀가 셔틀버스 배정
-  airline     text,                                -- 탑승 항공사 (제주항공, 티웨이 등)
-  trip_role   text,                                -- 여행 기간 내내 유지되는 역할 (키 수령, 가이드 등)
+  airline        text,                             -- 가는편 항공사 (제주, 티웨이, 현지 합류 등)
+  return_airline text,                             -- 오는편 항공사 (제주, 티웨이, 현지 합류 등)
+  trip_role      text,                             -- 여행 기간 내내 유지되는 역할 (키 수령, 가이드 등)
   created_at  timestamptz DEFAULT now()
 );
 
@@ -36,6 +37,7 @@ CREATE TABLE IF NOT EXISTS schedules (
   activated_at    timestamptz,
   scope           text        NOT NULL DEFAULT 'all',  -- 일정 대상 (all | advance | rear)
   shuttle_type    text,                               -- 셔틀 타입 (departure | return | null)
+  airline_leg     text        CHECK (airline_leg IN ('outbound', 'return')),  -- 항공 구간 (outbound | return | null)
   created_at      timestamptz DEFAULT now(),
   CONSTRAINT unique_schedule_position UNIQUE (day_number, sort_order)
 );
