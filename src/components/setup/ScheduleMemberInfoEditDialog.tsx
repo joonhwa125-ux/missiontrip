@@ -214,15 +214,6 @@ export default function ScheduleMemberInfoEditDialog({
     originalGroupOtherPermanentLeaders.length === 0 &&
     !existingTempLeaderInOriginal;
 
-  // 원래 조에 이미 다른 조장(영구 OR 임시)이 있으면 안내만
-  const remainingLeaderInfo = isTransferringAsLeader
-    ? existingTempLeaderInOriginal
-      ? `임시 조장 ${existingTempLeaderInOriginal.name}`
-      : originalGroupOtherPermanentLeaders.length > 0
-        ? `조장 ${originalGroupOtherPermanentLeaders.map((l) => l.name).join(", ")}`
-        : null
-    : null;
-
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[85vh] overflow-y-auto">
@@ -337,19 +328,8 @@ export default function ScheduleMemberInfoEditDialog({
           </div>
 
           {/* Phase J+: 원래 조 조장 공백 방지 */}
-          {isTransferringAsLeader && remainingLeaderInfo && (
-            <div
-              className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900"
-              role="status"
-            >
-              <p className="font-medium">
-                ✓ {originalGroupName} 조에 남는 조장이 있어요
-              </p>
-              <p className="mt-0.5 text-emerald-800">
-                {remainingLeaderInfo} — 추가 대체 지정 불필요
-              </p>
-            </div>
-          )}
+          {/* 조장 공백 경고만 노출. 남는 조장 있을 때 알리는 초록 배너는 노이즈로 제거됨.
+              드롭다운/경고 미노출 = "조치 불필요"로 관리자에게 자연스럽게 전달. */}
           {showReplacementSection && (
             <div
               className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5"
