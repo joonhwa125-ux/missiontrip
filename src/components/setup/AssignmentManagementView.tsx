@@ -279,7 +279,8 @@ export default function AssignmentManagementView({
         return;
       }
 
-      // Step 2: 편집 시 기존 자식 정리 — 새 대체 조장과 다른 자식 row는 삭제
+      // Step 2: 편집 시 기존 자식 정리 — 새 대체 조장과 다른 자식 row는 삭제.
+      // 각 삭제 결과를 확인하여 부분 실패 시 즉시 중단 + 사용자 안내 (일관성 유지).
       if (existingId) {
         const existingChildren = memberInfos.filter(
           (s) => s.caused_by_smi_id === mainSmiId
@@ -287,7 +288,15 @@ export default function AssignmentManagementView({
         for (const child of existingChildren) {
           // 새 대체 조장이 이 자식과 동일 user면 유지 (아래에서 update)
           if (child.user_id === values.replacement_leader_user_id) continue;
-          await deleteScheduleMemberInfo(child.id);
+          const deleteResult = await deleteScheduleMemberInfo(child.id);
+          if (!deleteResult.ok) {
+            setErrorMsg(
+              `기존 대체 조장 정리 중 오류: ${deleteResult.error ?? "알 수 없는 오류"}. 배정 탭에서 수동으로 확인해주세요.`
+            );
+            router.refresh();
+            broadcastMemberUpdate();
+            return;
+          }
         }
       }
 
@@ -386,22 +395,40 @@ export default function AssignmentManagementView({
               return;
             }
             const newMainId = mainRes.data?.id;
-            // 2. 자식 row들도 복구 (새 부모 id로 연결)
-            if (newMainId && childSnapshots.length > 0) {
-              for (const child of childSnapshots) {
-                await updateScheduleMemberInfo(
-                  child.schedule_id,
-                  child.user_id,
-                  {
-                    temp_group_id: child.temp_group_id,
-                    temp_role: child.temp_role,
-                    excused_reason: child.excused_reason,
-                    activity: child.activity,
-                    menu: child.menu,
-                    note: child.note,
-                    caused_by_smi_id: newMainId,
-                  }
+            // 2. 자식 row들도 복구 (새 부모 id로 연결).
+            //    newMainId 누락 또는 자식 upsert 실패 시 부분 복구됨을 명시적으로 알림.
+            if (childSnapshots.length > 0) {
+              if (!newMainId) {
+                setErrorMsg(
+                  "메인 배정은 복구됐지만 id를 확인할 수 없어 대체 조장 배정 복구를 건너뛰었어요. 배정 탭에서 수동 확인해주세요."
                 );
+              } else {
+                const failedChildren: string[] = [];
+                for (const child of childSnapshots) {
+                  const res = await updateScheduleMemberInfo(
+                    child.schedule_id,
+                    child.user_id,
+                    {
+                      temp_group_id: child.temp_group_id,
+                      temp_role: child.temp_role,
+                      excused_reason: child.excused_reason,
+                      activity: child.activity,
+                      menu: child.menu,
+                      note: child.note,
+                      caused_by_smi_id: newMainId,
+                    }
+                  );
+                  if (!res.ok) {
+                    failedChildren.push(
+                      userMap.get(child.user_id)?.name ?? child.user_id
+                    );
+                  }
+                }
+                if (failedChildren.length > 0) {
+                  setErrorMsg(
+                    `메인 배정은 복구됐지만 대체 조장 복구 실패: ${failedChildren.join(", ")}. 배정 탭에서 수동으로 추가해주세요.`
+                  );
+                }
               }
             }
             router.refresh();

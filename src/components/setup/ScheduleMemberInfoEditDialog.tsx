@@ -164,10 +164,14 @@ export default function ScheduleMemberInfoEditDialog({
     return smi ? users.find((u) => u.id === smi.user_id) ?? null : null;
   }, [memberInfos, originalGroupId, selectedUser, form.schedule_id, users]);
 
-  // 대체 조장 후보: 원래 조의 다른 조원 (본인 제외, 이미 다른 조로 이동하는 사람 제외)
+  // 대체 조장 후보: 원래 조의 다른 조원 (본인 제외 / 이미 다른 조로 이동 / 독립 배정 보유자 제외)
+  //
+  // 독립 배정(caused_by_smi_id IS NULL) 보유자를 제외하는 이유:
+  //   대체 조장으로 upsert하면 기존 행의 caused_by_smi_id를 이 메인에 연결하게 되어,
+  //   메인 삭제 시 DB CASCADE가 그 사용자의 기존 독립 배정(예: 제외/활동)까지
+  //   함께 삭제하는 데이터 손실 위험이 있음. 먼저 기존 배정을 정리한 뒤 재선택하도록 유도.
   const replacementCandidates = useMemo(() => {
     if (!originalGroupId || !selectedUser) return [];
-    // 이 일정에서 다른 조로 이동하는 사용자들
     const movingOutIds = new Set(
       memberInfos
         .filter(
@@ -178,11 +182,24 @@ export default function ScheduleMemberInfoEditDialog({
         )
         .map((s) => s.user_id)
     );
+    // 이 일정에 독립 배정(부모 없음)을 가진 사용자들
+    // 단, 이미 이 메인의 자식인 경우(이전에 이 메인이 생성한 대체 조장)는 재선택 허용
+    const conflictingIndependentIds = new Set(
+      memberInfos
+        .filter(
+          (s) =>
+            s.schedule_id === form.schedule_id &&
+            s.caused_by_smi_id === null &&
+            s.user_id !== selectedUser.id
+        )
+        .map((s) => s.user_id)
+    );
     return users.filter(
       (u) =>
         u.group_id === originalGroupId &&
         u.id !== selectedUser.id &&
-        !movingOutIds.has(u.id)
+        !movingOutIds.has(u.id) &&
+        !conflictingIndependentIds.has(u.id)
     );
   }, [users, originalGroupId, selectedUser, memberInfos, form.schedule_id]);
 
