@@ -39,7 +39,8 @@ const INPUT_CLASS =
   "w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm";
 
 function scheduleLabel(s: Schedule): string {
-  return `${s.day_number}-${s.sort_order} · ${s.title}`;
+  // 장소 우선 표시 (PRD 4.2.1 카드 계층과 일관), 없으면 집결지 fallback
+  return `${s.day_number}-${s.sort_order} · ${s.location ?? s.title}`;
 }
 
 export default function ScheduleGroupInfoEditDialog({
