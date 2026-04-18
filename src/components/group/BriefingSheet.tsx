@@ -182,15 +182,15 @@ export default function BriefingSheet({
             <DialogTitle className="text-base">
               {groupName} 브리핑 · {selectedDay}일차
             </DialogTitle>
-            <DialogDescription className="text-xs">
-              {isFromCache
-                ? "오프라인 캐시 기준 · 연결되면 최신으로 업데이트돼요"
-                : "출발 전 꼭 확인해주세요"}
+            {/* 접근성: 시각적으로는 숨기되 스크린리더에는 컨텍스트 제공 */}
+            <DialogDescription className="sr-only">
+              {groupName} {selectedDay}일차 브리핑 상세
+              {isFromCache ? " · 오프라인 캐시 기준" : ""}
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        <div className="flex-1 space-y-6 overflow-y-auto px-5 pb-4 pt-2 text-sm">
+        <div className="flex-1 space-y-6 overflow-y-auto px-5 pb-4 pt-3 text-sm">
           {!hasAnyContent && (
             <p className="py-10 text-center text-sm text-muted-foreground">
               이 일차에 등록된 브리핑 항목이 없어요

@@ -22,7 +22,7 @@ export default function BriefingBanner({ roleCount, specialCount, onOpen }: Prop
   return (
     <div
       className={cn(
-        "rounded-xl border border-stone-200",
+        "rounded-xl border border-stone-200 border-l-4 border-l-stone-900",
         "bg-white text-sm text-stone-900 shadow-sm"
       )}
       role="region"
