@@ -122,6 +122,14 @@ export default function GroupView({
   const { toast, showToast } = useToast();
   // CR-009: activeSchedule을 state로 관리 — 체크인 뷰에서도 Realtime 갱신 반영
   const [currentSchedule, setCurrentSchedule] = useState(activeSchedule);
+  // 운영 버그 수정: router.refresh로 새 activeSchedule prop이 도착해도
+  //                currentSchedule state가 동기화되지 않아 일정 카드가 stale로 표시되던 문제.
+  //                다른 prop들과 동일한 prop→state 패턴 적용.
+  const prevActiveScheduleRef = useRef(activeSchedule);
+  if (prevActiveScheduleRef.current !== activeSchedule) {
+    prevActiveScheduleRef.current = activeSchedule;
+    setCurrentSchedule(activeSchedule);
+  }
 
   // W-3: 보고 무효화 중 self-echo 차단용 ref (취소→재체크인 사이에만 true)
   const reportInvalidatedRef = useRef(false);

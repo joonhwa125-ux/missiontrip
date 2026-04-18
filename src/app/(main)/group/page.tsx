@@ -20,6 +20,12 @@ import type {
 
 export const metadata: Metadata = { title: "조장" };
 
+// router.refresh() 가 항상 fresh data를 받도록 보장.
+// Realtime broadcast → onScheduleActivated/Deactivated → router.refresh 흐름에서
+// Vercel/Next 캐시가 stale 응답을 줄 수 있는 케이스 차단 (admin/page.tsx와 동일 패턴).
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default async function GroupPage() {
   // 인증 확인은 쿠키 기반 클라이언트
   const authClient = createClient();
