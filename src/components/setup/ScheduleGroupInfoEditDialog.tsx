@@ -126,9 +126,7 @@ export default function ScheduleGroupInfoEditDialog({
               required
             >
               {groups.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}{g.bus_name ? ` · ${g.bus_name}` : ""}
-                </option>
+                <option key={g.id} value={g.id}>{g.name}</option>
               ))}
             </select>
           </div>

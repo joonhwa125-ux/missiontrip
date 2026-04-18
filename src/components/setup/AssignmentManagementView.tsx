@@ -44,6 +44,8 @@ interface SimpleUser {
   id: string;
   name: string;
   group_id: string;
+  /** Phase J+: 대체 조장 계산 시 원래 조에 영구 조장이 있는지 판별용 */
+  role?: import("@/lib/types").UserRole;
 }
 
 interface Props {
@@ -241,25 +243,65 @@ export default function AssignmentManagementView({
   // ==========================================================================
   // SMI (인원별) 핸들러
   // ==========================================================================
+  // Phase J+: 대체 조장이 함께 지정된 경우 2-step save (atomic은 아니지만 에러 명시)
   const handleSmiSave = (values: ScheduleMemberInfoFormValues) => {
     const existingId = smiDialog?.mode === "edit" ? smiDialog.id : null;
-    run(
-      () =>
-        updateScheduleMemberInfo(
+    startTransition(async () => {
+      // Step 1: 메인 smi 저장 (이동자 본인)
+      const mainResult = await updateScheduleMemberInfo(
+        values.schedule_id,
+        values.user_id,
+        {
+          temp_group_id: values.temp_group_id,
+          temp_role: values.temp_role,
+          excused_reason: values.excused_reason,
+          activity: values.activity,
+          menu: values.menu,
+          note: values.note,
+        },
+        existingId
+      );
+      if (!mainResult.ok) {
+        setErrorMsg(mainResult.error ?? "오류가 발생했어요");
+        return;
+      }
+
+      // Step 2: 대체 조장 smi (있을 때만)
+      if (values.replacement_leader_user_id) {
+        const existingReplacement = memberInfos.find(
+          (s) =>
+            s.schedule_id === values.schedule_id &&
+            s.user_id === values.replacement_leader_user_id
+        );
+        const replacementResult = await updateScheduleMemberInfo(
           values.schedule_id,
-          values.user_id,
+          values.replacement_leader_user_id,
           {
-            temp_group_id: values.temp_group_id,
-            temp_role: values.temp_role,
-            excused_reason: values.excused_reason,
-            activity: values.activity,
-            menu: values.menu,
-            note: values.note,
+            // 기존 필드는 보존, temp_role만 leader로 설정
+            temp_group_id: existingReplacement?.temp_group_id ?? null,
+            temp_role: "leader",
+            excused_reason: existingReplacement?.excused_reason ?? null,
+            activity: existingReplacement?.activity ?? null,
+            menu: existingReplacement?.menu ?? null,
+            note: existingReplacement?.note ?? null,
           },
-          existingId
-        ),
-      () => setSmiDialog(null)
-    );
+          existingReplacement?.id
+        );
+        if (!replacementResult.ok) {
+          setErrorMsg(
+            `이동자 배정은 저장됐지만 대체 조장 지정 실패: ${replacementResult.error ?? "알 수 없는 오류"}. 배정 탭에서 수동으로 추가해주세요.`
+          );
+          router.refresh();
+          broadcastMemberUpdate();
+          return;
+        }
+      }
+
+      setErrorMsg(null);
+      setSmiDialog(null);
+      router.refresh();
+      broadcastMemberUpdate();
+    });
   };
 
   const confirmDeleteSmi = () => {
@@ -574,6 +616,7 @@ export default function AssignmentManagementView({
           schedules={schedules}
           groups={groups}
           users={users}
+          memberInfos={memberInfos}
           initial={smiDialog.mode === "edit" ? smiDialog.initial : undefined}
           onSave={handleSmiSave}
           onClose={() => setSmiDialog(null)}

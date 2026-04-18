@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useId, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,12 +9,15 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import type { Schedule, TempRole } from "@/lib/types";
+import { isLeaderRole } from "@/lib/constants";
+import type { Schedule, TempRole, UserRole, ScheduleMemberInfo } from "@/lib/types";
 
 interface SimpleUser {
   id: string;
   name: string;
   group_id: string;
+  /** Phase J+: 원래 조에 다른 영구 조장 있는지 판별용 */
+  role?: UserRole;
 }
 
 interface SimpleGroup {
@@ -32,6 +35,8 @@ export interface ScheduleMemberInfoFormValues {
   activity: string | null;
   menu: string | null;
   note: string | null;
+  /** Phase J+: 조 이동 + 임시 조장 지정 시 원래 조의 대체 임시 조장 user_id (optional) */
+  replacement_leader_user_id?: string | null;
 }
 
 interface Props {
@@ -39,6 +44,8 @@ interface Props {
   schedules: Schedule[];
   users: SimpleUser[];
   groups: SimpleGroup[];
+  /** Phase J+: 이 일정의 기존 smi — 대체 조장의 기존 필드 보존 + 이미 있는 조장 판별 */
+  memberInfos: ScheduleMemberInfo[];
   initial?: ScheduleMemberInfoFormValues;
   onSave: (values: ScheduleMemberInfoFormValues) => void;
   onClose: () => void;
@@ -56,6 +63,7 @@ export default function ScheduleMemberInfoEditDialog({
   schedules,
   users,
   groups,
+  memberInfos,
   initial,
   onSave,
   onClose,
@@ -69,6 +77,7 @@ export default function ScheduleMemberInfoEditDialog({
     activity: initial?.activity ?? null,
     menu: initial?.menu ?? null,
     note: initial?.note ?? null,
+    replacement_leader_user_id: initial?.replacement_leader_user_id ?? null,
   });
 
   const set = useCallback(
@@ -89,6 +98,10 @@ export default function ScheduleMemberInfoEditDialog({
       activity: form.activity?.trim() || null,
       menu: form.menu?.trim() || null,
       note: form.note?.trim() || null,
+      // 대체 조장은 이동+조장 조건일 때만 유효
+      replacement_leader_user_id: showReplacementSection
+        ? form.replacement_leader_user_id || null
+        : null,
     });
   };
 
@@ -104,7 +117,93 @@ export default function ScheduleMemberInfoEditDialog({
     activity: `${uid}-activity`,
     menu: `${uid}-menu`,
     note: `${uid}-note`,
+    replacement: `${uid}-replacement`,
   };
+
+  // Phase J+: 대체 조장 지정 관련 계산
+  //  - 조건: 이동자의 원래 조(users.group_id)가 temp_group_id와 다를 때
+  //          AND temp_role === 'leader' (조장 권한을 가져감)
+  //          → 원래 조에 조장 공백 위험
+  const selectedUser = useMemo(
+    () => users.find((u) => u.id === form.user_id),
+    [users, form.user_id]
+  );
+  const originalGroupId = selectedUser?.group_id ?? null;
+  const isTransferringAsLeader =
+    form.temp_role === "leader" &&
+    !!form.temp_group_id &&
+    !!originalGroupId &&
+    form.temp_group_id !== originalGroupId;
+
+  // 원래 조의 다른 영구 조장(role=leader/admin_leader)
+  const originalGroupOtherPermanentLeaders = useMemo(() => {
+    if (!originalGroupId || !selectedUser) return [];
+    return users.filter(
+      (u) =>
+        u.group_id === originalGroupId &&
+        u.id !== selectedUser.id &&
+        u.role &&
+        isLeaderRole(u.role)
+    );
+  }, [users, originalGroupId, selectedUser]);
+
+  // 원래 조에 이미 이 일정의 임시 조장이 지정된 다른 사람이 있는지
+  const existingTempLeaderInOriginal = useMemo(() => {
+    if (!originalGroupId || !selectedUser) return null;
+    const smi = memberInfos.find(
+      (s) =>
+        s.schedule_id === form.schedule_id &&
+        s.temp_role === "leader" &&
+        s.user_id !== selectedUser.id &&
+        // temp_group_id가 없거나 원래 조면 그 조의 임시 조장
+        (s.temp_group_id === null || s.temp_group_id === originalGroupId) &&
+        // 해당 사용자의 원래 조가 이 조여야 함
+        users.find((u) => u.id === s.user_id)?.group_id === originalGroupId
+    );
+    return smi ? users.find((u) => u.id === smi.user_id) ?? null : null;
+  }, [memberInfos, originalGroupId, selectedUser, form.schedule_id, users]);
+
+  // 대체 조장 후보: 원래 조의 다른 조원 (본인 제외, 이미 다른 조로 이동하는 사람 제외)
+  const replacementCandidates = useMemo(() => {
+    if (!originalGroupId || !selectedUser) return [];
+    // 이 일정에서 다른 조로 이동하는 사용자들
+    const movingOutIds = new Set(
+      memberInfos
+        .filter(
+          (s) =>
+            s.schedule_id === form.schedule_id &&
+            s.temp_group_id &&
+            s.temp_group_id !== originalGroupId
+        )
+        .map((s) => s.user_id)
+    );
+    return users.filter(
+      (u) =>
+        u.group_id === originalGroupId &&
+        u.id !== selectedUser.id &&
+        !movingOutIds.has(u.id)
+    );
+  }, [users, originalGroupId, selectedUser, memberInfos, form.schedule_id]);
+
+  const originalGroupName = useMemo(
+    () => groups.find((g) => g.id === originalGroupId)?.name ?? "원래 조",
+    [groups, originalGroupId]
+  );
+
+  // 경고 표시 조건: 이동자가 조장 권한을 가져가는데 원래 조에 남는 조장이 없음
+  const showReplacementSection =
+    isTransferringAsLeader &&
+    originalGroupOtherPermanentLeaders.length === 0 &&
+    !existingTempLeaderInOriginal;
+
+  // 원래 조에 이미 다른 조장(영구 OR 임시)이 있으면 안내만
+  const remainingLeaderInfo = isTransferringAsLeader
+    ? existingTempLeaderInOriginal
+      ? `임시 조장 ${existingTempLeaderInOriginal.name}`
+      : originalGroupOtherPermanentLeaders.length > 0
+        ? `조장 ${originalGroupOtherPermanentLeaders.map((l) => l.name).join(", ")}`
+        : null
+    : null;
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -157,9 +256,7 @@ export default function ScheduleMemberInfoEditDialog({
               >
                 <option value="">없음</option>
                 {groups.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}{g.bus_name ? ` · ${g.bus_name}` : ""}
-                  </option>
+                  <option key={g.id} value={g.id}>{g.name}</option>
                 ))}
               </select>
             </div>
@@ -220,6 +317,58 @@ export default function ScheduleMemberInfoEditDialog({
               className={INPUT_CLASS}
             />
           </div>
+
+          {/* Phase J+: 원래 조 조장 공백 방지 */}
+          {isTransferringAsLeader && remainingLeaderInfo && (
+            <div
+              className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900"
+              role="status"
+            >
+              <p className="font-medium">
+                ✓ {originalGroupName} 조에 남는 조장이 있어요
+              </p>
+              <p className="mt-0.5 text-emerald-800">
+                {remainingLeaderInfo} — 추가 대체 지정 불필요
+              </p>
+            </div>
+          )}
+          {showReplacementSection && (
+            <div
+              className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5"
+              role="alert"
+            >
+              <p className="mb-1 text-xs font-semibold text-amber-900">
+                ⚠️ {originalGroupName} 조의 조장이 공백이 돼요
+              </p>
+              <p className="mb-2 text-xs text-amber-800">
+                원래 조에서 조장 역할을 대신할 조원을 지정해주세요.
+              </p>
+              <label
+                htmlFor={ids.replacement}
+                className="mb-1 block text-xs font-medium text-amber-900"
+              >
+                대체 임시 조장
+              </label>
+              <select
+                id={ids.replacement}
+                value={form.replacement_leader_user_id ?? ""}
+                onChange={(e) =>
+                  set("replacement_leader_user_id", e.target.value || null)
+                }
+                className={INPUT_CLASS}
+              >
+                <option value="">(없음 — 공백 감수)</option>
+                {replacementCandidates.map((u) => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+              {replacementCandidates.length === 0 && (
+                <p className="mt-1 text-[0.6875rem] text-amber-700">
+                  {originalGroupName}에 지정 가능한 다른 조원이 없어요.
+                </p>
+              )}
+            </div>
+          )}
           <DialogFooter className="pt-2">
             <button
               type="button"

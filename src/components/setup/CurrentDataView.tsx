@@ -239,7 +239,7 @@ export default function CurrentDataView({
         <AssignmentManagementView
           schedules={schedules}
           groups={groups}
-          users={users.map((u) => ({ id: u.id, name: u.name, group_id: u.group_id }))}
+          users={users.map((u) => ({ id: u.id, name: u.name, group_id: u.group_id, role: u.role }))}
           groupInfos={groupInfos}
           memberInfos={memberInfos}
         />
