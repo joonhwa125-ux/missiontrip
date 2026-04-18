@@ -52,23 +52,6 @@ type SectionGroup = {
   members: Member[];
 };
 
-/** 조원을 (미확인 → 불참 → 완료) 순으로 정렬 */
-function sortByStatus(
-  ms: Member[],
-  checkedIds: Set<string>,
-  absentIds: Set<string>
-): Member[] {
-  return [...ms].sort((a, b) => {
-    const aChecked = checkedIds.has(a.id);
-    const bChecked = checkedIds.has(b.id);
-    const aAbsent = absentIds.has(a.id);
-    const bAbsent = absentIds.has(b.id);
-    const aOrder = aChecked ? (aAbsent ? 1 : 2) : 0;
-    const bOrder = bChecked ? (bAbsent ? 1 : 2) : 0;
-    return aOrder - bOrder;
-  });
-}
-
 /**
  * 섹션 그루핑 결정:
  *  1) 이 일정에 activity 메타가 하나라도 있으면 activity 기준 그루핑 (식사/투어 등)
@@ -350,20 +333,13 @@ export default function GroupCheckinView({
     return checkIns.filter((c) => memberIdSet.has(c.user_id)).length;
   }, [checkIns, members]);
 
-  // 정렬: 미확인 → 불참 → 완료 (이니셜 원 행용 — 전체 flat 정렬)
-  const sorted = useMemo(
-    () => sortByStatus(members, checkedIds, absentIds),
-    [members, checkedIds, absentIds]
-  );
+  // 이니셜 원 행 — 원본 순서 유지 (탭한 항목이 제자리에서 반영되도록)
+  const sorted = members;
 
-  // Phase F: 섹션 그루핑 (activity or airline)
+  // Phase F: 섹션 그루핑 (activity or airline). 섹션 내부도 원본 순서 유지
   const sections = useMemo(
-    () =>
-      buildSections(members, memberInfoMap).map((s) => ({
-        ...s,
-        members: sortByStatus(s.members, checkedIds, absentIds),
-      })),
-    [members, memberInfoMap, checkedIds, absentIds]
+    () => buildSections(members, memberInfoMap),
+    [members, memberInfoMap]
   );
 
   return (
