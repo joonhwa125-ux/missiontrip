@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { UsersIcon, PlusIcon } from "@/components/ui/icons";
 import SettingsDropdown from "@/components/common/SettingsDropdown";
-import type { Group, Schedule, AdminMember, AdminCheckIn, AdminReport, AdminShuttleReport, CheckIn } from "@/lib/types";
+import type { Group, Schedule, AdminMember, AdminCheckIn, AdminReport, AdminShuttleReport, CheckIn, ScheduleMemberInfo } from "@/lib/types";
 
 interface Props {
   currentUser: { id: string; role: string; group_id: string; shuttle_bus: string | null; return_shuttle_bus: string | null };
@@ -34,6 +34,8 @@ interface Props {
   initialCheckInsMap: Record<string, AdminCheckIn[]>;
   initialReportsMap: Record<string, AdminReport[]>;
   initialShuttleReportsMap: Record<string, AdminShuttleReport[]>;
+  /** Phase J: 활성화된 일정별 schedule_member_info 매핑 (effective roster/임시 조장 표시용) */
+  initialMemberInfosMap: Record<string, ScheduleMemberInfo[]>;
 }
 
 /** 클라이언트에서 직접 체크인/보고 데이터 조회 (RLS email 기반 권한 통제) */
@@ -79,6 +81,7 @@ export default function AdminView({
   initialCheckInsMap,
   initialReportsMap,
   initialShuttleReportsMap,
+  initialMemberInfosMap,
 }: Props) {
   const router = useRouter();
   const [schedules, setSchedules] = useState(initialSchedules);
@@ -86,6 +89,8 @@ export default function AdminView({
   const [checkInsMap, setCheckInsMap] = useState(initialCheckInsMap);
   const [reportsMap, setReportsMap] = useState(initialReportsMap);
   const [shuttleReportsMap, setShuttleReportsMap] = useState(initialShuttleReportsMap);
+  // Phase J: schedule_member_info per schedule (effective roster/임시 조장 표시용)
+  const [memberInfosMap, setMemberInfosMap] = useState(initialMemberInfosMap);
   const { toast, showToast } = useToast();
 
   // 캐시 판별용 ref (useCallback 의존성 없이 최신 값 참조)
@@ -99,6 +104,7 @@ export default function AdminView({
   const prevShuttleReportsRef = useRef(initialShuttleReportsMap);
   const prevSchedulesRef = useRef(initialSchedules);
   const prevMembersRef = useRef(initialMembers);
+  const prevMemberInfosRef = useRef(initialMemberInfosMap);
 
   if (prevCheckInsRef.current !== initialCheckInsMap) {
     prevCheckInsRef.current = initialCheckInsMap;
@@ -132,6 +138,14 @@ export default function AdminView({
   if (prevMembersRef.current !== initialMembers) {
     prevMembersRef.current = initialMembers;
     setMembers(initialMembers);
+  }
+  if (prevMemberInfosRef.current !== initialMemberInfosMap) {
+    prevMemberInfosRef.current = initialMemberInfosMap;
+    const newKeys = Object.keys(initialMemberInfosMap).length;
+    const curKeys = Object.keys(memberInfosMap).length;
+    if (newKeys > 0 || curKeys === 0) {
+      setMemberInfosMap(initialMemberInfosMap);
+    }
   }
 
   // mount 시 + activeSchedule 변경 시 최신 체크인/보고 데이터 fetch (클라이언트 직접 SELECT)
@@ -555,6 +569,7 @@ export default function AdminView({
         members={members}
         checkIns={bottomSheetSchedule ? (checkInsMap[bottomSheetSchedule.id] ?? []) : []}
         reports={bottomSheetSchedule ? (reportsMap[bottomSheetSchedule.id] ?? []) : []}
+        memberInfos={bottomSheetSchedule ? (memberInfosMap[bottomSheetSchedule.id] ?? []) : []}
         isReadOnly={isBottomSheetReadOnly}
         onClose={() => setBottomSheetSchedule(null)}
         onCheckInsChange={handleBottomSheetCheckInsChange}

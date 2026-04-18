@@ -14,6 +14,7 @@ import type { Schedule } from "@/lib/types";
 interface SimpleGroup {
   id: string;
   name: string;
+  bus_name?: string | null;
 }
 
 export interface ScheduleGroupInfoFormValues {
@@ -125,7 +126,9 @@ export default function ScheduleGroupInfoEditDialog({
               required
             >
               {groups.map((g) => (
-                <option key={g.id} value={g.id}>{g.name}</option>
+                <option key={g.id} value={g.id}>
+                  {g.name}{g.bus_name ? ` · ${g.bus_name}` : ""}
+                </option>
               ))}
             </select>
           </div>

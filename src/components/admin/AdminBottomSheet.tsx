@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { cn, getGroupBadgeStatus, filterMembersByScope } from "@/lib/utils";
 import { COPY, GROUP_BADGE_STYLE, isLeaderRole } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
+import { computeEffectiveGroupMembers, findTempLeader } from "@/lib/rosterClient";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ import type {
   AdminCheckIn,
   AdminReport,
   ShuttleReport,
+  ScheduleMemberInfo,
 } from "@/lib/types";
 
 interface Props {
@@ -30,6 +32,8 @@ interface Props {
   members: AdminMember[];
   checkIns: AdminCheckIn[];
   reports: AdminReport[];
+  /** Phase J: 이 schedule의 schedule_member_info 레코드 (effective roster/임시 조장 계산용) */
+  memberInfos: ScheduleMemberInfo[];
   isReadOnly: boolean;
   onClose: () => void;
   onCheckInsChange: React.Dispatch<React.SetStateAction<AdminCheckIn[]>>;
@@ -42,6 +46,7 @@ export default function AdminBottomSheet({
   members,
   checkIns,
   reports,
+  memberInfos,
   isReadOnly,
   onClose,
   onCheckInsChange,
@@ -88,18 +93,36 @@ export default function AdminBottomSheet({
     () =>
       groups
         .map((g) => {
-          const gMembers = scopeMembers.filter((m) => m.group_id === g.id);
+          // Phase J: effective roster 적용 — 일반 일정만 (셔틀은 기존 로직).
+          //          transferredIn 인원을 gMembers에 포함, transferredOut은 제외.
+          const applyEffective = !schedule?.shuttle_type;
+          const gMembers = applyEffective
+            ? computeEffectiveGroupMembers(g.id, scopeMembers, memberInfos)
+            : scopeMembers.filter((m) => m.group_id === g.id);
           const absentCount = gMembers.filter((m) => absentIds.has(m.id)).length;
           const checkedCount = gMembers.filter(
             (m) => checkedIds.has(m.id) && !absentIds.has(m.id)
           ).length;
           const totalCount = gMembers.length - absentCount;
           const badge = getGroupBadgeStatus(gMembers.length, checkedCount, reportMap.has(g.id), absentCount);
-          const leader = gMembers.find((m) => isLeaderRole(m.role));
-          return { group: g, totalCount, checkedCount, absentCount, badge, leader, rawTotal: gMembers.length };
+          // Phase J: 임시 조장 우선 표시 (smi.temp_role='leader'), 없으면 영구 조장
+          const tempLeader = applyEffective ? findTempLeader(gMembers, memberInfos) : undefined;
+          const permanentLeader = gMembers.find((m) => isLeaderRole(m.role));
+          const leader = tempLeader ?? permanentLeader;
+          const leaderIsTemp = !!tempLeader;
+          return {
+            group: g,
+            totalCount,
+            checkedCount,
+            absentCount,
+            badge,
+            leader,
+            leaderIsTemp,
+            rawTotal: gMembers.length,
+          };
         })
         .filter((s) => s.rawTotal > 0),
-    [groups, scopeMembers, checkedIds, absentIds, reportMap]
+    [groups, scopeMembers, checkedIds, absentIds, reportMap, memberInfos, schedule?.shuttle_type]
   );
 
   const busEntries = useMemo(() => {
@@ -220,6 +243,7 @@ export default function AdminBottomSheet({
           <AdminGroupDrillDown
             group={drillGroup}
             members={scopeMembers}
+            memberInfos={memberInfos}
             checkIns={checkIns}
             activeSchedule={isReadOnly ? null : schedule}
             onBack={() => setDrillGroup(null)}
@@ -305,7 +329,7 @@ export default function AdminBottomSheet({
                 <section key={busName} className="mb-4">
                   <h3 className="mb-2 text-sm font-bold text-muted-foreground">{busName}</h3>
                   <div className="grid grid-cols-2 gap-2 [&>*:last-child:nth-child(odd)]:col-span-2">
-                    {busSummaries.map(({ group, totalCount, checkedCount, absentCount, badge, leader, rawTotal }) => {
+                    {busSummaries.map(({ group, totalCount, checkedCount, absentCount, badge, leader, leaderIsTemp, rawTotal }) => {
                       const b = GROUP_BADGE_STYLE[badge];
                       const progress = totalCount > 0 ? (checkedCount / totalCount) * 100 : 0;
                       return (
@@ -332,6 +356,11 @@ export default function AdminBottomSheet({
                           {leader && (
                             <div className="mb-1.5 flex items-center gap-1 text-xs text-muted-foreground">
                               <span className="truncate">{leader.name}</span>
+                              {leaderIsTemp && (
+                                <span className="flex-shrink-0 rounded-full bg-indigo-100 px-1.5 py-0.5 text-[0.6875rem] font-medium text-indigo-800">
+                                  임시
+                                </span>
+                              )}
                               {leader.phone && (
                                 <a
                                   href={`tel:${leader.phone}`}

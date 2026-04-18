@@ -51,10 +51,32 @@ export default async function GroupPage() {
   const hasTempLeader = isPermanentLeader ? false : await hasActiveOrPastTempLeaderRole(currentUser.id);
   if (!isPermanentLeader && !hasTempLeader) redirect("/");
 
+  // Phase J: active schedule을 먼저 조회 — effective group 결정에 필요
+  const { data: activeSchedule } = await supabase
+    .from("schedules")
+    .select("id, title, location, day_number, sort_order, scheduled_time, scope, is_active, shuttle_type, activated_at, created_at")
+    .eq("is_active", true)
+    .maybeSingle();
+
+  // Phase J: 현재 사용자의 effective group 결정
+  //  - 일반 일정 + smi.temp_role='leader' + smi.temp_group_id 지정 시 → 해당 조로 뷰 전환
+  //  - 셔틀 일정은 기존 로직 유지 (shuttle은 그룹 개념과 다름)
+  let effectiveGroupId = currentUser.group_id;
+  if (activeSchedule && !activeSchedule.shuttle_type) {
+    const { data: mySmi } = await supabase
+      .from("schedule_member_info")
+      .select("temp_group_id, temp_role")
+      .eq("user_id", currentUser.id)
+      .eq("schedule_id", activeSchedule.id)
+      .maybeSingle();
+    if (mySmi?.temp_role === "leader" && mySmi.temp_group_id) {
+      effectiveGroupId = mySmi.temp_group_id;
+    }
+  }
+
   const [
     { data: group },
     { data: members },
-    { data: activeSchedule },
     { data: schedules },
     { data: allGroups },
     { data: allMembers },
@@ -62,18 +84,13 @@ export default async function GroupPage() {
     supabase
       .from("groups")
       .select("name")
-      .eq("id", currentUser.group_id)
+      .eq("id", effectiveGroupId)
       .single(),
     supabase
       .from("users")
       .select("id, name, party, airline, trip_role")
-      .eq("group_id", currentUser.group_id)
+      .eq("group_id", effectiveGroupId)
       .order("name"),
-    supabase
-      .from("schedules")
-      .select("id, title, location, day_number, sort_order, scheduled_time, scope, is_active, shuttle_type, activated_at, created_at")
-      .eq("is_active", true)
-      .maybeSingle(),
     supabase
       .from("schedules")
       .select("id, title, location, day_number, sort_order, scheduled_time, scope, is_active, shuttle_type, activated_at, created_at")
@@ -154,7 +171,7 @@ export default async function GroupPage() {
             !activeSchedule.shuttle_type && baseRosterMembers.length > 0
               ? getEffectiveRoster({
                   scheduleId: activeSchedule.id,
-                  groupId: currentUser.group_id,
+                  groupId: effectiveGroupId,
                   baseMembers: baseRosterMembers,
                   allGroups: (allGroups ?? []) as Group[],
                 })
@@ -172,7 +189,8 @@ export default async function GroupPage() {
             : new Set(members?.map((m) => m.id) ?? []);
           checkIns = allData.filter((ci) => rosterIds.has(ci.user_id)) as CheckIn[];
           allReports = allReportsData ?? [];
-          initialReported = allReports.some((r) => r.group_id === currentUser.group_id);
+          // 보고 여부는 effective group 기준 (임시 조장도 자기 조 보고 상태를 봄)
+          initialReported = allReports.some((r) => r.group_id === effectiveGroupId);
         })()
       );
     }
@@ -219,7 +237,7 @@ export default async function GroupPage() {
     supabase
       .from("schedule_group_info")
       .select("id, schedule_id, group_id, location_detail, rotation, sub_location, note, created_at, updated_at, updated_by")
-      .eq("group_id", currentUser.group_id),
+      .eq("group_id", effectiveGroupId),
     baseMemberIds.length > 0
       ? supabase
           .from("schedule_member_info")
@@ -229,7 +247,7 @@ export default async function GroupPage() {
     supabase
       .from("schedule_member_info")
       .select("id, schedule_id, user_id, temp_group_id, temp_role, excused_reason, activity, menu, note, created_at, updated_at, updated_by")
-      .eq("temp_group_id", currentUser.group_id),
+      .eq("temp_group_id", effectiveGroupId),
   ]);
 
   const smiById = new Map<string, ScheduleMemberInfo>();
@@ -299,7 +317,7 @@ export default async function GroupPage() {
 
   return (
     <GroupView
-      currentUser={{ id: currentUser.id, group_id: currentUser.group_id, shuttle_bus: currentUser.shuttle_bus ?? null, return_shuttle_bus: currentUser.return_shuttle_bus ?? null }}
+      currentUser={{ id: currentUser.id, group_id: effectiveGroupId, shuttle_bus: currentUser.shuttle_bus ?? null, return_shuttle_bus: currentUser.return_shuttle_bus ?? null }}
       groupName={group?.name ?? "내 조"}
       members={(members ?? []).map((m) => ({
         id: m.id,

@@ -20,6 +20,7 @@ interface SimpleUser {
 interface SimpleGroup {
   id: string;
   name: string;
+  bus_name?: string | null;
 }
 
 export interface ScheduleMemberInfoFormValues {
@@ -156,7 +157,9 @@ export default function ScheduleMemberInfoEditDialog({
               >
                 <option value="">없음</option>
                 {groups.map((g) => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
+                  <option key={g.id} value={g.id}>
+                    {g.name}{g.bus_name ? ` · ${g.bus_name}` : ""}
+                  </option>
                 ))}
               </select>
             </div>

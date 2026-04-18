@@ -7,6 +7,7 @@ import { PhoneIcon, ChevronLeftIcon, CheckIcon, MinusIcon } from "@/components/u
 import { createCheckin, deleteCheckin, markAbsent } from "@/actions/checkin";
 import { COPY, CHANNEL_GLOBAL, CHANNEL_ADMIN, EVENT_REPORT_INVALIDATED, isLeaderRole } from "@/lib/constants";
 import { formatTime } from "@/lib/utils";
+import { computeEffectiveGroupMembers } from "@/lib/rosterClient";
 import {
   Dialog,
   DialogContent,
@@ -16,7 +17,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import type { Group, Schedule, AdminMember, AdminCheckIn } from "@/lib/types";
+import type { Group, Schedule, AdminMember, AdminCheckIn, ScheduleMemberInfo } from "@/lib/types";
 
 type Member = AdminMember;
 type CheckIn = AdminCheckIn;
@@ -28,6 +29,8 @@ type ConfirmAction =
 interface Props {
   group: Group;
   members: Member[];
+  /** Phase J: 이 schedule의 schedule_member_info (effective roster + 임시 조장 표시) */
+  memberInfos: ScheduleMemberInfo[];
   checkIns: CheckIn[];
   activeSchedule: Schedule | null;
   onBack: () => void;
@@ -38,6 +41,7 @@ interface Props {
 export default function AdminGroupDrillDown({
   group,
   members,
+  memberInfos,
   checkIns,
   activeSchedule,
   onBack,
@@ -49,10 +53,36 @@ export default function AdminGroupDrillDown({
   const { broadcast } = useBroadcast();
   const [confirm, setConfirm] = useState<ConfirmAction | null>(null);
 
-  const groupMembers = useMemo(
-    () => members.filter((m) => m.group_id === group.id),
-    [members, group]
+  // Phase J: effective roster — 일반 일정만 적용. 셔틀 일정은 기존 current group 기준 유지.
+  const groupMembers = useMemo(() => {
+    if (activeSchedule?.shuttle_type) {
+      return members.filter((m) => m.group_id === group.id);
+    }
+    return computeEffectiveGroupMembers(group.id, members, memberInfos);
+  }, [members, memberInfos, group.id, activeSchedule?.shuttle_type]);
+
+  // Phase J: 이 일정에서 임시 조장 user_id 집합 (MemberRow에서 배지 표시)
+  const tempLeaderIds = useMemo(
+    () =>
+      new Set(
+        memberInfos.filter((s) => s.temp_role === "leader").map((s) => s.user_id)
+      ),
+    [memberInfos]
   );
+  // Phase J: 합류 인원 (transferredIn) — 원래 조가 다른데 이 조로 이동된 사람
+  const joinedFromMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const smi of memberInfos) {
+      if (smi.temp_group_id === group.id) {
+        const u = members.find((m) => m.id === smi.user_id);
+        if (u && u.group_id !== group.id) {
+          // 원래 조의 이름을 표시하기 위해 group_id만 저장 (group 이름은 drill-down 차원에선 생략)
+          map.set(u.id, u.group_id);
+        }
+      }
+    }
+    return map;
+  }, [memberInfos, members, group.id]);
   const checkedMap = useMemo(
     () => new Map(
       checkIns.filter((c) => groupMembers.some((m) => m.id === c.user_id))
@@ -175,6 +205,8 @@ export default function AdminGroupDrillDown({
             member={m}
             checkin={checkedMap.get(m.id) ?? null}
             activeSchedule={activeSchedule}
+            isTempLeader={tempLeaderIds.has(m.id)}
+            isJoined={joinedFromMap.has(m.id)}
             onCheckin={() => handleCheckin(m)}
             onAbsent={() => setConfirm({ type: "absent", member: m })}
             onCancel={() => setConfirm({ type: "cancel", member: m })}
@@ -197,6 +229,10 @@ interface MemberRowProps {
   member: Member;
   checkin: CheckIn | null;
   activeSchedule: Schedule | null;
+  /** Phase J: 임시 조장 (smi.temp_role='leader')이면 true */
+  isTempLeader?: boolean;
+  /** Phase J: 이 조에 다른 조에서 합류한 경우 true */
+  isJoined?: boolean;
   onCheckin: () => void;
   onAbsent: () => void;
   onCancel: () => void;
@@ -206,6 +242,8 @@ function MemberRow({
   member,
   checkin,
   activeSchedule,
+  isTempLeader,
+  isJoined,
   onCheckin,
   onAbsent,
   onCancel,
@@ -220,9 +258,22 @@ function MemberRow({
       {/* 이름 + 배지 (한 줄) */}
       <div className="flex min-w-0 flex-1 items-center gap-1.5">
         <span className="min-w-0 truncate font-medium">{member.name}</span>
-        {isLeader && (
+        {isLeader && !isTempLeader && (
           <span className="flex-shrink-0 rounded-md bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-500">
             조장
+          </span>
+        )}
+        {isTempLeader && (
+          <span className="flex-shrink-0 rounded-md bg-indigo-100 px-1.5 py-0.5 text-xs font-medium text-indigo-800">
+            임시 조장
+          </span>
+        )}
+        {isJoined && (
+          <span
+            className="flex-shrink-0 rounded-full bg-indigo-50 px-1.5 py-0.5 text-[0.6875rem] font-medium text-indigo-700"
+            aria-label="다른 조에서 합류"
+          >
+            합류
           </span>
         )}
         {isChecked ? (

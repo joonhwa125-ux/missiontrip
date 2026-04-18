@@ -3,7 +3,7 @@ import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { isAdminRole } from "@/lib/constants";
 import AdminView from "@/components/admin/AdminView";
-import type { Group, Schedule } from "@/lib/types";
+import type { Group, Schedule, ScheduleMemberInfo } from "@/lib/types";
 
 export const metadata: Metadata = { title: "관리자" };
 
@@ -59,6 +59,9 @@ export default async function AdminPage() {
   const checkInsMap: Record<string, CiRow[]> = {};
   const reportsMap: Record<string, RpRow[]> = {};
   const shuttleReportsMap: Record<string, ShRpRow[]> = {};
+  // v2 Phase J: 활성화된 일정별 schedule_member_info 매핑.
+  //             관리자 대시보드가 effective roster(조이동/임시조장)를 반영하려면 필요.
+  const memberInfosMap: Record<string, ScheduleMemberInfo[]> = {};
 
   if (activatedIds.length > 0) {
     // 모든 활성화 일정에 빈 배열을 미리 생성 (체크인 0건이어도 캐시 히트)
@@ -66,8 +69,9 @@ export default async function AdminPage() {
       checkInsMap[id] = [];
       reportsMap[id] = [];
       shuttleReportsMap[id] = [];
+      memberInfosMap[id] = [];
     }
-    const [{ data: allCi }, { data: allRp }, { data: allShRp }] = await Promise.all([
+    const [{ data: allCi }, { data: allRp }, { data: allShRp }, { data: allSmi }] = await Promise.all([
       supabase
         .from("check_ins")
         .select("schedule_id, user_id, is_absent, checked_at, absence_reason, absence_location")
@@ -79,6 +83,10 @@ export default async function AdminPage() {
       supabase
         .from("shuttle_reports")
         .select("schedule_id, shuttle_bus, pending_count, reported_at")
+        .in("schedule_id", activatedIds),
+      supabase
+        .from("schedule_member_info")
+        .select("id, schedule_id, user_id, temp_group_id, temp_role, excused_reason, activity, menu, note, created_at, updated_at, updated_by")
         .in("schedule_id", activatedIds),
     ]);
     for (const ci of allCi ?? []) {
@@ -97,6 +105,9 @@ export default async function AdminPage() {
     for (const sr of allShRp ?? []) {
       shuttleReportsMap[sr.schedule_id].push(sr);
     }
+    for (const smi of (allSmi ?? []) as ScheduleMemberInfo[]) {
+      memberInfosMap[smi.schedule_id].push(smi);
+    }
   }
 
   return (
@@ -109,6 +120,7 @@ export default async function AdminPage() {
       initialCheckInsMap={checkInsMap}
       initialReportsMap={reportsMap}
       initialShuttleReportsMap={shuttleReportsMap}
+      initialMemberInfosMap={memberInfosMap}
     />
   );
 }

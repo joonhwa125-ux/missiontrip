@@ -37,6 +37,7 @@ import type {
 interface SimpleGroup {
   id: string;
   name: string;
+  bus_name?: string | null;
 }
 
 interface SimpleUser {
