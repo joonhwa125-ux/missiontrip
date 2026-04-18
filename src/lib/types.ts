@@ -202,6 +202,12 @@ export interface ScheduleMemberInfo {
   activity: string | null;
   menu: string | null;
   note: string | null;
+  /**
+   * Phase J+: 이 배정이 다른 배정(부모)에 의해 생성된 경우 부모의 id.
+   * 예: A조 조장 liam.j의 이동+조장 배정 → blue.kk의 대체 조장 배정은 이 필드에 liam.j 배정의 id를 가짐.
+   * 부모 삭제 시 DB CASCADE로 자동 삭제됨.
+   */
+  caused_by_smi_id: string | null;
   created_at: string;
   updated_at: string;
   updated_by: string | null;

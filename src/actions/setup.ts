@@ -872,6 +872,8 @@ export async function updateScheduleMemberInfo(
     activity: string | null;
     menu: string | null;
     note: string | null;
+    /** Phase J+: 이 배정이 다른 배정에 의해 부수적으로 생성되는 경우 부모 배정 id */
+    caused_by_smi_id?: string | null;
   },
   existingId?: string | null
 ): Promise<ActionResult<{ id: string }>> {
@@ -893,6 +895,7 @@ export async function updateScheduleMemberInfo(
     activity: payload.activity?.trim() || null,
     menu: payload.menu?.trim() || null,
     note: payload.note?.trim() || null,
+    caused_by_smi_id: payload.caused_by_smi_id ?? null,
     updated_by: admin.id,
   };
 

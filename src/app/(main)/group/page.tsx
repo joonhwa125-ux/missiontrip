@@ -241,12 +241,12 @@ export default async function GroupPage() {
     baseMemberIds.length > 0
       ? supabase
           .from("schedule_member_info")
-          .select("id, schedule_id, user_id, temp_group_id, temp_role, excused_reason, activity, menu, note, created_at, updated_at, updated_by")
+          .select("id, schedule_id, user_id, temp_group_id, temp_role, excused_reason, activity, menu, note, caused_by_smi_id, created_at, updated_at, updated_by")
           .in("user_id", baseMemberIds)
       : Promise.resolve({ data: [] as ScheduleMemberInfo[] }),
     supabase
       .from("schedule_member_info")
-      .select("id, schedule_id, user_id, temp_group_id, temp_role, excused_reason, activity, menu, note, created_at, updated_at, updated_by")
+      .select("id, schedule_id, user_id, temp_group_id, temp_role, excused_reason, activity, menu, note, caused_by_smi_id, created_at, updated_at, updated_by")
       .eq("temp_group_id", effectiveGroupId),
   ]);
 

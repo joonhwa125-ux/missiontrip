@@ -243,11 +243,17 @@ export default function AssignmentManagementView({
   // ==========================================================================
   // SMI (인원별) 핸들러
   // ==========================================================================
-  // Phase J+: 대체 조장이 함께 지정된 경우 2-step save (atomic은 아니지만 에러 명시)
+  // Phase J+: 2-step save + 부모-자식 연결 (caused_by_smi_id)
+  //   Step 1) 메인 smi 저장, 반환된 id를 부모 id로 획득
+  //   Step 2) 기존 자식(이 메인이 생성한) 중 새 대체 조장과 다른 행은 삭제.
+  //           DB CASCADE가 메인 삭제 시 자식 자동 삭제를 보장하므로, UI 레벨에서는
+  //           "메인 편집 시 자식 정리"만 처리하면 됨.
+  //   Step 3) 새 대체 조장 지정 시 upsert (caused_by_smi_id = 메인 id).
+  //           user_id가 기존 자식과 같으면 update, 다르면 새 row.
   const handleSmiSave = (values: ScheduleMemberInfoFormValues) => {
     const existingId = smiDialog?.mode === "edit" ? smiDialog.id : null;
     startTransition(async () => {
-      // Step 1: 메인 smi 저장 (이동자 본인)
+      // Step 1: 메인 smi 저장
       const mainResult = await updateScheduleMemberInfo(
         values.schedule_id,
         values.user_id,
@@ -258,6 +264,8 @@ export default function AssignmentManagementView({
           activity: values.activity,
           menu: values.menu,
           note: values.note,
+          // 본인은 최상위 독립 배정 (자식이 아님)
+          caused_by_smi_id: null,
         },
         existingId
       );
@@ -265,8 +273,25 @@ export default function AssignmentManagementView({
         setErrorMsg(mainResult.error ?? "오류가 발생했어요");
         return;
       }
+      const mainSmiId = mainResult.data?.id;
+      if (!mainSmiId) {
+        setErrorMsg("배정 id를 가져오지 못했어요");
+        return;
+      }
 
-      // Step 2: 대체 조장 smi (있을 때만)
+      // Step 2: 편집 시 기존 자식 정리 — 새 대체 조장과 다른 자식 row는 삭제
+      if (existingId) {
+        const existingChildren = memberInfos.filter(
+          (s) => s.caused_by_smi_id === mainSmiId
+        );
+        for (const child of existingChildren) {
+          // 새 대체 조장이 이 자식과 동일 user면 유지 (아래에서 update)
+          if (child.user_id === values.replacement_leader_user_id) continue;
+          await deleteScheduleMemberInfo(child.id);
+        }
+      }
+
+      // Step 3: 대체 조장 지정 시 upsert
       if (values.replacement_leader_user_id) {
         const existingReplacement = memberInfos.find(
           (s) =>
@@ -277,13 +302,14 @@ export default function AssignmentManagementView({
           values.schedule_id,
           values.replacement_leader_user_id,
           {
-            // 기존 필드는 보존, temp_role만 leader로 설정
+            // 기존 필드는 보존, temp_role만 leader로 설정, caused_by로 부모 연결
             temp_group_id: existingReplacement?.temp_group_id ?? null,
             temp_role: "leader",
             excused_reason: existingReplacement?.excused_reason ?? null,
             activity: existingReplacement?.activity ?? null,
             menu: existingReplacement?.menu ?? null,
             note: existingReplacement?.note ?? null,
+            caused_by_smi_id: mainSmiId,
           },
           existingReplacement?.id
         );
@@ -310,7 +336,11 @@ export default function AssignmentManagementView({
       setDeleteSmiId(null);
       return;
     }
-    const restorePayload: ScheduleMemberInfoFormValues = {
+    // Phase J+: 자식 row(CASCADE로 같이 삭제될) 스냅샷 — Undo 복구용
+    const childSnapshots = memberInfos.filter(
+      (s) => s.caused_by_smi_id === target.id
+    );
+    const restorePayload = {
       schedule_id: target.schedule_id,
       user_id: target.user_id,
       temp_group_id: target.temp_group_id,
@@ -319,6 +349,8 @@ export default function AssignmentManagementView({
       activity: target.activity,
       menu: target.menu,
       note: target.note,
+      // 원래 부모 관계도 보존 (이 target이 다른 배정의 자식이었다면)
+      caused_by_smi_id: target.caused_by_smi_id,
     };
     const userName = userMap.get(target.user_id)?.name ?? "참가자";
     const scheduleName =
@@ -328,10 +360,15 @@ export default function AssignmentManagementView({
       () => deleteScheduleMemberInfo(target.id),
       () => {
         setDeleteSmiId(null);
+        const childCount = childSnapshots.length;
         setUndo({
-          message: `${userName} · ${scheduleName} 인원별 배정을 삭제했어요`,
+          message:
+            childCount > 0
+              ? `${userName} · ${scheduleName} 배정 + 대체 조장 ${childCount}건 삭제됨`
+              : `${userName} · ${scheduleName} 인원별 배정을 삭제했어요`,
           restore: async () => {
-            const res = await updateScheduleMemberInfo(
+            // 1. 메인 복구 (부모 관계도 보존)
+            const mainRes = await updateScheduleMemberInfo(
               restorePayload.schedule_id,
               restorePayload.user_id,
               {
@@ -341,14 +378,34 @@ export default function AssignmentManagementView({
                 activity: restorePayload.activity,
                 menu: restorePayload.menu,
                 note: restorePayload.note,
+                caused_by_smi_id: restorePayload.caused_by_smi_id,
               }
             );
-            if (!res.ok) {
-              setErrorMsg(res.error ?? "되돌리기에 실패했어요");
-            } else {
-              router.refresh();
-              broadcastMemberUpdate();
+            if (!mainRes.ok) {
+              setErrorMsg(mainRes.error ?? "되돌리기에 실패했어요");
+              return;
             }
+            const newMainId = mainRes.data?.id;
+            // 2. 자식 row들도 복구 (새 부모 id로 연결)
+            if (newMainId && childSnapshots.length > 0) {
+              for (const child of childSnapshots) {
+                await updateScheduleMemberInfo(
+                  child.schedule_id,
+                  child.user_id,
+                  {
+                    temp_group_id: child.temp_group_id,
+                    temp_role: child.temp_role,
+                    excused_reason: child.excused_reason,
+                    activity: child.activity,
+                    menu: child.menu,
+                    note: child.note,
+                    caused_by_smi_id: newMainId,
+                  }
+                );
+              }
+            }
+            router.refresh();
+            broadcastMemberUpdate();
           },
         });
       }
@@ -560,7 +617,11 @@ export default function AssignmentManagementView({
                       <td className="px-2 py-2">
                         <div className="flex justify-center gap-2 whitespace-nowrap">
                           <button
-                            onClick={() =>
+                            onClick={() => {
+                              // Phase J+: 기존 자식 row(대체 조장) 있으면 초기값으로 로드
+                              const existingChild = memberInfos.find(
+                                (s) => s.caused_by_smi_id === m.id
+                              );
                               setSmiDialog({
                                 mode: "edit",
                                 id: m.id,
@@ -573,8 +634,10 @@ export default function AssignmentManagementView({
                                   activity: m.activity,
                                   menu: m.menu,
                                   note: m.note,
+                                  replacement_leader_user_id: existingChild?.user_id ?? null,
                                 },
-                              })
+                              });
+                            }
                             }
                             className="min-h-11 rounded-lg bg-gray-100 px-2 text-xs font-medium"
                             aria-label="인원별 배정 수정"

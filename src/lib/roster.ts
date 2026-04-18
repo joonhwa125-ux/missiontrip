@@ -52,7 +52,7 @@ export async function getEffectiveRoster(params: {
   // 이 일정의 모든 schedule_member_info 레코드
   const { data: smiRows, error } = await supabase
     .from("schedule_member_info")
-    .select("id, schedule_id, user_id, temp_group_id, temp_role, excused_reason, activity, menu, note, created_at, updated_at, updated_by")
+    .select("id, schedule_id, user_id, temp_group_id, temp_role, excused_reason, activity, menu, note, caused_by_smi_id, created_at, updated_at, updated_by")
     .eq("schedule_id", scheduleId);
 
   if (error || !smiRows || smiRows.length === 0) {
