@@ -231,7 +231,7 @@ export default function BriefingSheet({
                 {Array.from(outboundAirlineGroups.entries()).map(([airline, names]) => (
                   <li key={airline} className="rounded-lg bg-sky-50 px-3 py-2">
                     <div className="mb-0.5 flex items-baseline gap-2">
-                      <span className="text-sm font-semibold text-sky-900">✈︎ {airline}</span>
+                      <span className="text-sm font-semibold text-sky-900">{airline}</span>
                       <span className="text-xs text-sky-700">{names.length}명</span>
                     </div>
                     <p className="text-xs text-stone-700">{names.join(", ")}</p>
@@ -251,7 +251,7 @@ export default function BriefingSheet({
                 {Array.from(returnAirlineGroups.entries()).map(([airline, names]) => (
                   <li key={airline} className="rounded-lg bg-sky-50 px-3 py-2">
                     <div className="mb-0.5 flex items-baseline gap-2">
-                      <span className="text-sm font-semibold text-sky-900">✈︎ {airline}</span>
+                      <span className="text-sm font-semibold text-sky-900">{airline}</span>
                       <span className="text-xs text-sky-700">{names.length}명</span>
                     </div>
                     <p className="text-xs text-stone-700">{names.join(", ")}</p>

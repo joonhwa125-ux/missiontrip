@@ -10,7 +10,6 @@ interface Props {
   scheduleCounts: Record<string, number>;
   scheduleAbsentCounts: Record<string, number>;
   onEnterCheckin: () => void;
-  onStatusOpen: () => void;
 }
 
 export default function ScheduleCard({
@@ -20,7 +19,6 @@ export default function ScheduleCard({
   scheduleCounts,
   scheduleAbsentCounts,
   onEnterCheckin,
-  onStatusOpen,
 }: Props) {
   const status = getScheduleStatus(schedule);
   const timeDisplay = schedule.scheduled_time ? formatTime(schedule.scheduled_time) : null;
@@ -90,13 +88,6 @@ export default function ScheduleCard({
               style={{ width: effectiveTotal > 0 ? `${pct}%` : "0%" }}
             />
           </div>
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); onStatusOpen(); }}
-          className="mt-2 w-full min-h-11 rounded-xl border border-stone-200 bg-gray-50 text-xs font-medium text-gray-700"
-          aria-label="현황 보기"
-        >
-          현황 보기 &gt;
         </button>
       </div>
     );

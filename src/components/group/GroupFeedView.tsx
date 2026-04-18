@@ -9,70 +9,47 @@ import PageHeader from "@/components/common/PageHeader";
 import SettingsDropdown from "@/components/common/SettingsDropdown";
 import DayTabs from "@/components/common/DayTabs";
 import ScheduleCard from "./ScheduleCard";
-import GroupStatusGrid from "./GroupStatusGrid";
 import BriefingBanner from "./BriefingBanner";
 import BriefingSheet from "./BriefingSheet";
 import { COPY } from "@/lib/constants";
 import type {
   Schedule,
   CheckIn,
-  Group,
   GroupMember,
-  GroupMemberBrief,
   BriefingData,
 } from "@/lib/types";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 
 type Member = GroupMember;
 
 interface Props {
   schedules: Schedule[];
-  activeSchedule: Schedule | null;
   members: Member[];
   shuttleBus?: string | null;
   returnShuttleBus?: string | null;
   checkIns: CheckIn[];
   scheduleCounts: Record<string, number>;
   scheduleAbsentCounts: Record<string, number>;
-  allGroups: Group[];
-  allCheckIns: { user_id: string; is_absent: boolean }[];
-  allMembers: GroupMemberBrief[];
-  allReports: { group_id: string }[];
   onEnterCheckin: () => void;
   /** 조장 브리핑 (v2 Phase E) — null이면 배너 숨김 */
   briefing: BriefingData | null;
   groupId: string;
-  userId: string;
   groupName: string;
 }
 
 export default function GroupFeedView({
   schedules,
-  activeSchedule,
   members,
   shuttleBus,
   returnShuttleBus,
   checkIns,
   scheduleCounts,
   scheduleAbsentCounts,
-  allGroups,
-  allCheckIns,
-  allMembers,
-  allReports,
   onEnterCheckin,
   briefing,
   groupId,
-  userId,
   groupName,
 }: Props) {
   const { isOnline, pendingCount } = useOfflineSync();
-  const [statusOpen, setStatusOpen] = useState(false);
   const [briefingOpen, setBriefingOpen] = useState(false);
   const { briefing: cachedBriefing, isFromCache } = useBriefingCache(groupId, briefing);
 
@@ -170,7 +147,6 @@ export default function GroupFeedView({
         {(roleCount > 0 || specialCount > 0) && (
           <div className="mb-3">
             <BriefingBanner
-              userId={userId}
               roleCount={roleCount}
               specialCount={specialCount}
               onOpen={() => setBriefingOpen(true)}
@@ -187,7 +163,6 @@ export default function GroupFeedView({
               scheduleCounts={scheduleCounts}
               scheduleAbsentCounts={scheduleAbsentCounts}
               onEnterCheckin={onEnterCheckin}
-              onStatusOpen={() => setStatusOpen(true)}
             />
           ))}
           {daySchedules.length === 0 && (
@@ -197,29 +172,6 @@ export default function GroupFeedView({
           )}
         </div>
       </div>
-
-      {/* 전체 조 현황 바텀시트 */}
-      <Dialog open={statusOpen} onOpenChange={setStatusOpen}>
-        <DialogContent className="flex max-h-[80vh] flex-col overflow-hidden p-0">
-          <div className="flex-shrink-0 px-6 pt-4">
-            <DialogHeader>
-              <DialogTitle>전체 현황</DialogTitle>
-              <DialogDescription>
-                {activeSchedule?.location ?? activeSchedule?.title ?? "대기 중"} 기준
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-          <div className="overflow-y-auto px-6 pb-6">
-            <GroupStatusGrid
-              allGroups={allGroups}
-              allCheckIns={allCheckIns}
-              allMembers={allMembers}
-              allReports={allReports}
-              scope={activeSchedule?.scope ?? "all"}
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* 브리핑 바텀시트 */}
       {cachedBriefing && (

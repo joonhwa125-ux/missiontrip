@@ -10,7 +10,6 @@ import type {
   Group,
   GroupParty,
   GroupMember,
-  ShuttleReport,
   BriefingData,
   ScheduleMemberInfo,
   ScheduleGroupInfo,
@@ -133,10 +132,7 @@ export default async function GroupPage() {
   ]);
 
   let checkIns: CheckIn[] = [];
-  let allCheckIns: { user_id: string; is_absent: boolean }[] = [];
-  let allReports: { group_id: string }[] = [];
   let initialReported = false;
-  let shuttleReports: ShuttleReport[] = [];
   // Phase F: 활성 일정의 effective roster (non-shuttle일 때만 계산)
   let effectiveRoster: EffectiveRoster | null = null;
   const scheduleCounts: Record<string, number> = {};
@@ -170,7 +166,7 @@ export default async function GroupPage() {
             return_airline: m.return_airline ?? null,
             trip_role: m.trip_role ?? null,
           }));
-          const [rosterResult, { data: allCi }, { data: allReportsData }] = await Promise.all([
+          const [rosterResult, { data: allCi }, { data: myReportData }] = await Promise.all([
             !activeSchedule.shuttle_type && baseRosterMembers.length > 0
               ? getEffectiveRoster({
                   scheduleId: activeSchedule.id,
@@ -180,31 +176,29 @@ export default async function GroupPage() {
                 })
               : Promise.resolve(null),
             supabase.from("check_ins").select("id, user_id, schedule_id, checked_at, checked_by, checked_by_user_id, offline_pending, is_absent, absence_reason, absence_location, group_id_at_checkin").eq("schedule_id", activeSchedule.id),
-            supabase.from("group_reports").select("group_id").eq("schedule_id", activeSchedule.id),
+            // 보고 여부는 effective group 기준 (임시 조장도 자기 조 보고 상태를 봄)
+            supabase.from("group_reports").select("group_id").eq("schedule_id", activeSchedule.id).eq("group_id", effectiveGroupId).maybeSingle(),
           ]);
 
           effectiveRoster = rosterResult;
           const allData = allCi ?? [];
-          allCheckIns = allData.map((ci) => ({ user_id: ci.user_id, is_absent: ci.is_absent }));
           // Phase F: roster 적용 시 transferredIn 포함/transferredOut 제외된 id 집합 사용
           const rosterIds = rosterResult
             ? new Set(rosterResult.activeMembers.map((m) => m.id))
             : new Set(members?.map((m) => m.id) ?? []);
           checkIns = allData.filter((ci) => rosterIds.has(ci.user_id)) as CheckIn[];
-          allReports = allReportsData ?? [];
-          // 보고 여부는 effective group 기준 (임시 조장도 자기 조 보고 상태를 봄)
-          initialReported = allReports.some((r) => r.group_id === effectiveGroupId);
+          initialReported = !!myReportData;
         })()
       );
     }
 
     // (2) 셔틀 보고 (활성 일정이 셔틀이고 배정 버스 있을 때)
+    // UNIQUE (shuttle_bus, schedule_id) 인덱스로 1-row 조회
     if (activeSchedule?.shuttle_type && myShuttleBus) {
       queries.push(
-        supabase.from("shuttle_reports").select("id, shuttle_bus, schedule_id, reported_by, pending_count, reported_at").eq("schedule_id", activeSchedule.id)
+        supabase.from("shuttle_reports").select("id").eq("schedule_id", activeSchedule.id).eq("shuttle_bus", myShuttleBus).maybeSingle()
           .then(({ data: sr }) => {
-            shuttleReports = (sr ?? []) as ShuttleReport[];
-            initialReported = shuttleReports.some((r) => r.shuttle_bus === myShuttleBus);
+            initialReported = !!sr;
           }) as Promise<void>
       );
     }
@@ -341,10 +335,6 @@ export default async function GroupPage() {
       activeSchedule={activeSchedule ?? null}
       initialCheckIns={checkIns}
       schedules={(schedules as Schedule[]) ?? []}
-      allGroups={(allGroups as Group[]) ?? []}
-      allCheckIns={allCheckIns}
-      allMembers={(allMembers ?? []).map((m) => ({ id: m.id, group_id: m.group_id, party: (m.party as "advance" | "rear") ?? null, name: m.name, role: m.role }))}
-      allReports={allReports}
       scheduleCounts={scheduleCounts}
       scheduleAbsentCounts={scheduleAbsentCounts}
       initialReported={initialReported}

@@ -10,9 +10,8 @@ export const OFFLINE_PENDING_KEY = "mtrip_pending";
 export const OFFLINE_PENDING_REPORTS_KEY = "mtrip_pending_reports";
 export const ACTIVE_SCHEDULE_KEY = "mtrip_active_schedule";
 
-// 브리핑 관련 스토리지 키 prefix — 실제 키는 `${prefix}${groupId}` / `${prefix}${userId}`
+// 브리핑 캐시 스토리지 키 prefix — 실제 키는 `${prefix}${groupId}`
 export const BRIEFING_CACHE_PREFIX = "mtrip_briefing_";
-export const BRIEFING_DISMISSED_PREFIX = "mtrip_briefing_dismissed_";
 
 // 셋업 동기화 스토리지 키
 export const SETUP_LAST_SYNCED_KEY = "setup_last_synced";

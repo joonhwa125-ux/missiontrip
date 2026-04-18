@@ -13,9 +13,7 @@ import GroupCheckinView from "./GroupCheckinView";
 import type {
   Schedule,
   CheckIn,
-  Group,
   GroupMember,
-  GroupMemberBrief,
   BriefingData,
   EffectiveRosterClient,
   ScheduleMemberInfo,
@@ -33,10 +31,6 @@ interface Props {
   activeSchedule: Schedule | null;
   initialCheckIns: CheckIn[];
   schedules: Schedule[];
-  allGroups: Group[];
-  allCheckIns: { user_id: string; is_absent: boolean }[];
-  allMembers: GroupMemberBrief[];
-  allReports: { group_id: string }[];
   scheduleCounts: Record<string, number>;
   scheduleAbsentCounts: Record<string, number>;
   initialReported: boolean;
@@ -56,10 +50,6 @@ export default function GroupView({
   activeSchedule,
   initialCheckIns,
   schedules: initialSchedules,
-  allGroups,
-  allCheckIns,
-  allMembers,
-  allReports: initialReports,
   scheduleCounts,
   scheduleAbsentCounts,
   initialReported,
@@ -70,8 +60,6 @@ export default function GroupView({
   const [view, setView] = useState<ViewMode>("feed");
   const [schedules, setSchedules] = useState(initialSchedules);
   const [checkIns, setCheckIns] = useState<CheckIn[]>(initialCheckIns);
-  const [allCheckInsState, setAllCheckInsState] = useState(allCheckIns);
-  const [allReportsState, setAllReportsState] = useState(initialReports);
   // Phase G 후속 fix: briefing을 state로 lift → onMemberUpdated 시 클라이언트 refetch로
   //                  0-flash 업데이트. 서버 router.refresh()도 병행되지만 briefingState가
   //                  먼저 최신화되어 깜빡임 해소.
@@ -80,8 +68,6 @@ export default function GroupView({
   // prop→state 동기화 (router.refresh() 시 서버에서 새 props가 올 때 state도 갱신)
   const prevSchedulesRef = useRef(initialSchedules);
   const prevCheckInsRef = useRef(initialCheckIns);
-  const prevAllCheckInsRef = useRef(allCheckIns);
-  const prevAllReportsRef = useRef(initialReports);
   const prevBriefingRef = useRef(briefing);
 
   if (prevSchedulesRef.current !== initialSchedules) {
@@ -92,18 +78,6 @@ export default function GroupView({
     prevCheckInsRef.current = initialCheckIns;
     if (initialCheckIns.length > 0 || checkIns.length === 0) {
       setCheckIns(initialCheckIns);
-    }
-  }
-  if (prevAllCheckInsRef.current !== allCheckIns) {
-    prevAllCheckInsRef.current = allCheckIns;
-    if (allCheckIns.length > 0 || allCheckInsState.length === 0) {
-      setAllCheckInsState(allCheckIns);
-    }
-  }
-  if (prevAllReportsRef.current !== initialReports) {
-    prevAllReportsRef.current = initialReports;
-    if (initialReports.length > 0 || allReportsState.length === 0) {
-      setAllReportsState(initialReports);
     }
   }
   if (prevBriefingRef.current !== briefing) {
@@ -165,7 +139,6 @@ export default function GroupView({
     if (data.length === 0 && checkIns.length > 0) return;
     const memberIdSet = new Set(members.map((m) => m.id));
     setCheckIns(data.filter((ci) => memberIdSet.has(ci.user_id)) as CheckIn[]);
-    setAllCheckInsState(data.map((ci) => ({ user_id: ci.user_id, is_absent: ci.is_absent })));
   }, [currentSchedule, members, checkIns.length]);
 
   // 백그라운드 복귀 시 타겟 fetch (router.refresh() 대신 — 0-flash 방지)
@@ -247,8 +220,6 @@ export default function GroupView({
     prevScheduleIdRef.current = currentSchedule?.id;
     // 즉시 리셋 (이전 일정 데이터 잔류 방지)
     setCheckIns([]);
-    setAllCheckInsState([]);
-    setAllReportsState([]);
     setReported(false);
     // 새 일정 데이터 fetch
     fetchLatestCheckIns();
@@ -311,37 +282,14 @@ export default function GroupView({
       );
       showToast("일정 시간이 변경되었어요");
     },
-    onGroupReported: ({ group_id }) => {
-      // W-3: 보고 무효화 중(취소→재체크인) self-echo만 차단, 평소에는 통과 (multi-tab 호환)
-      if (group_id === currentUser.group_id && reportInvalidatedRef.current) return;
-      setAllReportsState((prev) =>
-        prev.some((r) => r.group_id === group_id)
-          ? prev
-          : [...prev, { group_id }]
-      );
-    },
     onReportInvalidated: ({ group_id }) => {
-      // 체크인 취소 → 보고 무효화: allReportsState에서 제거
-      setAllReportsState((prev) => {
-        const next = prev.filter((r) => r.group_id !== group_id);
-        return next.length === prev.length ? prev : next;
-      });
-      // 내 조 보고 무효화 시 reported + ref도 리셋
+      // 내 조 보고 무효화 시 reported + ref 리셋
       if (group_id === currentUser.group_id) {
         setReported(false);
         reportInvalidatedRef.current = true;
       }
     },
     onCheckinUpdated: ({ user_id, action, is_absent }) => {
-      // 전체 현황 바텀시트용 allCheckIns 업데이트 (모든 조)
-      setAllCheckInsState((prev) => {
-        if (action === "insert") {
-          if (prev.some((c) => c.user_id === user_id)) return prev;
-          return [...prev, { user_id, is_absent: is_absent ?? false }];
-        }
-        return prev.filter((c) => c.user_id !== user_id);
-      });
-
       // 내 조 체크인 상세 업데이트
       if (!currentSchedule) return;
       setCheckIns((prev) => {
@@ -372,17 +320,6 @@ export default function GroupView({
       showToast("연결이 복구되었어요");
     },
   });
-
-  // 내 조 checkIns 변경 → allCheckInsState에 동기화
-  // (useBroadcast와 useRealtime이 별도 채널 인스턴스를 사용하므로 self-echo가 도달하지 않음)
-  useEffect(() => {
-    const myMemberIds = new Set(members.map((m) => m.id));
-    setAllCheckInsState((prev) => {
-      const withoutMyGroup = prev.filter((c) => !myMemberIds.has(c.user_id));
-      const myCheckIns = checkIns.map((c) => ({ user_id: c.user_id, is_absent: c.is_absent }));
-      return [...withoutMyGroup, ...myCheckIns];
-    });
-  }, [checkIns, members]);
 
   // 셔틀 일정: 해당 버스 인원 / 일반 일정: 조 인원 scope 필터
   // Phase F: non-shuttle 일정이면서 effectiveRoster가 주어진 경우, base 대신 roster의 activeMembers 사용
@@ -438,39 +375,20 @@ export default function GroupView({
     if (wasComplete && !checkinComplete) {
       reportInvalidatedRef.current = true;
       setReported(false);
-      setAllReportsState((prev) => {
-        const next = prev.filter((r) => r.group_id !== currentUser.group_id);
-        return next.length === prev.length ? prev : next;
-      });
     } else if (checkinComplete) {
       reportInvalidatedRef.current = false;
     }
-  }, [checkinComplete, currentUser.group_id]);
+  }, [checkinComplete]);
 
-  // 보고 완료 시 allReportsState에 즉시 반영 (self-echo 미도달 대응)
-  // 셔틀 일정은 group_id 기반 allReportsState 업데이트 불필요
   const handleReported = useCallback(() => {
     setReported(true);
-    if (!currentSchedule?.shuttle_type) {
-      setAllReportsState((prev) =>
-        prev.some((r) => r.group_id === currentUser.group_id)
-          ? prev
-          : [...prev, { group_id: currentUser.group_id }]
-      );
-    }
-  }, [currentUser.group_id, currentSchedule?.shuttle_type]);
+  }, []);
 
-  // 보고 무효화 (체크인 취소 시) — reported + allReportsState + ref 일괄 처리
+  // 보고 무효화 (체크인 취소 시) — reported + ref 리셋
   const handleReportReset = useCallback(() => {
     setReported(false);
     reportInvalidatedRef.current = true;
-    if (!currentSchedule?.shuttle_type) {
-      setAllReportsState((prev) => {
-        const next = prev.filter((r) => r.group_id !== currentUser.group_id);
-        return next.length === prev.length ? prev : next;
-      });
-    }
-  }, [currentUser.group_id, currentSchedule?.shuttle_type]);
+  }, []);
 
   // CR-010: 체크인 진입 시 히스토리 푸시
   const handleEnterCheckin = useCallback(() => {
@@ -488,20 +406,14 @@ export default function GroupView({
       {view === "feed" ? (
         <GroupFeedView
           schedules={schedules}
-          activeSchedule={currentSchedule}
           members={members}
           shuttleBus={currentUser.shuttle_bus}
           returnShuttleBus={currentUser.return_shuttle_bus}
           checkIns={checkIns}
           scheduleCounts={scheduleCounts}
           scheduleAbsentCounts={scheduleAbsentCounts}
-          allGroups={allGroups}
-          allCheckIns={allCheckInsState}
-          allMembers={allMembers}
-          allReports={allReportsState}
           onEnterCheckin={handleEnterCheckin}
           groupId={currentUser.group_id}
-          userId={currentUser.id}
           groupName={groupName}
           briefing={briefingState}
         />
