@@ -84,6 +84,8 @@ export interface Schedule {
   is_active: boolean;
   shuttle_type: ShuttleType | null;
   airline_leg: AirlineLeg | null;
+  /** 비행편 필터 키워드 (예: 티웨이, 제주항공). 조원 중 매칭자 0명이면 조장 화면에서 일정 숨김. null이면 필터 적용 안 함. */
+  airline_filter: string | null;
   activated_at: string | null;
   created_at: string;
 }
@@ -326,6 +328,7 @@ export interface ParsedSchedule {
   scope: ScheduleScope;
   shuttle_type: ShuttleType | null;
   airline_leg: AirlineLeg | null;
+  airline_filter: string | null;
 }
 
 /** v2: 일정×조 파싱 레코드 — Google Sheets "조 브리핑" 시트 */

@@ -244,6 +244,7 @@ export default function PreviewStep({
                 <th className="min-w-[48px] px-3 py-2">구분</th>
                 <th className="min-w-[72px] px-3 py-2">셔틀</th>
                 <th className="min-w-[72px] px-3 py-2">항공</th>
+                <th className="min-w-[96px] px-3 py-2">항공사 필터</th>
               </tr>
             </thead>
             <tbody>
@@ -263,6 +264,7 @@ export default function PreviewStep({
                   <td className="px-3 py-2 text-center">
                     {s.airline_leg === "outbound" ? "가는편" : s.airline_leg === "return" ? "오는편" : "-"}
                   </td>
+                  <td className="px-3 py-2 text-center">{s.airline_filter ?? "-"}</td>
                 </tr>
               ))}
             </tbody>

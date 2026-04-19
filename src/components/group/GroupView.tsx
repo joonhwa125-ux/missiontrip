@@ -7,6 +7,7 @@ import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
 import { useToast } from "@/hooks/useToast";
 import { COPY } from "@/lib/constants";
 import { filterMembersByScope } from "@/lib/utils";
+import { memberMatchesAirlineFilter } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
 import GroupFeedView from "./GroupFeedView";
 import GroupCheckinView from "./GroupCheckinView";
@@ -89,7 +90,10 @@ export default function GroupView({
   const [reported, setReported] = useState(() => {
     if (!initialReported) return false;
     const scope = activeSchedule?.scope ?? "all";
-    const filtered = filterMembersByScope(members, scope);
+    const byScope = filterMembersByScope(members, scope);
+    const filtered = activeSchedule?.shuttle_type
+      ? byScope
+      : byScope.filter((m) => memberMatchesAirlineFilter(activeSchedule?.airline_filter ?? null, m));
     const ids = new Set(initialCheckIns.map((c) => c.user_id));
     return filtered.length > 0 && filtered.every((m) => ids.has(m.id));
   });
@@ -254,6 +258,7 @@ export default function GroupView({
           is_active: true,
           shuttle_type: shuttle_type ?? null,
           airline_leg: prev?.airline_leg ?? null,
+          airline_filter: prev?.airline_filter ?? null,
           activated_at: new Date().toISOString(),
           created_at: prev?.created_at ?? new Date().toISOString(),
         }));
@@ -328,14 +333,17 @@ export default function GroupView({
     if (currentSchedule?.shuttle_type === "departure") return shuttleMembers;
     if (currentSchedule?.shuttle_type === "return") return returnShuttleMembers;
     const rosterSource = effectiveRoster?.activeMembers ?? members;
-    return filterMembersByScope(rosterSource, currentSchedule?.scope ?? "all");
-  }, [currentSchedule?.shuttle_type, currentSchedule?.scope, members, shuttleMembers, returnShuttleMembers, effectiveRoster]);
+    const byScope = filterMembersByScope(rosterSource, currentSchedule?.scope ?? "all");
+    // airline_filter: 해당 편 탑승자만 체크인 대상 (예: 티웨이 일정엔 티웨이 탑승자만)
+    return byScope.filter((m) => memberMatchesAirlineFilter(currentSchedule?.airline_filter ?? null, m));
+  }, [currentSchedule?.shuttle_type, currentSchedule?.scope, currentSchedule?.airline_filter, members, shuttleMembers, returnShuttleMembers, effectiveRoster]);
 
-  // Phase F: 제외 인원 (scope 필터 적용) — 체크인 카운트에서 제외하고 별도 섹션에 표시
+  // Phase F: 제외 인원 (scope + airline_filter 적용) — 체크인 카운트에서 제외하고 별도 섹션에 표시
   const scopedExcused = useMemo(() => {
     if (!effectiveRoster || currentSchedule?.shuttle_type) return [];
-    return filterMembersByScope(effectiveRoster.excusedMembers, currentSchedule?.scope ?? "all");
-  }, [effectiveRoster, currentSchedule?.scope, currentSchedule?.shuttle_type]);
+    const byScope = filterMembersByScope(effectiveRoster.excusedMembers, currentSchedule?.scope ?? "all");
+    return byScope.filter((m) => memberMatchesAirlineFilter(currentSchedule?.airline_filter ?? null, m));
+  }, [effectiveRoster, currentSchedule?.scope, currentSchedule?.airline_filter, currentSchedule?.shuttle_type]);
 
   // Phase F: main roster = effectiveMembers - 제외
   const excusedIdSet = useMemo(() => new Set(scopedExcused.map((m) => m.id)), [scopedExcused]);

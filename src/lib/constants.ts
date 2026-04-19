@@ -85,6 +85,46 @@ export function getPartyLabel(party: GroupParty | null): string {
   return "-";
 }
 
+/**
+ * 일정의 airline_filter에 매칭되는 멤버가 있는지 검사.
+ * - filter가 null/공백이면 항상 true (필터 적용 안 함)
+ * - 멤버의 airline(가는편) 또는 return_airline(오는편)이 filter 값을 포함(includes)하면 매치
+ *
+ * 예: filter="티웨이" → members 중 airline이 "티웨이 항공"/"티웨이"인 사람 있으면 true
+ *     filter="제주항공" → members 중 airline/return_airline에 "제주항공"이 있으면 true
+ *
+ * GroupFeedView(조장 화면 필터), AdminBottomSheet(관리자 조 카운트)에서 공통 사용.
+ */
+export function matchesAirlineFilter(
+  filter: string | null,
+  members: Array<{ airline?: string | null; return_airline?: string | null }>
+): boolean {
+  if (!filter) return true;
+  const trimmed = filter.trim();
+  if (!trimmed) return true;
+  return members.some((m) => {
+    const out = m.airline ?? "";
+    const ret = m.return_airline ?? "";
+    return out.includes(trimmed) || ret.includes(trimmed);
+  });
+}
+
+/**
+ * 특정 멤버 한 명이 일정의 airline_filter에 매칭되는지 검사.
+ * 조원 단위 필터링(바텀시트의 셔틀버스 그룹핑과 유사)에 사용.
+ */
+export function memberMatchesAirlineFilter(
+  filter: string | null,
+  member: { airline?: string | null; return_airline?: string | null }
+): boolean {
+  if (!filter) return true;
+  const trimmed = filter.trim();
+  if (!trimmed) return true;
+  const out = member.airline ?? "";
+  const ret = member.return_airline ?? "";
+  return out.includes(trimmed) || ret.includes(trimmed);
+}
+
 // 역할 라우팅
 export const ROLE_ROUTES: Record<string, string> = {
   leader: "/group",

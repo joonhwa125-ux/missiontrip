@@ -2,7 +2,7 @@
 
 import { formatTime, getScheduleStatus, filterMembersByScope } from "@/lib/utils";
 import { CheckIcon } from "@/components/ui/icons";
-import { SCOPE_LABEL } from "@/lib/constants";
+import { SCOPE_LABEL, memberMatchesAirlineFilter } from "@/lib/constants";
 import type { Schedule, AdminCheckIn, AdminMember, AdminReport, AdminShuttleReport, Group } from "@/lib/types";
 
 interface Props {
@@ -27,7 +27,11 @@ export default function AdminScheduleCard({
   const scopeLabel = schedule.scope === "rear" ? SCOPE_LABEL[schedule.scope] : null;
 
   const isShuttle = !!schedule.shuttle_type;
-  const scopeMembers = filterMembersByScope(members, schedule.scope);
+  const byScope = filterMembersByScope(members, schedule.scope);
+  // 셔틀 일정은 airline_filter 적용 안 함 (셔틀 탑승자 기준)
+  const scopeMembers = isShuttle
+    ? byScope
+    : byScope.filter((m) => memberMatchesAirlineFilter(schedule.airline_filter, m));
   const checkedIds = new Set(checkIns.filter((c) => !c.is_absent).map((c) => c.user_id));
   const absentIds = new Set(checkIns.filter((c) => c.is_absent).map((c) => c.user_id));
 

@@ -53,7 +53,7 @@ export default async function GroupPage() {
   // Phase J: active schedule을 먼저 조회 — effective group 결정에 필요
   const { data: activeSchedule } = await supabase
     .from("schedules")
-    .select("id, title, location, day_number, sort_order, scheduled_time, scope, is_active, shuttle_type, airline_leg, activated_at, created_at")
+    .select("id, title, location, day_number, sort_order, scheduled_time, scope, is_active, shuttle_type, airline_leg, airline_filter, activated_at, created_at")
     .eq("is_active", true)
     .maybeSingle();
 
@@ -92,7 +92,7 @@ export default async function GroupPage() {
       .order("name"),
     supabase
       .from("schedules")
-      .select("id, title, location, day_number, sort_order, scheduled_time, scope, is_active, shuttle_type, airline_leg, activated_at, created_at")
+      .select("id, title, location, day_number, sort_order, scheduled_time, scope, is_active, shuttle_type, airline_leg, airline_filter, activated_at, created_at")
       .order("day_number")
       .order("sort_order"),
     supabase.from("groups").select("id, name, bus_name").order("name"),

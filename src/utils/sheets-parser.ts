@@ -182,7 +182,7 @@ function validateUserRow(
 
 // 일정 행 검증 — 일차 범위 + 일정명 필수 + 대상 매핑
 // 컬럼 순서: 0=일차, 1=순서, 2=장소, 3=일정명, 4=예정시각, 5=대상,
-//           6=셔틀여부(출발/귀가/빈칸), 7=항공구간(가는편/오는편/빈칸)
+//           6=셔틀여부(출발/귀가/빈칸), 7=항공구간(가는편/오는편/빈칸), 8=항공사 필터
 function validateScheduleRow(
   row: string[],
   rowIndex: number
@@ -196,6 +196,7 @@ function validateScheduleRow(
   scope?: "all" | "advance" | "rear";
   shuttleType?: ShuttleType | null;
   airlineLeg?: AirlineLeg | null;
+  airlineFilter?: string | null;
 } {
   const errors: ValidationError[] = [];
   const rowNum = rowIndex + 1;
@@ -208,6 +209,7 @@ function validateScheduleRow(
   const scopeRaw = sanitizeText(row[5] ?? "");
   const shuttleRaw = sanitizeText(row[6] ?? "");
   const airlineLegRaw = sanitizeText(row[7] ?? "");
+  const airlineFilter = sanitizeText(row[8] ?? "") || null;
   const shuttleNorm = shuttleRaw.toLowerCase();
   let shuttleType: ShuttleType | null = null;
   let shuttleInvalid = false;
@@ -251,7 +253,7 @@ function validateScheduleRow(
     return { errors };
   }
 
-  return { errors, dayNumber, sortOrder: isNaN(sortOrder) ? rowIndex : sortOrder, location, title, scheduledTime, scope, shuttleType, airlineLeg };
+  return { errors, dayNumber, sortOrder: isNaN(sortOrder) ? rowIndex : sortOrder, location, title, scheduledTime, scope, shuttleType, airlineLeg, airlineFilter };
 }
 
 // 참가자 시트 파싱 (11컬럼: 이름, 전화번호, 역할, 소속조, 배정차량, 출발셔틀버스, 귀가셔틀버스,
@@ -307,7 +309,7 @@ export function parseUsersSheet(rows: string[][]): {
   return { users, groups, errors };
 }
 
-// 일정 시트 파싱 (8컬럼: 일차, 순서, 장소, 일정명, 예정시각, 대상, 셔틀여부, 항공구간)
+// 일정 시트 파싱 (9컬럼: 일차, 순서, 장소, 일정명, 예정시각, 대상, 셔틀여부, 항공구간, 항공사 필터)
 export function parseSchedulesSheet(rows: string[][]): {
   schedules: ParsedSchedule[];
   errors: ValidationError[];
@@ -333,6 +335,7 @@ export function parseSchedulesSheet(rows: string[][]): {
       scope: result.scope,
       shuttle_type: result.shuttleType ?? null,
       airline_leg: result.airlineLeg ?? null,
+      airline_filter: result.airlineFilter ?? null,
     });
   }
 

@@ -22,6 +22,7 @@ interface Props {
     scope: ScheduleScope;
     shuttle_type: ShuttleType | null;
     airline_leg: AirlineLeg | null;
+    airline_filter: string | null;
   }) => void;
   onClose: () => void;
 }
@@ -58,6 +59,7 @@ export default function ScheduleEditDialog({ schedule, onSave, onClose }: Props)
     scope: schedule.scope,
     shuttle_type: schedule.shuttle_type,
     airline_leg: schedule.airline_leg,
+    airline_filter: schedule.airline_filter ?? "",
   });
 
   const set = useCallback(
@@ -77,6 +79,7 @@ export default function ScheduleEditDialog({ schedule, onSave, onClose }: Props)
       scope: form.scope,
       shuttle_type: form.shuttle_type,
       airline_leg: form.airline_leg,
+      airline_filter: form.airline_filter.trim() || null,
     });
   };
 
@@ -186,6 +189,19 @@ export default function ScheduleEditDialog({ schedule, onSave, onClose }: Props)
             </select>
             <p className="mt-1 text-[0.6875rem] text-muted-foreground">
               비행 일정으로 지정하면 해당 일차 브리핑 카드에 항공사 섹션이 노출돼요
+            </p>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">항공사 필터</label>
+            <input
+              value={form.airline_filter}
+              onChange={(e) => set("airline_filter", e.target.value)}
+              placeholder="예: 티웨이, 제주항공, 에어서울 (빈칸이면 필터 없음)"
+              className={INPUT_CLASS}
+              aria-label="항공사 필터"
+            />
+            <p className="mt-1 text-[0.6875rem] text-muted-foreground">
+              입력한 키워드를 포함한 탑승자가 조에 없으면 해당 조장 화면에서 이 일정이 숨겨져요
             </p>
           </div>
           <DialogFooter className="pt-2">

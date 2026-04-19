@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { cn, getGroupBadgeStatus, filterMembersByScope } from "@/lib/utils";
-import { COPY, GROUP_BADGE_STYLE, isLeaderRole } from "@/lib/constants";
+import { COPY, GROUP_BADGE_STYLE, isLeaderRole, memberMatchesAirlineFilter } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
 import { computeEffectiveGroupMembers, findTempLeader } from "@/lib/rosterClient";
 import {
@@ -84,10 +84,15 @@ export default function AdminBottomSheet({
   );
   const reportMap = useMemo(() => new Map(reports.map((r) => [r.group_id, r])), [reports]);
 
-  const scopeMembers = useMemo(
-    () => filterMembersByScope(members, schedule?.scope ?? "all"),
-    [schedule?.scope, members]
-  );
+  const scopeMembers = useMemo(() => {
+    const byScope = filterMembersByScope(members, schedule?.scope ?? "all");
+    // 셔틀 일정은 airline_filter 적용 안 함 (셔틀 탑승자 기준으로 이미 그룹핑됨)
+    if (schedule?.shuttle_type) return byScope;
+    // airline_filter: 해당 편 탑승자가 아닌 조원은 일정 카운트에서 제외
+    return byScope.filter((m) =>
+      memberMatchesAirlineFilter(schedule?.airline_filter ?? null, m)
+    );
+  }, [schedule?.scope, schedule?.shuttle_type, schedule?.airline_filter, members]);
 
   const summaries = useMemo(
     () =>

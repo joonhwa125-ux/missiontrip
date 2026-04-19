@@ -11,7 +11,7 @@ import DayTabs from "@/components/common/DayTabs";
 import ScheduleCard from "./ScheduleCard";
 import BriefingBanner from "./BriefingBanner";
 import BriefingSheet from "./BriefingSheet";
-import { COPY } from "@/lib/constants";
+import { COPY, matchesAirlineFilter } from "@/lib/constants";
 import type {
   Schedule,
   CheckIn,
@@ -53,17 +53,19 @@ export default function GroupFeedView({
   const [briefingOpen, setBriefingOpen] = useState(false);
   const { briefing: cachedBriefing, isFromCache } = useBriefingCache(groupId, briefing);
 
-  // scope 필터: 셔틀 일정은 버스 배정자만, 일반 일정은 조내 party 기준
+  // scope 필터: 셔틀 일정은 버스 배정자만, 일반 일정은 조내 party + airline_filter 기준
   const hasAdvance = members.some((m) => m.party === "advance");
   const hasRear = members.some((m) => m.party === "rear");
   const mySchedules = schedules.filter((s) => {
     if (s.shuttle_type === "departure") return !!shuttleBus;
     if (s.shuttle_type === "return") return !!returnShuttleBus;
-    return (
+    const scopeOk =
       s.scope === "all" ||
       (s.scope === "advance" && hasAdvance) ||
-      (s.scope === "rear" && hasRear)
-    );
+      (s.scope === "rear" && hasRear);
+    if (!scopeOk) return false;
+    // airline_filter: 해당 편 탑승자가 조에 없으면 일정 숨김 (예: 접근성2(1조) 전원 티웨이 → 제주항공 카드 숨김)
+    return matchesAirlineFilter(s.airline_filter, members);
   });
   const days = useMemo(
     () => Array.from(new Set(mySchedules.map((s) => s.day_number))).sort(),

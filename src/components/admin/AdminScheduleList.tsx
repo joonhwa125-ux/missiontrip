@@ -10,6 +10,7 @@ import { filterMembersByScope } from "@/lib/utils";
 import {
   CHANNEL_GLOBAL, COPY,
   EVENT_SCHEDULE_ACTIVATED, EVENT_SCHEDULE_DEACTIVATED,
+  memberMatchesAirlineFilter,
 } from "@/lib/constants";
 import type { Schedule, AdminCheckIn, AdminMember, AdminReport, AdminShuttleReport, Group } from "@/lib/types";
 import AdminScheduleCard from "@/components/admin/AdminScheduleCard";
@@ -44,10 +45,14 @@ export default function AdminScheduleList({
     () => (activeSchedule ? checkInsMap[activeSchedule.id] ?? [] : []),
     [activeSchedule, checkInsMap]
   );
-  const totalMemberCount = useMemo(
-    () => filterMembersByScope(members, activeSchedule?.scope ?? "all").length,
-    [activeSchedule?.scope, members]
-  );
+  const totalMemberCount = useMemo(() => {
+    const byScope = filterMembersByScope(members, activeSchedule?.scope ?? "all");
+    // 셔틀 일정은 airline_filter 적용 안 함 (셔틀 탑승자 기준)
+    if (activeSchedule?.shuttle_type) return byScope.length;
+    return byScope.filter((m) =>
+      memberMatchesAirlineFilter(activeSchedule?.airline_filter ?? null, m)
+    ).length;
+  }, [activeSchedule?.scope, activeSchedule?.shuttle_type, activeSchedule?.airline_filter, members]);
 
 
   // -- 일정 활성화 Server Action --

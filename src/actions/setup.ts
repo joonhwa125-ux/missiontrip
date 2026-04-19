@@ -273,6 +273,7 @@ async function upsertSchedules(
     scope: s.scope,
     shuttle_type: s.shuttle_type,
     airline_leg: s.airline_leg,
+    airline_filter: s.airline_filter,
     scheduled_time: s.scheduled_time ? parseKSTTime(s.scheduled_time) : null,
   }));
 
@@ -566,6 +567,7 @@ export async function updateSchedule(
     scope: ScheduleScope;
     shuttle_type: ShuttleType | null;
     airline_leg: AirlineLeg | null;
+    airline_filter: string | null;
   }
 ): Promise<ActionResult> {
   const admin = await requireAdmin();
