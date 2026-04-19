@@ -177,7 +177,7 @@ export default function BriefingSheet({
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="flex max-h-[85vh] w-[calc(100%-2rem)] max-w-lg flex-col overflow-hidden p-0">
-        <div className="flex-shrink-0 border-b border-stone-100 px-5 pb-3 pt-4">
+        <div className="flex-shrink-0 border-b border-stone-100 px-5 pb-2 pt-4">
           <DialogHeader className="text-left">
             <DialogTitle className="text-base">
               {groupName} 브리핑 · {selectedDay}일차
@@ -190,7 +190,7 @@ export default function BriefingSheet({
           </DialogHeader>
         </div>
 
-        <div className="flex-1 space-y-6 overflow-y-auto px-5 pb-4 pt-3 text-sm">
+        <div className="flex-1 space-y-6 overflow-y-auto px-5 pb-4 pt-2 text-sm">
           {!hasAnyContent && (
             <p className="py-10 text-center text-sm text-muted-foreground">
               이 일차에 등록된 브리핑 항목이 없어요
