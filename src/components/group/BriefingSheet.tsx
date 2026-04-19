@@ -49,14 +49,9 @@ function isMemberInfoEmpty(info: ScheduleMemberInfo): boolean {
   );
 }
 
-/** 조 단위 info가 비어있는지 — 4개 표시 필드가 모두 null이면 스킵 */
+/** 조 단위 info가 비어있는지 — 표시 필드가 모두 null이면 스킵 */
 function isGroupInfoEmpty(info: ScheduleGroupInfo): boolean {
-  return (
-    !info.location_detail &&
-    !info.rotation &&
-    !info.sub_location &&
-    !info.note
-  );
+  return !info.group_location && !info.note;
 }
 
 /** label은 plain 텍스트, value만 배지로 노출 (항목명-값 시각 계층 분리) */
@@ -287,19 +282,9 @@ export default function BriefingSheet({
                     {/* 조 단위 정보 — 멤버 정보와 동일한 bg-stone-50 컨테이너 패턴 */}
                     {block.groupInfo && (
                       <div className="mb-2 space-y-1.5 rounded-lg bg-stone-50 px-3 py-2">
-                        {(block.groupInfo.location_detail ||
-                          block.groupInfo.rotation ||
-                          block.groupInfo.sub_location) && (
+                        {block.groupInfo.group_location && (
                           <div className="flex flex-wrap gap-1">
-                            {block.groupInfo.location_detail && (
-                              <Chip label="층" value={block.groupInfo.location_detail} tone="info" />
-                            )}
-                            {block.groupInfo.rotation && (
-                              <Chip label="순서" value={block.groupInfo.rotation} tone="info" />
-                            )}
-                            {block.groupInfo.sub_location && (
-                              <Chip label="장소" value={block.groupInfo.sub_location} tone="info" />
-                            )}
+                            <Chip label="조 위치" value={block.groupInfo.group_location} tone="info" />
                           </div>
                         )}
                         {block.groupInfo.note && (

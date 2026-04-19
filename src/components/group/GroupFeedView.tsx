@@ -111,7 +111,7 @@ export default function GroupFeedView({
     const sgSpecials = cachedBriefing.groupInfos.filter(
       (g) =>
         dayScheduleIds.has(g.schedule_id) &&
-        !!(g.location_detail || g.rotation || g.sub_location || g.note)
+        !!(g.group_location || g.note)
     ).length;
     const smSpecials = cachedBriefing.memberInfos.filter(
       (m) =>

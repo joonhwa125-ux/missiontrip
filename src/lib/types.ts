@@ -218,14 +218,12 @@ export interface ScheduleMemberInfo {
   updated_by: string | null;
 }
 
-/** 일정×조 메타데이터 — 층수, 순환순서, 활동장소, 관리자 메모 */
+/** 일정×조 메타데이터 — 조 위치, 관리자 메모 */
 export interface ScheduleGroupInfo {
   id: string;
   schedule_id: string;
   group_id: string;
-  location_detail: string | null;
-  rotation: string | null;
-  sub_location: string | null;
+  group_location: string | null;
   note: string | null;
   created_at: string;
   updated_at: string;
@@ -335,9 +333,7 @@ export interface ParsedGroupInfo {
   day_number: number;
   sort_order: number;
   group_name: string;
-  location_detail: string | null;
-  rotation: string | null;
-  sub_location: string | null;
+  group_location: string | null;
   note: string | null;
 }
 

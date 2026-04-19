@@ -181,9 +181,7 @@ export default function AssignmentManagementView({
           values.schedule_id,
           values.group_id,
           {
-            location_detail: values.location_detail,
-            rotation: values.rotation,
-            sub_location: values.sub_location,
+            group_location: values.group_location,
             note: values.note,
           },
           existingId
@@ -202,9 +200,7 @@ export default function AssignmentManagementView({
     const restorePayload: ScheduleGroupInfoFormValues = {
       schedule_id: target.schedule_id,
       group_id: target.group_id,
-      location_detail: target.location_detail,
-      rotation: target.rotation,
-      sub_location: target.sub_location,
+      group_location: target.group_location,
       note: target.note,
     };
     const scheduleName =
@@ -222,9 +218,7 @@ export default function AssignmentManagementView({
               restorePayload.schedule_id,
               restorePayload.group_id,
               {
-                location_detail: restorePayload.location_detail,
-                rotation: restorePayload.rotation,
-                sub_location: restorePayload.sub_location,
+                group_location: restorePayload.group_location,
                 note: restorePayload.note,
               }
             );
@@ -466,7 +460,7 @@ export default function AssignmentManagementView({
         <div>
           <div className="mb-2 flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
-              일정별 조에게 공지되는 안내 (층수/순환/장소/메모)
+              일정별 조에게 공지되는 안내 (조 위치, 메모)
             </p>
             <button
               onClick={() => setSgiDialog({ mode: "create" })}
@@ -484,10 +478,8 @@ export default function AssignmentManagementView({
                 <tr className="text-center text-xs text-muted-foreground whitespace-nowrap">
                   <th className="min-w-[140px] px-2 py-2">일정</th>
                   <th className="min-w-[64px] px-2 py-2">조</th>
-                  <th className="min-w-[64px] px-2 py-2">층</th>
-                  <th className="min-w-[80px] px-2 py-2">순서</th>
-                  <th className="min-w-[80px] px-2 py-2">장소</th>
-                  <th className="min-w-[120px] px-2 py-2">메모</th>
+                  <th className="min-w-[96px] px-2 py-2">조 위치</th>
+                  <th className="min-w-[160px] px-2 py-2">메모</th>
                   <th className="min-w-[96px] px-2 py-2">편집</th>
                 </tr>
               </thead>
@@ -508,9 +500,7 @@ export default function AssignmentManagementView({
                         {s ? scheduleLabel(s) : "(삭제된 일정)"}
                       </td>
                       <td className="px-2 py-2 text-center text-xs">{group?.name ?? "-"}</td>
-                      <td className="px-2 py-2 text-center text-xs">{g.location_detail ?? "-"}</td>
-                      <td className="px-2 py-2 text-center text-xs">{g.rotation ?? "-"}</td>
-                      <td className="px-2 py-2 text-center text-xs">{g.sub_location ?? "-"}</td>
+                      <td className="px-2 py-2 text-center text-xs">{g.group_location ?? "-"}</td>
                       <td className="px-2 py-2 text-xs truncate max-w-[200px]">{g.note ?? "-"}</td>
                       <td className="px-2 py-2">
                         <div className="flex justify-center gap-2 whitespace-nowrap">
@@ -522,9 +512,7 @@ export default function AssignmentManagementView({
                                 initial: {
                                   schedule_id: g.schedule_id,
                                   group_id: g.group_id,
-                                  location_detail: g.location_detail,
-                                  rotation: g.rotation,
-                                  sub_location: g.sub_location,
+                                  group_location: g.group_location,
                                   note: g.note,
                                 },
                               })

@@ -49,6 +49,10 @@ next-env.d.ts
 credentials.json
 service-account*.json
 
+# 실제 직원 개인정보 (LDAP, 호칭, 조편성, 항공편) 포함된 변환 CSV + 내부 운영 문서
+# data/scripts/ 내 로직은 버전관리 대상. data/converted/ 생성물은 비공개
+data/converted/
+
 # claude code
 .claude/agent-memory/
 .claude/settings.local.json

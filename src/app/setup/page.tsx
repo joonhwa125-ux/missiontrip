@@ -51,7 +51,7 @@ export default async function SetupPage() {
     // v2 Phase G: 조 브리핑
     service
       .from("schedule_group_info")
-      .select("id, schedule_id, group_id, location_detail, rotation, sub_location, note, created_at, updated_at, updated_by"),
+      .select("id, schedule_id, group_id, group_location, note, created_at, updated_at, updated_by"),
     // v2 Phase G: 개인 안내
     service
       .from("schedule_member_info")

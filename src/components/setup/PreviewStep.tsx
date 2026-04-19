@@ -275,9 +275,7 @@ export default function PreviewStep({
                 <th className="min-w-[48px] px-3 py-2">일정</th>
                 <th className="min-w-[36px] px-3 py-2">순서</th>
                 <th className="min-w-[72px] px-3 py-2">조</th>
-                <th className="min-w-[80px] px-3 py-2">층수</th>
-                <th className="min-w-[96px] px-3 py-2">순환</th>
-                <th className="min-w-[96px] px-3 py-2">장소상세</th>
+                <th className="min-w-[96px] px-3 py-2">조 위치</th>
                 <th className="min-w-[160px] px-3 py-2">메모</th>
               </tr>
             </thead>
@@ -287,9 +285,7 @@ export default function PreviewStep({
                   <td className="px-3 py-2 text-center">{gi.day_number}</td>
                   <td className="px-3 py-2 text-center">{gi.sort_order}</td>
                   <td className="px-3 py-2 text-center font-medium">{gi.group_name}</td>
-                  <td className="px-3 py-2 text-center">{gi.location_detail ?? "-"}</td>
-                  <td className="px-3 py-2 text-center">{gi.rotation ?? "-"}</td>
-                  <td className="px-3 py-2 text-center">{gi.sub_location ?? "-"}</td>
+                  <td className="px-3 py-2 text-center">{gi.group_location ?? "-"}</td>
                   <td className="px-3 py-2 text-muted-foreground">{gi.note ?? "-"}</td>
                 </tr>
               ))}

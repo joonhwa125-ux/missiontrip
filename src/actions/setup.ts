@@ -305,9 +305,7 @@ async function upsertScheduleGroupInfo(
   const payload: {
     schedule_id: string;
     group_id: string;
-    location_detail: string | null;
-    rotation: string | null;
-    sub_location: string | null;
+    group_location: string | null;
     note: string | null;
     updated_by: string;
   }[] = [];
@@ -322,9 +320,7 @@ async function upsertScheduleGroupInfo(
     payload.push({
       schedule_id: scheduleId,
       group_id: groupId,
-      location_detail: gi.location_detail,
-      rotation: gi.rotation,
-      sub_location: gi.sub_location,
+      group_location: gi.group_location,
       note: gi.note,
       updated_by: adminId,
     });
@@ -793,9 +789,7 @@ export async function updateScheduleGroupInfo(
   scheduleId: string,
   groupId: string,
   payload: {
-    location_detail: string | null;
-    rotation: string | null;
-    sub_location: string | null;
+    group_location: string | null;
     note: string | null;
   },
   existingId?: string | null
@@ -808,18 +802,12 @@ export async function updateScheduleGroupInfo(
   const normalized = {
     schedule_id: scheduleId,
     group_id: groupId,
-    location_detail: payload.location_detail?.trim() || null,
-    rotation: payload.rotation?.trim() || null,
-    sub_location: payload.sub_location?.trim() || null,
+    group_location: payload.group_location?.trim() || null,
     note: payload.note?.trim() || null,
     updated_by: admin.id,
   };
 
-  const hasContent =
-    normalized.location_detail ||
-    normalized.rotation ||
-    normalized.sub_location ||
-    normalized.note;
+  const hasContent = normalized.group_location || normalized.note;
   if (!hasContent) {
     return { ok: false, error: "최소 한 개 항목은 입력해주세요" };
   }

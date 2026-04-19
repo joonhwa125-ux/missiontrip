@@ -341,7 +341,7 @@ export function parseSchedulesSheet(rows: string[][]): {
 
 // ============================================================================
 // v2: 조 브리핑 시트 파싱 (일정×조 메타데이터)
-// 컬럼 순서: 0=일차, 1=순서, 2=조, 3=층수, 4=순환, 5=장소상세, 6=메모
+// 컬럼 순서: 0=일차, 1=순서, 2=조, 3=조 위치, 4=메모
 // 모든 컬럼이 opt-in — 비어있는 셀은 해당 항목 미지정으로 처리
 // 빈 시트(헤더만 또는 전체 빈)도 정상으로 간주 (v2 기능 opt-in)
 // ============================================================================
@@ -363,10 +363,8 @@ export function parseGroupInfoSheet(rows: string[][]): {
     const sortOrderRaw = row[1]?.trim() ?? "";
     const sortOrder = parseInt(sortOrderRaw, 10);
     const groupName = sanitizeText(row[2] ?? "");
-    const locationDetail = sanitizeText(row[3] ?? "") || null;
-    const rotation = sanitizeText(row[4] ?? "") || null;
-    const subLocation = sanitizeText(row[5] ?? "") || null;
-    const note = row[6]?.trim() || null;
+    const groupLocation = sanitizeText(row[3] ?? "") || null;
+    const note = row[4]?.trim() || null;
 
     if (isNaN(dayNumber) || dayNumber < MIN_DAY_NUMBER || dayNumber > MAX_DAY_NUMBER) {
       errors.push({ sheet: "group_info", row: rowNum, field: "일차", message: `일차는 ${MIN_DAY_NUMBER}~${MAX_DAY_NUMBER}만 가능해요` });
@@ -381,7 +379,7 @@ export function parseGroupInfoSheet(rows: string[][]): {
       continue;
     }
     // 모든 메타데이터가 비어있으면 의미 없는 행 — 스킵 (에러 아님)
-    if (!locationDetail && !rotation && !subLocation && !note) continue;
+    if (!groupLocation && !note) continue;
 
     const key = `${dayNumber}-${sortOrder}-${groupName}`;
     if (seen.has(key)) {
@@ -394,9 +392,7 @@ export function parseGroupInfoSheet(rows: string[][]): {
       day_number: dayNumber,
       sort_order: sortOrder,
       group_name: groupName,
-      location_detail: locationDetail,
-      rotation,
-      sub_location: subLocation,
+      group_location: groupLocation,
       note,
     });
   }

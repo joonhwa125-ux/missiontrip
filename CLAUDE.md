@@ -532,7 +532,7 @@ NEXT_PUBLIC_TIMEZONE=Asia/Seoul               # 모든 시각 표시 KST 기준
   - **여행 역할 (`trip_role`)**: 1일차 탭에서만 노출 (출발 당일 리마인드용)
   - **가는편 항공사**: 해당 일차에 `schedules.airline_leg='outbound'`인 일정이 있으면 노출. 항공사별 인원 그룹핑
   - **오는편 항공사**: 해당 일차에 `schedules.airline_leg='return'`인 일정이 있으면 노출
-  - **일정별 안내 (`schedule_group_info` / `schedule_member_info`)**: 해당 일차의 일정만 (층수/순환/활동/메뉴/메모/조이동/임시역할)
+  - **일정별 안내 (`schedule_group_info` / `schedule_member_info`)**: 해당 일차의 일정만 (조 위치/메모/활동/메뉴/조이동/임시역할)
 - 일차 하드코딩 없음 — `airline_leg`가 지정된 어느 일차든 자동 렌더 (중간 일차 비행 시나리오 대응)
 
 #### 4.2.2 체크인 화면 (드릴다운)

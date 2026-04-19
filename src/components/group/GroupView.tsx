@@ -157,7 +157,7 @@ export default function GroupView({
     const [sgiRes, smiByUserRes, smiByTempRes] = await Promise.all([
       supabase
         .from("schedule_group_info")
-        .select("id, schedule_id, group_id, location_detail, rotation, sub_location, note, created_at, updated_at, updated_by")
+        .select("id, schedule_id, group_id, group_location, note, created_at, updated_at, updated_by")
         .eq("group_id", currentUser.group_id),
       baseMemberIds.length > 0
         ? supabase

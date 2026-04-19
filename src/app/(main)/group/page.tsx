@@ -233,7 +233,7 @@ export default async function GroupPage() {
   const [{ data: sgiRows }, byUserSmiRes, byTempSmiRes] = await Promise.all([
     supabase
       .from("schedule_group_info")
-      .select("id, schedule_id, group_id, location_detail, rotation, sub_location, note, created_at, updated_at, updated_by")
+      .select("id, schedule_id, group_id, group_location, note, created_at, updated_at, updated_by")
       .eq("group_id", effectiveGroupId),
     baseMemberIds.length > 0
       ? supabase

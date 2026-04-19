@@ -63,14 +63,12 @@ CREATE TABLE IF NOT EXISTS check_ins (
   CONSTRAINT unique_checkin UNIQUE (user_id, schedule_id)
 );
 
--- 일정×조 메타데이터 (층수, 순환순서, 활동장소, 관리자 메모)
+-- 일정×조 메타데이터 (조 위치, 관리자 메모)
 CREATE TABLE IF NOT EXISTS schedule_group_info (
   id              uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
   schedule_id     uuid        NOT NULL REFERENCES schedules(id) ON DELETE CASCADE,
   group_id        uuid        NOT NULL REFERENCES groups(id)    ON DELETE CASCADE,
-  location_detail text,                              -- '1층', '2층', 'A홀'
-  rotation        text,                              -- '식사먼저', '투어먼저', '1그룹'
-  sub_location    text,                              -- '해먹존', '족욕존'
+  group_location  text,                              -- 조 단위 세부 위치: '1층 80명석', 'A홀 3번 테이블', '스페이스닷원 멀티홀'
   note            text,                              -- 관리자가 조장에게 전달할 메모
   created_at      timestamptz DEFAULT now(),
   updated_at      timestamptz DEFAULT now(),

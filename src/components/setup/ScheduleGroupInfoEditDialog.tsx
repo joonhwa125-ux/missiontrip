@@ -20,9 +20,7 @@ interface SimpleGroup {
 export interface ScheduleGroupInfoFormValues {
   schedule_id: string;
   group_id: string;
-  location_detail: string | null;
-  rotation: string | null;
-  sub_location: string | null;
+  group_location: string | null;
   note: string | null;
 }
 
@@ -54,9 +52,7 @@ export default function ScheduleGroupInfoEditDialog({
   const [form, setForm] = useState<ScheduleGroupInfoFormValues>({
     schedule_id: initial?.schedule_id ?? schedules[0]?.id ?? "",
     group_id: initial?.group_id ?? groups[0]?.id ?? "",
-    location_detail: initial?.location_detail ?? null,
-    rotation: initial?.rotation ?? null,
-    sub_location: initial?.sub_location ?? null,
+    group_location: initial?.group_location ?? null,
     note: initial?.note ?? null,
   });
 
@@ -72,9 +68,7 @@ export default function ScheduleGroupInfoEditDialog({
     e.preventDefault();
     onSave({
       ...form,
-      location_detail: form.location_detail?.trim() || null,
-      rotation: form.rotation?.trim() || null,
-      sub_location: form.sub_location?.trim() || null,
+      group_location: form.group_location?.trim() || null,
       note: form.note?.trim() || null,
     });
   };
@@ -86,8 +80,6 @@ export default function ScheduleGroupInfoEditDialog({
     schedule: `${uid}-schedule`,
     group: `${uid}-group`,
     location: `${uid}-location`,
-    rotation: `${uid}-rotation`,
-    subLocation: `${uid}-sub`,
     note: `${uid}-note`,
   };
 
@@ -97,7 +89,7 @@ export default function ScheduleGroupInfoEditDialog({
         <DialogHeader>
           <DialogTitle>{isEdit ? "조 브리핑 수정" : "조 브리핑 추가"}</DialogTitle>
           <DialogDescription className="sr-only">
-            일정별 조에게 공지되는 안내 (층수/순환/장소/메모)
+            일정별 조에게 공지되는 안내 (조 위치/메모)
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3 py-1">
@@ -131,35 +123,13 @@ export default function ScheduleGroupInfoEditDialog({
               ))}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label htmlFor={ids.location} className="mb-1 block text-xs font-medium text-muted-foreground">층/위치</label>
-              <input
-                id={ids.location}
-                value={form.location_detail ?? ""}
-                onChange={(e) => set("location_detail", e.target.value)}
-                placeholder="예: 1층, A홀"
-                className={INPUT_CLASS}
-              />
-            </div>
-            <div>
-              <label htmlFor={ids.rotation} className="mb-1 block text-xs font-medium text-muted-foreground">순환 순서</label>
-              <input
-                id={ids.rotation}
-                value={form.rotation ?? ""}
-                onChange={(e) => set("rotation", e.target.value)}
-                placeholder="예: 식사먼저"
-                className={INPUT_CLASS}
-              />
-            </div>
-          </div>
           <div>
-            <label htmlFor={ids.subLocation} className="mb-1 block text-xs font-medium text-muted-foreground">활동 장소</label>
+            <label htmlFor={ids.location} className="mb-1 block text-xs font-medium text-muted-foreground">조 위치</label>
             <input
-              id={ids.subLocation}
-              value={form.sub_location ?? ""}
-              onChange={(e) => set("sub_location", e.target.value)}
-              placeholder="예: 해먹존, 족욕존"
+              id={ids.location}
+              value={form.group_location ?? ""}
+              onChange={(e) => set("group_location", e.target.value)}
+              placeholder="예: 1층 80명석, 스페이스닷원 멀티홀"
               className={INPUT_CLASS}
             />
           </div>
