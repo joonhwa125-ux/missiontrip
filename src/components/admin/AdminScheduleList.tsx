@@ -96,7 +96,8 @@ export default function AdminScheduleList({
   };
 
   useAllReportedNotification(activeSchedule, members, reportsMap, onToast);
-  useAutoActivateTimer(allSchedules, activeCheckIns, totalMemberCount, activeSchedule, handleActivate, onToast);
+  // 자동 활성화는 useAutoActivate(공용)에 위임됨 — 이 훅은 미확인 경고 토스트 전담
+  useAutoActivateTimer(allSchedules, activeCheckIns, totalMemberCount, activeSchedule, onToast);
 
   // -- 수동 활성화 (미확인 경고 래핑) --
   const handleActivateClick = (s: Schedule) => {

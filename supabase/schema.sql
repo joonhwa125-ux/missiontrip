@@ -295,7 +295,14 @@ $$;
 -- 자동 활성화 RPC — 시각 · 상태를 원자적으로 검증한 뒤에만 활성화.
 -- 조장/관리자 누구든 호출 가능하되 서버 시계 기준으로만 실제 반영되므로
 -- 클라이언트 시각 조작 · 경쟁 조건에서도 안전하다.
--- 반환값: true=실제 활성화 수행, false=조건 미충족(no-op).
+--
+-- ## 연쇄 처리 정책 (2026-04-20 개정)
+-- 과거 대기 일정이 여러 개 쌓여 있을 때 "가장 최신 1건만" 활성화하고,
+-- 그 이전에 놓친 일정들은 한 번의 호출로 일괄 completed 처리한다.
+-- 기존 방식(1분에 1건씩 순차 처리)은 DB 복구 · 시트 재임포트 등으로 과거
+-- 일정이 대량 쌓였을 때 UI가 수 분간 요동하는 문제가 있었다.
+--
+-- 반환값: true=실제 활성화 수행, false=조건 미충족 또는 target이 최신이 아님(no-op).
 CREATE OR REPLACE FUNCTION auto_activate_due_schedule(target_id uuid)
 RETURNS boolean
 LANGUAGE plpgsql
@@ -303,14 +310,53 @@ SECURITY DEFINER
 AS $$
 DECLARE
   rows_affected int := 0;
+  latest_due_id uuid;
 BEGIN
-  -- 다른 활성 일정 비활성화 (activated_at 보존)
+  -- 지금 활성화되어야 할 "가장 최신" 과거 대기 일정 식별
+  SELECT id INTO latest_due_id
+  FROM schedules
+  WHERE is_active = false
+    AND activated_at IS NULL
+    AND scheduled_time IS NOT NULL
+    AND scheduled_time <= now()
+  ORDER BY scheduled_time DESC, day_number DESC, sort_order DESC
+  LIMIT 1;
+
+  -- 대상 없음: no-op
+  IF latest_due_id IS NULL THEN
+    RETURN false;
+  END IF;
+
+  -- target이 최신이 아니면: 놓친 일정으로 간주 → completed 마킹만
+  -- (클라이언트가 가장 이른 past due를 넘기는 경우에도 안전)
+  IF latest_due_id <> target_id THEN
+    UPDATE schedules
+    SET activated_at = now()
+    WHERE id = target_id
+      AND is_active = false
+      AND activated_at IS NULL
+      AND scheduled_time IS NOT NULL
+      AND scheduled_time <= now();
+    RETURN false;
+  END IF;
+
+  -- target이 최신 — 정식 활성화 절차
+  -- 1) 기존 활성 일정 비활성화 (activated_at 보존)
   UPDATE schedules
   SET is_active = false,
       activated_at = COALESCE(activated_at, now())
   WHERE is_active = true AND id <> target_id;
 
-  -- target 활성화: 대기 상태 + 시각 도래 시에만
+  -- 2) target 이외의 모든 과거 대기 일정을 일괄 completed 처리
+  UPDATE schedules
+  SET activated_at = now()
+  WHERE is_active = false
+    AND activated_at IS NULL
+    AND scheduled_time IS NOT NULL
+    AND scheduled_time <= now()
+    AND id <> target_id;
+
+  -- 3) target 활성화
   UPDATE schedules
   SET is_active = true,
       activated_at = now()
@@ -429,13 +475,15 @@ BEGIN
     'auto_activate_schedule',
     '* * * * *',  -- 1분 간격
     $inner$
+    -- 최신 past due 우선 선택 — RPC 내부 로직과 일치시켜 한 번의 호출로
+    -- "최신 1건 activate + 이전 놓친 일정 일괄 completed" 처리되도록.
     SELECT auto_activate_due_schedule(id)
     FROM schedules
     WHERE is_active = false
       AND activated_at IS NULL
       AND scheduled_time IS NOT NULL
       AND scheduled_time <= now()
-    ORDER BY day_number, sort_order
+    ORDER BY scheduled_time DESC, day_number DESC, sort_order DESC
     LIMIT 1
     $inner$
   );

@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { filterMembersByScope } from "@/lib/utils";
 import { getReportedLabel } from "@/lib/constants";
+import { useAutoActivate } from "@/hooks/useAutoActivate";
 import type { Schedule, AdminCheckIn, AdminMember, AdminReport } from "@/lib/types";
 
 /** 현재 활성 일정 기준 미확인 인원 수 계산 */
@@ -46,31 +47,47 @@ export function useAllReportedNotification(
 }
 
 /**
- * 자동 활성화 타이머 (관리자 전용, 60초 + visibilitychange).
+ * 자동 활성화 타이머 (관리자 전용).
  *
- * ## 정책 (Phase A 변경, 2026-04-20)
- * - 운영 모델 변화("확인된 조는 먼저 이동")에 따라 **미확인 게이트 제거**.
- * - 이전 활성 일정에 미확인 인원이 남아있어도 다음 일정을 자동 시작하며,
- *   관리자에게는 알림 토스트만 발송(차단 아님).
+ * ## 책임 (2026-04-20 재설계)
+ * - **활성화 자체는 `useAutoActivate`에 위임** — RPC 배치 정리 · 최신 past due 선택 정책과
+ *   완전히 일치시킨다. 조장 훅과 관리자 훅이 각자 다른 target을 고르면 race condition 발생.
+ * - 이 훅은 **관리자 전용 "미확인 인원 경고" 토스트**만 책임진다 (운영 모델 변화:
+ *   "확인된 조는 먼저 이동" → 차단 아닌 경고).
  * - 누락 방지는 조장 뷰의 미확인 배지 + 카카오워크 공지로 보완.
+ *
+ * ## 과거 설계 문제 (G-1)
+ * - 이전엔 이 훅이 `find()`로 sort_order 첫 past due를 골라 `activateSchedule` 호출.
+ *   → `useAutoActivate`가 scheduled_time 최신을 고르는 것과 불일치 → 관리자 단독 시나리오에서
+ *   과거 일정 일괄 정리 효과 무력화 + 두 경로 경쟁 가능성.
  */
 export function useAutoActivateTimer(
   allSchedules: Schedule[],
   activeCheckIns: AdminCheckIn[],
   totalMemberCount: number,
   activeSchedule: Schedule | null,
-  handleActivate: (s: Schedule) => void,
   onToast: (msg: string) => void
 ) {
+  // 활성화는 공용 훅에 위임 — 조장 뷰와 동일 경로
+  useAutoActivate(allSchedules);
+
   const autoAlertedRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     const check = () => {
-      const now = new Date();
-      const waiting = allSchedules.filter(
-        (s) => !s.is_active && !s.activated_at && s.scheduled_time
-      );
-      const due = waiting.find((s) => new Date(s.scheduled_time!) <= now);
+      const now = Date.now();
+      // 최신 past due 선택 — RPC · useAutoActivate와 정책 일치
+      let due: Schedule | undefined;
+      let dueTime = 0;
+      for (const s of allSchedules) {
+        if (s.is_active || s.activated_at || s.scheduled_time === null) continue;
+        const t = new Date(s.scheduled_time).getTime();
+        if (t > now) continue;
+        if (t > dueTime) {
+          dueTime = t;
+          due = s;
+        }
+      }
       if (!due) return;
       const unchecked = calcUncheckedCount(activeCheckIns, totalMemberCount);
       // 미확인 인원 남아있는 상태로 다음 일정이 자동 시작될 때 1회 경고 (차단 아님)
@@ -78,7 +95,6 @@ export function useAutoActivateTimer(
         autoAlertedRef.current.add(due.id);
         onToast(`이전 일정 ${unchecked}명 미확인 상태로 ${due.title} 시작할게요`);
       }
-      handleActivate(due);
     };
     check();
     const timer = setInterval(check, 60_000);
@@ -90,5 +106,5 @@ export function useAutoActivateTimer(
       clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [allSchedules, activeCheckIns, totalMemberCount, activeSchedule, handleActivate, onToast]);
+  }, [allSchedules, activeCheckIns, totalMemberCount, activeSchedule, onToast]);
 }

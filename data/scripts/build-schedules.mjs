@@ -44,7 +44,18 @@ function parseCsv(text) {
 //
 // 항공사 필터: users.airline / users.return_airline 부분 매칭(includes).
 // 공지: 일정별 공통 안내. 모든 조장에게 동일 노출.
+//
+// ⚠ 예정시각 컬럼은 "YYYY-MM-DD HH:MM" 절대 날짜 형식으로 출력한다.
+//   시각만("HH:MM") 쓰면 setup.ts의 parseKSTTime이 "임포트 당일"을 기본값으로 써서
+//   DB에 잘못된 날짜가 저장되는 문제 발생 (2026-04-20 사건 — docs/decisions.md).
+//   다음 트립 때는 TRIP_DAYS만 수정하면 됨.
 // ─────────────────────────────────────────────
+const TRIP_DAYS = {
+  1: "2026-04-23", // 목 — 출발
+  2: "2026-04-24", // 금
+  3: "2026-04-25", // 토 — 복귀
+};
+
 const SCHEDULES = [
   // ── 1일차 (4/23 목) ──
   [1, 1,  "판교·성수 사옥",     "판교/성수 사옥 셔틀 집결",       "07:00", "선발", "출발", "",       "",       ""],
@@ -97,11 +108,16 @@ function writeSchedules() {
   const header = ["일차","순서","장소","일정명","예정시각","대상","셔틀여부","항공구간","항공사 필터","공지"];
   const lines = [header.map(csvEscape).join(",")];
   for (const row of SCHEDULES) {
-    lines.push(row.map(csvEscape).join(","));
+    const [day, order, loc, title, time, scope, shuttle, leg, airline, notice] = row;
+    const date = TRIP_DAYS[day];
+    if (!date) throw new Error(`TRIP_DAYS에 ${day}일차 매핑이 없습니다`);
+    // 절대 날짜 병합 — parseKSTTime의 fullDate 패턴과 매칭
+    const absoluteTime = `${date} ${time}`;
+    lines.push([day, order, loc, title, absoluteTime, scope, shuttle, leg, airline, notice].map(csvEscape).join(","));
   }
   fs.writeFileSync(OUT_SCHED, lines.join("\n") + "\n", "utf-8");
   const withNotice = SCHEDULES.filter((r) => r[9]).length;
-  console.log(`✅ ${OUT_SCHED} (${SCHEDULES.length}개 일정, 공지 ${withNotice}건)`);
+  console.log(`✅ ${OUT_SCHED} (${SCHEDULES.length}개 일정, 공지 ${withNotice}건, 기간 ${TRIP_DAYS[1]} ~ ${TRIP_DAYS[3]})`);
 }
 
 // ─────────────────────────────────────────────

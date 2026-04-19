@@ -38,13 +38,21 @@ export function useAutoActivate(schedules: Schedule[]) {
     const check = async () => {
       if (inFlight) return;
       const now = Date.now();
-      const due = schedulesRef.current.find(
-        (s) =>
-          !s.is_active &&
-          !s.activated_at &&
-          s.scheduled_time !== null &&
-          new Date(s.scheduled_time).getTime() <= now
-      );
+      // 과거 대기 일정들 중 "가장 최신"을 target으로 선택 — RPC 정책과 일치해
+      // 한 번의 호출로 최신 activate + 이전 놓친 일정 일괄 completed 처리.
+      // (과거엔 find()가 sort_order 오름차순의 첫 past due를 골라
+      //  RPC가 target != latest로 판정해 여러 tick이 필요했음.)
+      let due: Schedule | undefined;
+      let dueTime = 0;
+      for (const s of schedulesRef.current) {
+        if (s.is_active || s.activated_at || s.scheduled_time === null) continue;
+        const t = new Date(s.scheduled_time).getTime();
+        if (t > now) continue;
+        if (t > dueTime) {
+          dueTime = t;
+          due = s;
+        }
+      }
       if (!due) return;
 
       inFlight = true;
