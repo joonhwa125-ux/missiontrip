@@ -1,14 +1,42 @@
 // 1~3일차 CSV와 전체타임테이블을 기반으로 schedules.csv + member_info.csv 생성
 // 출력:
 //   - data/converted/schedules.csv
-//   - data/converted/member_info.csv  (현재 확정된 미참여만)
+//   - data/converted/member_info.csv  (미참여 + 더클리프 메뉴 + 치유의숲 활동)
 
 import fs from "node:fs";
 import path from "node:path";
 
+const HOME = process.env.USERPROFILE || process.env.HOME;
+const DL = path.join(HOME, "Downloads");
+const SRC_WHICH = path.join(DL, "[인력관리TF] 운영안 - 몇조_.csv");
+
 const OUT_DIR = path.resolve("data/converted");
 const OUT_SCHED = path.join(OUT_DIR, "schedules.csv");
 const OUT_MEMBER_INFO = path.join(OUT_DIR, "member_info.csv");
+
+// 몇조 CSV 파서 (RFC 4180)
+function parseCsv(text) {
+  const rows = [];
+  let row = [], field = "", inQuotes = false;
+  const t = text.replace(/^\uFEFF/, "");
+  for (let i = 0; i < t.length; i++) {
+    const ch = t[i];
+    if (inQuotes) {
+      if (ch === '"') { if (t[i+1] === '"') { field += '"'; i++; } else inQuotes = false; }
+      else field += ch;
+    } else {
+      if (ch === '"') inQuotes = true;
+      else if (ch === ",") { row.push(field); field = ""; }
+      else if (ch === "\r" || ch === "\n") {
+        if (ch === "\r" && t[i+1] === "\n") i++;
+        row.push(field); field = ""; rows.push(row); row = [];
+      } else field += ch;
+    }
+  }
+  row.push(field);
+  if (row.some(c => c !== "")) rows.push(row);
+  return rows;
+}
 
 // ─────────────────────────────────────────────
 // schedules.csv
@@ -87,7 +115,8 @@ function writeSchedules() {
 //   - 1일차 포도원 집결(본대) (sort_order=13): rose.es, kevin.s
 // 그 외는 pending-questions.md에 기록 (사용자 확인 후 추가)
 
-const MEMBER_INFO = [
+// 확정된 미참여 (사용자 지시 기반)
+const STATIC_MEMBER_INFO = [
   // 1일차 난타공연장 미참여
   [1, 11, "yul.9",   "미참여", "숙소 체크·카드키 분류 업무"],
   [1, 11, "bart.11", "미참여", "숙소 체크·카드키 분류 업무"],
@@ -98,14 +127,64 @@ const MEMBER_INFO = [
   [1, 13, "kevin.s", "미참여", "숙소 휴식"],
 ];
 
+// 몇조 CSV 컬럼 (0-indexed):
+//   0=LDAP, 10=더클리프 음료, 11=더클리프 푸드박스, 13=치유의숲 조
+// 일정 sort_order (schedules.csv 기준):
+//   2일차 4 = 더클리프 출발 집결 (16:10) — 더클리프 체류 시간대의 메뉴 정보 연결
+//   3일차 2 = 치유의숲 집결 (10:00) — 개인별 프로그램 조 배정
+const DEOCLIFF_ORDER = 4;
+const HEALING_ORDER = 2;
+
+function buildMemberInfoFromWhichGroup() {
+  const extra = [];
+  if (!fs.existsSync(SRC_WHICH)) {
+    console.log(`⚠  ${SRC_WHICH} 없음 — 메뉴/활동 스킵`);
+    return extra;
+  }
+  const rows = parseCsv(fs.readFileSync(SRC_WHICH, "utf-8"));
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    if (!row || !row[0]) continue;
+    const ldap = row[0].trim();
+    if (!ldap) continue;
+
+    // 더클리프 메뉴 — 음료·푸드박스 둘 다 있으면 ' · '로 결합, 하나만 있으면 그 값만
+    const drink = (row[10] || "").trim();
+    const foodbox = (row[11] || "").trim();
+    const validDrink = drink && drink !== "-";
+    const validFood = foodbox && foodbox !== "-";
+    if (validDrink && validFood) {
+      extra.push([2, DEOCLIFF_ORDER, ldap, "메뉴", `${drink} · ${foodbox}`]);
+    } else if (validDrink) {
+      extra.push([2, DEOCLIFF_ORDER, ldap, "메뉴", drink]);
+    } else if (validFood) {
+      extra.push([2, DEOCLIFF_ORDER, ldap, "메뉴", foodbox]);
+    }
+
+    // 치유의숲 활동 — 조 배정값 그대로 (예: "해먹 1조", "족욕 2조 (조장)", "해먹 STAFF (제니퍼 지원)")
+    const healing = (row[13] || "").trim();
+    if (healing && healing !== "-") {
+      extra.push([3, HEALING_ORDER, ldap, "활동", healing]);
+    }
+  }
+  return extra;
+}
+
 function writeMemberInfo() {
+  const dynamic = buildMemberInfoFromWhichGroup();
+  const all = [...STATIC_MEMBER_INFO, ...dynamic];
   const header = ["일차","순서","이름","항목","값"];
   const lines = [header.map(csvEscape).join(",")];
-  for (const row of MEMBER_INFO) {
+  for (const row of all) {
     lines.push(row.map(csvEscape).join(","));
   }
   fs.writeFileSync(OUT_MEMBER_INFO, lines.join("\n") + "\n", "utf-8");
-  console.log(`✅ ${OUT_MEMBER_INFO} (${MEMBER_INFO.length}개 개인 안내)`);
+  console.log(`✅ ${OUT_MEMBER_INFO} (${all.length}개 개인 안내: 미참여 ${STATIC_MEMBER_INFO.length} + 메뉴/활동 ${dynamic.length})`);
+
+  // 자가검증
+  const byField = {};
+  for (const r of all) byField[r[3]] = (byField[r[3]] || 0) + 1;
+  for (const [k, n] of Object.entries(byField)) console.log(`  - ${k}: ${n}행`);
 }
 
 writeSchedules();
