@@ -631,9 +631,17 @@ NEXT_PUBLIC_TIMEZONE=Asia/Seoul               # 모든 시각 표시 KST 기준
 
 #### 4.3.4 일정 관리 기능
 
-- **자동 활성화 (관리자 클라이언트 타이머):** 관리자 앱이 열려있는 동안 1분 간격으로 현재 시각과 대기 일정의 `scheduled_time`을 비교. 시각 도래 시 `activateSchedule` Server Action 자동 호출. 앱이 백그라운드였다가 돌아올 때(`visibilitychange` 이벤트) 밀린 활성화를 즉시 처리. 서버 cron 불필요
-- **수동 조정:** TF장이 필요시 [활성화] 버튼으로 다른 일정을 수동 활성화 가능. 자동 활성화가 안 됐어도 수동 [활성화]로 언제든 체크인 시작 가능
-- **미확인 경고:** 현재 활성 일정에 미확인 인원이 남아있는 상태에서 다른 일정을 활성화하려 하면 '현재 일정에 N명이 미확인 상태예요. 그래도 전환할까요?' 경고 모달 표시. 자동 활성화 시에도 동일 — 미확인 인원 있으면 자동 전환하지 않고 관리자에게 알림 토스트로 판단 요청
+> **운영 모델 변화 반영 (Phase A, 2026-04-20):** "확인된 조는 먼저 이동" 정책에 따라 자동 활성화를 단일 관리자 중심에서 분산·원자화 모델로 전환. 이전 일정의 미확인 인원이 다음 일정 시작을 막지 않도록 게이트를 제거했다.
+
+- **자동 활성화 (분산 클라이언트 타이머 + DB 폴백):**
+  - **1차-A: 조장 분산 타이머 (신규).** 로그인한 조장 18명의 각 브라우저(`GroupView`)가 1분 간격으로 `scheduled_time` 도래 일정을 탐지. `autoActivateSchedule` Server Action → RPC `auto_activate_due_schedule`가 시각·상태를 서버에서 원자적으로 검증해 실제 활성화 수행. `visibilitychange`로 백그라운드 복귀 시 밀린 처리 즉시 복구.
+  - **1차-B: 관리자 타이머 (기존).** 관리자 `/admin` 브라우저는 `useAutoActivateTimer` 경유로 `activateSchedule` 호출. 추가로 "이전 일정 미확인 N명 있는 상태로 시작" 토스트를 발송.
+  - **2차: Supabase pg_cron 폴백.** 모든 클라이언트 오프라인 극단적 상황 대비. DB 내부에서 1분 간격으로 동일 RPC 호출. `idx_one_active_schedule` UNIQUE 제약 + RPC 트랜잭션이 중복 활성화를 차단하므로 1차-A/B와 병행 안전.
+  - **관리자 탭 부재 시에도 자동 전환 보장** — 조장 분산 타이머 + pg_cron이 단일 장애점을 제거.
+- **수동 조정:** TF장이 필요시 [활성화] 버튼으로 다른 일정을 수동 활성화 가능. 자동 활성화가 안 됐어도 수동 [활성화]로 언제든 체크인 시작 가능.
+- **미확인 경고 정책:**
+  - **수동 활성화:** 현재 활성 일정에 미확인 인원이 남아있는 상태에서 다른 일정을 활성화하려 하면 '현재 일정에 N명이 미확인 상태예요. 그래도 전환할까요?' 경고 모달로 관리자 확인 요청 (기존 유지).
+  - **자동 활성화:** 미확인 인원이 있어도 **차단하지 않고** 다음 일정을 시작. 관리자에게 '이전 일정 N명 미확인 상태로 {일정} 시작할게요' 알림 토스트만 발송. 누락 방지는 조장 뷰의 미확인 배지 + 카카오워크 공지로 보완.
 
 ---
 
@@ -772,6 +780,7 @@ src/actions/
 | checkin.ts | `deleteCheckin(userId, scheduleId)` | leader, admin | 체크인 취소 DELETE + broadcast |
 | checkin.ts | `syncOfflineCheckins(checkins[])` | leader | RPC `sync_offline_checkins` 호출 |
 | schedule.ts | `activateSchedule(scheduleId)` | admin | RPC `activate_schedule` + broadcast |
+| schedule.ts | `autoActivateSchedule(scheduleId)` | leader, admin | RPC `auto_activate_due_schedule` (시각·상태 서버 원자 검증). 조장 분산 타이머가 호출. 실제 활성화 시에만 broadcast |
 | schedule.ts | `createSchedule(title, location, dayNumber, scheduledTime?)` | admin | 즉흥 일정 INSERT |
 | schedule.ts | `updateScheduleTime(scheduleId, scheduledTime)` | admin | 예정 시각 변경 + broadcast |
 | report.ts | `submitReport(groupId, scheduleId, pendingCount)` | leader | group_reports UPSERT + broadcast |

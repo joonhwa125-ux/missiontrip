@@ -292,6 +292,39 @@ BEGIN
 END;
 $$;
 
+-- 자동 활성화 RPC — 시각 · 상태를 원자적으로 검증한 뒤에만 활성화.
+-- 조장/관리자 누구든 호출 가능하되 서버 시계 기준으로만 실제 반영되므로
+-- 클라이언트 시각 조작 · 경쟁 조건에서도 안전하다.
+-- 반환값: true=실제 활성화 수행, false=조건 미충족(no-op).
+CREATE OR REPLACE FUNCTION auto_activate_due_schedule(target_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  rows_affected int := 0;
+BEGIN
+  -- 다른 활성 일정 비활성화 (activated_at 보존)
+  UPDATE schedules
+  SET is_active = false,
+      activated_at = COALESCE(activated_at, now())
+  WHERE is_active = true AND id <> target_id;
+
+  -- target 활성화: 대기 상태 + 시각 도래 시에만
+  UPDATE schedules
+  SET is_active = true,
+      activated_at = now()
+  WHERE id = target_id
+    AND is_active = false
+    AND activated_at IS NULL
+    AND scheduled_time IS NOT NULL
+    AND scheduled_time <= now();
+
+  GET DIAGNOSTICS rows_affected = ROW_COUNT;
+  RETURN rows_affected > 0;
+END;
+$$;
+
 -- 오프라인 체크인 일괄 동기화 (불참 사유 + 그룹 스냅샷 지원)
 CREATE OR REPLACE FUNCTION sync_offline_checkins(checkins jsonb)
 RETURNS int
@@ -374,3 +407,40 @@ CREATE INDEX IF NOT EXISTS idx_checkins_group_id_at_checkin
 -- ===== 6. Realtime 활성화 =====
 -- Supabase Dashboard → Database → Replication 에서
 -- check_ins, group_reports, schedules 테이블 활성화 필요
+
+-- ===== 7. 자동 활성화 pg_cron 폴백 =====
+-- 클라이언트 분산 타이머(조장 · 관리자 브라우저)가 1차 자동화 수행.
+-- 전원 오프라인인 극단적 상황을 대비한 2차 안전망으로 DB 내부 스케줄러를 둔다.
+-- RPC 내부 원자 검증 + `idx_one_active_schedule` UNIQUE가 클라이언트와의 중복을 차단한다.
+--
+-- pg_cron은 Supabase Dashboard > Database > Extensions 에서 활성화 필요.
+-- 미활성/권한 부족 환경에서는 아래 DO 블록이 NOTICE와 함께 스킵되며,
+-- 1차 클라이언트 타이머만으로도 정상 동작한다.
+DO $$
+BEGIN
+  CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+  -- 기존 작업이 있으면 제거 후 재등록 (멱등)
+  IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'auto_activate_schedule') THEN
+    PERFORM cron.unschedule('auto_activate_schedule');
+  END IF;
+
+  PERFORM cron.schedule(
+    'auto_activate_schedule',
+    '* * * * *',  -- 1분 간격
+    $inner$
+    SELECT auto_activate_due_schedule(id)
+    FROM schedules
+    WHERE is_active = false
+      AND activated_at IS NULL
+      AND scheduled_time IS NOT NULL
+      AND scheduled_time <= now()
+    ORDER BY day_number, sort_order
+    LIMIT 1
+    $inner$
+  );
+EXCEPTION
+  WHEN insufficient_privilege OR undefined_table OR undefined_function THEN
+    RAISE NOTICE 'pg_cron 설정을 스킵합니다 — 클라이언트 타이머만으로 정상 동작';
+END
+$$;

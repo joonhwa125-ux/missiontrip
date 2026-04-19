@@ -45,7 +45,15 @@ export function useAllReportedNotification(
   }, [reportsMap, activeSchedule, members, onToast]);
 }
 
-/** 자동 활성화 타이머 (60초 + visibilitychange) */
+/**
+ * 자동 활성화 타이머 (관리자 전용, 60초 + visibilitychange).
+ *
+ * ## 정책 (Phase A 변경, 2026-04-20)
+ * - 운영 모델 변화("확인된 조는 먼저 이동")에 따라 **미확인 게이트 제거**.
+ * - 이전 활성 일정에 미확인 인원이 남아있어도 다음 일정을 자동 시작하며,
+ *   관리자에게는 알림 토스트만 발송(차단 아님).
+ * - 누락 방지는 조장 뷰의 미확인 배지 + 카카오워크 공지로 보완.
+ */
 export function useAutoActivateTimer(
   allSchedules: Schedule[],
   activeCheckIns: AdminCheckIn[],
@@ -63,12 +71,12 @@ export function useAutoActivateTimer(
         (s) => !s.is_active && !s.activated_at && s.scheduled_time
       );
       const due = waiting.find((s) => new Date(s.scheduled_time!) <= now);
-      if (!due || autoAlertedRef.current.has(due.id)) return;
+      if (!due) return;
       const unchecked = calcUncheckedCount(activeCheckIns, totalMemberCount);
-      if (activeSchedule && unchecked > 0) {
+      // 미확인 인원 남아있는 상태로 다음 일정이 자동 시작될 때 1회 경고 (차단 아님)
+      if (activeSchedule && unchecked > 0 && !autoAlertedRef.current.has(due.id)) {
         autoAlertedRef.current.add(due.id);
-        onToast(`${due.title} 시간이 됐지만 ${unchecked}명이 미확인이에요`);
-        return;
+        onToast(`이전 일정 ${unchecked}명 미확인 상태로 ${due.title} 시작할게요`);
       }
       handleActivate(due);
     };

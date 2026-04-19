@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRealtime } from "@/hooks/useRealtime";
 import { useVisibilityRefresh } from "@/hooks/useVisibilityRefresh";
 import { useToast } from "@/hooks/useToast";
+import { useAutoActivate } from "@/hooks/useAutoActivate";
 import { COPY } from "@/lib/constants";
 import { filterMembersByScope } from "@/lib/utils";
 import { memberMatchesAirlineFilter } from "@/lib/constants";
@@ -152,6 +153,11 @@ export default function GroupView({
 
   // 백그라운드 복귀 시 타겟 fetch (router.refresh() 대신 — 0-flash 방지)
   useVisibilityRefresh(fetchLatestCheckIns);
+
+  // Phase A: 조장 분산 타이머 — 관리자 탭 부재 시에도 일정 시각이 되면
+  //          자동으로 활성화되도록 조장 18명이 분산 수행.
+  //          서버 RPC가 시각·상태를 원자적 검증하므로 중복·조작 안전.
+  useAutoActivate(schedules);
 
   // Phase G 후속 fix: 브리핑 데이터 타겟 fetch — schedule_group_info + schedule_member_info만 조회
   // onMemberUpdated에서 router.refresh보다 먼저 호출되어 클라이언트가 즉시 최신 브리핑을 표시.

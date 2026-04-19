@@ -1,8 +1,8 @@
 "use server";
 
 import { createServiceClient } from "@/lib/supabase/server";
-import { requireAdmin } from "@/lib/auth";
-import { MIN_DAY_NUMBER, MAX_DAY_NUMBER } from "@/lib/constants";
+import { requireAdmin, getCurrentUser } from "@/lib/auth";
+import { MIN_DAY_NUMBER, MAX_DAY_NUMBER, isAdminRole, isLeaderRole } from "@/lib/constants";
 import { revalidateMainPaths } from "./_shared";
 import type { ActionResult, ScheduleScope } from "@/lib/types";
 
@@ -26,6 +26,43 @@ export async function activateSchedule(
 
   revalidateMainPaths();
   return { ok: true };
+}
+
+/**
+ * 자동 활성화 — 조장·관리자 공용.
+ *
+ * ## 안전 모델
+ * - 권한: leader / admin / admin_leader (임시 조장 포함 여부는 영구 role만 허용)
+ * - 서버 시각 검증: RPC `auto_activate_due_schedule` 내부에서 `scheduled_time <= now()`
+ *   원자 체크 → 클라이언트 시각 조작 차단
+ * - 다수 클라이언트 동시 호출 안전: `idx_one_active_schedule` + RPC 트랜잭션
+ *
+ * ## 반환값
+ * - `ok=true, activated=true`: 실제 이 호출이 활성화를 수행함 (broadcast 필요)
+ * - `ok=true, activated=false`: 이미 다른 클라이언트가 처리했거나 조건 미충족 (no-op)
+ * - `ok=false`: 권한 없음 · RPC 오류
+ */
+export async function autoActivateSchedule(
+  scheduleId: string
+): Promise<{ ok: boolean; activated?: boolean; error?: string }> {
+  const user = await getCurrentUser();
+  if (!user) return { ok: false, error: "인증이 필요해요" };
+
+  const canActivate = isAdminRole(user.role) || isLeaderRole(user.role);
+  if (!canActivate) return { ok: false, error: "권한이 없어요" };
+
+  const supabase = createServiceClient();
+  const { data, error } = await supabase.rpc("auto_activate_due_schedule", {
+    target_id: scheduleId,
+  });
+
+  if (error) {
+    return { ok: false, error: "자동 활성화 중 오류가 발생했어요" };
+  }
+
+  const activated = data === true;
+  if (activated) revalidateMainPaths();
+  return { ok: true, activated };
 }
 
 // 일정 종료 (단일 UPDATE — activate와 달리 two-step 트랜잭션 불필요)
