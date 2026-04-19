@@ -168,12 +168,13 @@ export default function CurrentDataView({
                 <th className="min-w-[40px] px-2 py-2">구분</th>
                 <th className="min-w-[40px] px-2 py-2">셔틀</th>
                 <th className="min-w-[80px] px-2 py-2">항공사 필터</th>
+                <th className="min-w-[120px] px-2 py-2">공지</th>
                 <th className="min-w-[92px] px-2 py-2">편집</th>
               </tr>
             </thead>
             <tbody>
               {schedules.length === 0 && (
-                <tr><td colSpan={9} className="py-8 text-center text-sm text-muted-foreground">등록된 일정이 없어요</td></tr>
+                <tr><td colSpan={10} className="py-8 text-center text-sm text-muted-foreground">등록된 일정이 없어요</td></tr>
               )}
               {schedules.map((s) => (
                 <tr key={s.id} className="border-t border-gray-100">
@@ -185,6 +186,7 @@ export default function CurrentDataView({
                   <td className="px-2 py-2 text-center text-xs">{SCOPE_LABEL[s.scope]}</td>
                   <td className="px-2 py-2 text-center text-xs">{s.shuttle_type === "departure" ? "출발" : s.shuttle_type === "return" ? "귀가" : "-"}</td>
                   <td className="px-2 py-2 text-center text-xs">{s.airline_filter ?? "-"}</td>
+                  <td className="px-2 py-2 text-xs text-muted-foreground truncate max-w-[200px]">{s.notice ?? "-"}</td>
                   <td className="px-2 py-2">
                     <div className="flex justify-center gap-1 whitespace-nowrap">
                       <button onClick={() => setEditSchedule(s)} className="min-h-11 rounded-lg bg-gray-100 px-2 text-xs font-medium" aria-label={`${s.title} 수정`}>수정</button>

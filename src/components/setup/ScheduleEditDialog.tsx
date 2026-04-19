@@ -23,6 +23,7 @@ interface Props {
     shuttle_type: ShuttleType | null;
     airline_leg: AirlineLeg | null;
     airline_filter: string | null;
+    notice: string | null;
   }) => void;
   onClose: () => void;
 }
@@ -60,6 +61,7 @@ export default function ScheduleEditDialog({ schedule, onSave, onClose }: Props)
     shuttle_type: schedule.shuttle_type,
     airline_leg: schedule.airline_leg,
     airline_filter: schedule.airline_filter ?? "",
+    notice: schedule.notice ?? "",
   });
 
   const set = useCallback(
@@ -80,6 +82,7 @@ export default function ScheduleEditDialog({ schedule, onSave, onClose }: Props)
       shuttle_type: form.shuttle_type,
       airline_leg: form.airline_leg,
       airline_filter: form.airline_filter.trim() || null,
+      notice: form.notice.trim() || null,
     });
   };
 
@@ -202,6 +205,20 @@ export default function ScheduleEditDialog({ schedule, onSave, onClose }: Props)
             />
             <p className="mt-1 text-[0.6875rem] text-muted-foreground">
               입력한 키워드를 포함한 탑승자가 조에 없으면 해당 조장 화면에서 이 일정이 숨겨져요
+            </p>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">공지</label>
+            <textarea
+              value={form.notice}
+              onChange={(e) => set("notice", e.target.value)}
+              placeholder="예: 수하물 찾으면 조 단위로 가이드 만남 / 버스에서 방장이 카드키·조식쿠폰 수령"
+              rows={3}
+              className={INPUT_CLASS}
+              aria-label="공지"
+            />
+            <p className="mt-1 text-[0.6875rem] text-muted-foreground">
+              일정별 공통 안내. 모든 조장에게 동일하게 브리핑 시트에 노출돼요
             </p>
           </div>
           <DialogFooter className="pt-2">

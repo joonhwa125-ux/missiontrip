@@ -160,7 +160,13 @@ export default function BriefingSheet({
           }))
           .sort((a, b) => a.name.localeCompare(b.name, "ko")),
       }))
-      .filter((block) => block.groupInfo !== null || block.memberInfos.length > 0);
+      // 공지·조안내·개인안내 중 하나라도 있으면 블록 유지
+      .filter(
+        (block) =>
+          !!block.schedule.notice ||
+          block.groupInfo !== null ||
+          block.memberInfos.length > 0
+      );
   }, [briefing, selectedDay]);
 
   const hasTripRoles = tripRoles.length > 0;
@@ -278,6 +284,18 @@ export default function BriefingSheet({
                         </span>
                       )}
                     </header>
+
+                    {/* 일정별 공지 — 모든 조에 공통 (있을 때만 렌더) */}
+                    {block.schedule.notice && (
+                      <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                        <p className="mb-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-amber-800">
+                          공지
+                        </p>
+                        <p className="whitespace-pre-wrap text-xs leading-relaxed text-amber-900">
+                          {block.schedule.notice}
+                        </p>
+                      </div>
+                    )}
 
                     {/* 조 단위 정보 — 멤버 정보와 동일한 bg-stone-50 컨테이너 패턴 */}
                     {block.groupInfo && (

@@ -53,7 +53,7 @@ export default async function GroupPage() {
   // Phase J: active schedule을 먼저 조회 — effective group 결정에 필요
   const { data: activeSchedule } = await supabase
     .from("schedules")
-    .select("id, title, location, day_number, sort_order, scheduled_time, scope, is_active, shuttle_type, airline_leg, airline_filter, activated_at, created_at")
+    .select("id, title, location, day_number, sort_order, scheduled_time, scope, is_active, shuttle_type, airline_leg, airline_filter, notice, activated_at, created_at")
     .eq("is_active", true)
     .maybeSingle();
 
@@ -92,7 +92,7 @@ export default async function GroupPage() {
       .order("name"),
     supabase
       .from("schedules")
-      .select("id, title, location, day_number, sort_order, scheduled_time, scope, is_active, shuttle_type, airline_leg, airline_filter, activated_at, created_at")
+      .select("id, title, location, day_number, sort_order, scheduled_time, scope, is_active, shuttle_type, airline_leg, airline_filter, notice, activated_at, created_at")
       .order("day_number")
       .order("sort_order"),
     supabase.from("groups").select("id, name, bus_name").order("name"),
@@ -260,13 +260,13 @@ export default async function GroupPage() {
     if (relevantUserIds.has(m.id)) userNameMap[m.id] = m.name;
   }
 
-  // 브리핑에 등장하는 일정 — sgi/smi 레코드가 있는 일정 + airline_leg가 있는 비행 일정
-  //  (비행 일정은 sgi/smi 없어도 항공사 섹션 트리거를 위해 포함해야 함)
+  // 브리핑에 등장하는 일정 — sgi/smi 레코드 있는 일정 + airline_leg 있는 비행 일정 + notice(공지) 있는 일정
+  //  (비행·공지 있는 일정은 sgi/smi 없어도 섹션 렌더 트리거)
   const briefingScheduleIds = new Set<string>();
   for (const s of (sgiRows ?? []) as ScheduleGroupInfo[]) briefingScheduleIds.add(s.schedule_id);
   for (const s of smiRows) briefingScheduleIds.add(s.schedule_id);
   for (const s of (schedules ?? []) as Schedule[]) {
-    if (s.airline_leg) briefingScheduleIds.add(s.id);
+    if (s.airline_leg || s.notice) briefingScheduleIds.add(s.id);
   }
   const scheduleSummaries = ((schedules ?? []) as Schedule[])
     .filter((s) => briefingScheduleIds.has(s.id))
@@ -278,6 +278,7 @@ export default async function GroupPage() {
       sort_order: s.sort_order,
       scheduled_time: s.scheduled_time,
       airline_leg: s.airline_leg,
+      notice: s.notice,
     }))
     .sort((a, b) => a.day_number - b.day_number || a.sort_order - b.sort_order);
 

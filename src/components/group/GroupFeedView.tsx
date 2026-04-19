@@ -81,6 +81,10 @@ export default function GroupFeedView({
   //  - trip_role: 1일차에만 카운트 (BriefingSheet 규칙과 동일)
   //  - 항공사: 해당 일차에 airline_leg=outbound/return 일정 있을 때만 카운트
   //  - 특이사항: 해당 일차에 속한 sgi/smi만
+  // 배너 카운트 — 인원 수가 아닌 "항목 종류" 수로 집계
+  //   roleCount: 해당 일차에 (여행역할/가는편 항공사/오는편 항공사) 각 섹션 유무로 0~3
+  //   specialCount: 일정 × 안내 카테고리별 1건씩
+  //                 (예: 치유의숲 활동 배정 193명 → 1건, 더클리프 메뉴 203명 → 1건)
   const { roleCount, specialCount } = useMemo(() => {
     if (!cachedBriefing) return { roleCount: 0, specialCount: 0 };
 
@@ -91,36 +95,47 @@ export default function GroupFeedView({
     const hasOutbound = daySchedulesInBriefing.some((s) => s.airline_leg === "outbound");
     const hasReturn = daySchedulesInBriefing.some((s) => s.airline_leg === "return");
 
-    const tripRoles = selectedDay === 1
-      ? cachedBriefing.roleAssignments.filter((r) => r.trip_role).length
-      : 0;
-    const outboundAirlines = hasOutbound
-      ? new Set(
-          cachedBriefing.roleAssignments
-            .filter((r) => r.airline)
-            .map((r) => r.airline)
-        ).size
-      : 0;
-    const returnAirlines = hasReturn
-      ? new Set(
-          cachedBriefing.roleAssignments
-            .filter((r) => r.return_airline)
-            .map((r) => r.return_airline)
-        ).size
-      : 0;
-    const rc = tripRoles + outboundAirlines + returnAirlines;
+    // roleCount — 섹션 단위 (1일차 여행역할 / 가는편 / 오는편) 최대 3건
+    const tripRolesSection =
+      selectedDay === 1 && cachedBriefing.roleAssignments.some((r) => r.trip_role)
+        ? 1
+        : 0;
+    const outboundSection =
+      hasOutbound && cachedBriefing.roleAssignments.some((r) => r.airline) ? 1 : 0;
+    const returnSection =
+      hasReturn && cachedBriefing.roleAssignments.some((r) => r.return_airline) ? 1 : 0;
+    const rc = tripRolesSection + outboundSection + returnSection;
 
-    const sgSpecials = cachedBriefing.groupInfos.filter(
-      (g) =>
-        dayScheduleIds.has(g.schedule_id) &&
-        !!(g.group_location || g.note)
-    ).length;
-    const smSpecials = cachedBriefing.memberInfos.filter(
-      (m) =>
-        dayScheduleIds.has(m.schedule_id) &&
-        !!(m.note || m.excused_reason || m.activity || m.menu || m.temp_role || m.temp_group_id)
-    ).length;
-    return { roleCount: rc, specialCount: sgSpecials + smSpecials };
+    // specialCount — 일정 × 안내 카테고리별 1건씩
+    //   · 공지(notice): 일정별 1건
+    //   · 조 안내(group_info): 일정 × 카테고리(group_location/note)별 1건
+    //   · 개인 안내(member_info): 일정 × 카테고리(미참여/조이동/임시역할/활동/메뉴/메모)별 1건
+    const specialKeys = new Set<string>();
+
+    // 공지
+    for (const s of daySchedulesInBriefing) {
+      if (s.notice) specialKeys.add(`${s.schedule_id}:notice`);
+    }
+
+    // 조 안내
+    for (const g of cachedBriefing.groupInfos) {
+      if (!dayScheduleIds.has(g.schedule_id)) continue;
+      if (g.group_location) specialKeys.add(`${g.schedule_id}:group_location`);
+      if (g.note) specialKeys.add(`${g.schedule_id}:group_note`);
+    }
+
+    // 개인 안내
+    for (const m of cachedBriefing.memberInfos) {
+      if (!dayScheduleIds.has(m.schedule_id)) continue;
+      if (m.excused_reason) specialKeys.add(`${m.schedule_id}:미참여`);
+      if (m.temp_group_id) specialKeys.add(`${m.schedule_id}:조이동`);
+      if (m.temp_role) specialKeys.add(`${m.schedule_id}:임시역할`);
+      if (m.activity) specialKeys.add(`${m.schedule_id}:활동`);
+      if (m.menu) specialKeys.add(`${m.schedule_id}:메뉴`);
+      if (m.note) specialKeys.add(`${m.schedule_id}:메모`);
+    }
+
+    return { roleCount: rc, specialCount: specialKeys.size };
   }, [cachedBriefing, selectedDay]);
 
   return (

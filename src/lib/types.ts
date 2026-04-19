@@ -86,6 +86,8 @@ export interface Schedule {
   airline_leg: AirlineLeg | null;
   /** 비행편 필터 키워드 (예: 티웨이, 제주항공). 조원 중 매칭자 0명이면 조장 화면에서 일정 숨김. null이면 필터 적용 안 함. */
   airline_filter: string | null;
+  /** 일정별 공통 안내 (예: "수하물 찾으면 조 단위로 가이드 만남"). 조장 브리핑 시트에 일정 섹션 헤더 아래 표시. null이면 렌더 안 함. */
+  notice: string | null;
   activated_at: string | null;
   created_at: string;
 }
@@ -251,7 +253,8 @@ export interface BriefingData {
   /** 내 조원(이동IN 포함) 기준 schedule_member_info 레코드 */
   memberInfos: ScheduleMemberInfo[];
   /** 브리핑 렌더링 시 일정 정보 조회용 맵 — 서버에서 조립.
-   *  `airline_leg`가 null이 아닌 일정은 해당 일차에 항공사 섹션 트리거 */
+   *  `airline_leg`가 null이 아닌 일정은 해당 일차에 항공사 섹션 트리거
+   *  `notice`가 null이 아닌 일정은 해당 섹션에 공지 블록 렌더 */
   scheduleSummaries: Array<{
     schedule_id: string;
     title: string;
@@ -260,6 +263,7 @@ export interface BriefingData {
     sort_order: number;
     scheduled_time: string | null;
     airline_leg: AirlineLeg | null;
+    notice: string | null;
   }>;
   /** user_id → name 매핑 (member_info 렌더 시 필요) */
   userNameMap: Record<string, string>;
@@ -329,6 +333,7 @@ export interface ParsedSchedule {
   shuttle_type: ShuttleType | null;
   airline_leg: AirlineLeg | null;
   airline_filter: string | null;
+  notice: string | null;
 }
 
 /** v2: 일정×조 파싱 레코드 — Google Sheets "조 브리핑" 시트 */

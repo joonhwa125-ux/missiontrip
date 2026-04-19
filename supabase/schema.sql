@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS schedules (
   shuttle_type    text,                               -- 셔틀 타입 (departure | return | null)
   airline_leg     text        CHECK (airline_leg IN ('outbound', 'return')),  -- 항공 구간 (outbound | return | null)
   airline_filter  text,                               -- 비행편 필터 키워드 (예: 티웨이, 제주항공). users.airline 부분 매칭
+  notice          text,                               -- 일정별 공통 안내 (조장 브리핑 시트에 표시). 모든 조장에게 동일 노출
   created_at      timestamptz DEFAULT now(),
   CONSTRAINT unique_schedule_position UNIQUE (day_number, sort_order)
 );
