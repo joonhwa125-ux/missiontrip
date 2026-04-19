@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +10,10 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { formatTime } from "@/lib/utils";
+import {
+  BRIEFING_SEPARATOR,
+  getGroupColor,
+} from "@/lib/constants";
 import type {
   BriefingData,
   ScheduleGroupInfo,
@@ -54,7 +59,7 @@ function isGroupInfoEmpty(info: ScheduleGroupInfo): boolean {
   return !info.group_location && !info.note;
 }
 
-/** label은 plain 텍스트, value만 배지로 노출 (항목명-값 시각 계층 분리) */
+/** 라벨 chip — 개인 특이사항(미참여/조이동/임시역할)에 재사용 */
 function Chip({ label, value, tone = "neutral" }: { label: string; value: string; tone?: "neutral" | "warn" | "info" }) {
   const tones = {
     neutral: "bg-stone-100 text-stone-700",
@@ -66,6 +71,17 @@ function Chip({ label, value, tone = "neutral" }: { label: string; value: string
       <span className="text-stone-500">{label}</span>
       <span className={`rounded-full px-2 py-0.5 font-medium ${tones[tone]}`}>{value}</span>
     </span>
+  );
+}
+
+/** 그룹 컬러 닷 — 색상+텍스트 이중 표기로 KWCAG 1.3.3 준수 */
+function ColorDot({ groupName }: { groupName: string }) {
+  const color = getGroupColor(groupName);
+  return (
+    <span
+      className={`inline-block h-2 w-2 flex-shrink-0 rounded-full ${color.dot}`}
+      aria-hidden="true"
+    />
   );
 }
 
@@ -84,6 +100,315 @@ function groupByAirline(
     map.set(e.airline, arr);
   }
   return map;
+}
+
+/**
+ * 항공사 섹션 — 전원 동일이면 한 줄 압축, 분기면 그룹별 이름 + 컬러 닷.
+ */
+function AirlineSection({
+  labelId,
+  title,
+  groups,
+}: {
+  labelId: string;
+  title: string;
+  groups: Map<string, string[]>;
+}) {
+  const entries = Array.from(groups.entries());
+  if (entries.length === 0) return null;
+
+  const totalCount = entries.reduce((sum, [, names]) => sum + names.length, 0);
+  const isAllSame = entries.length === 1;
+
+  return (
+    <section aria-labelledby={labelId}>
+      <h3 id={labelId} className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
+        {title}
+      </h3>
+      {isAllSame ? (
+        <div className="flex items-center gap-2 rounded-lg bg-sky-50 px-3 py-2">
+          <ColorDot groupName={entries[0][0]} />
+          <p className="text-xs text-sky-900">
+            <span className="font-semibold">전원 {entries[0][0]}</span>
+            <span className="ml-1 text-sky-700">· {totalCount}명</span>
+          </p>
+        </div>
+      ) : (
+        <ul className="space-y-1.5">
+          {entries.map(([airline, names]) => (
+            <li key={airline} className="rounded-lg bg-sky-50 px-3 py-2">
+              <div className="mb-0.5 flex items-center gap-2">
+                <ColorDot groupName={airline} />
+                <span className="text-sm font-semibold text-sky-900">{airline}</span>
+                <span className="text-xs text-sky-700">
+                  · {names.length}/{totalCount}명
+                </span>
+              </div>
+              <p className="pl-4 text-xs text-stone-700">
+                {names.join(BRIEFING_SEPARATOR)}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/**
+ * 활동 배정 축 전환 렌더 — 같은 활동 멤버를 한 그룹으로 묶어 노출.
+ * 활동 값 내 "(조장)" 접미는 해당 프로그램 조의 조장으로 별도 강조(⭐).
+ */
+function ActivitySection({
+  infos,
+  userNameMap,
+}: {
+  infos: ScheduleMemberInfo[];
+  userNameMap: BriefingData["userNameMap"];
+}) {
+  const groups = useMemo(() => {
+    const map = new Map<string, Array<{ id: string; name: string; isActivityLeader: boolean }>>();
+    for (const info of infos) {
+      if (!info.activity) continue;
+      // "숲체험 6조 (조장)" → activityName="숲체험 6조", isActivityLeader=true
+      const leaderMatch = /\s*\((조장|조장\s*지원|.+\s*지원)\)\s*$/.exec(info.activity);
+      const activityName = leaderMatch
+        ? info.activity.slice(0, leaderMatch.index).trim()
+        : info.activity.trim();
+      const isActivityLeader = !!leaderMatch && leaderMatch[1] === "조장";
+      const arr = map.get(activityName) ?? [];
+      arr.push({
+        id: info.id,
+        name: userNameMap[info.user_id] ?? "참가자",
+        isActivityLeader,
+      });
+      map.set(activityName, arr);
+    }
+    // 활동명 내부에서 조장 먼저, 그 외 가나다
+    map.forEach((arr) => {
+      arr.sort((a, b) => {
+        if (a.isActivityLeader && !b.isActivityLeader) return -1;
+        if (!a.isActivityLeader && b.isActivityLeader) return 1;
+        return a.name.localeCompare(b.name, "ko");
+      });
+    });
+    return map;
+  }, [infos, userNameMap]);
+
+  const entries = Array.from(groups.entries());
+  if (entries.length === 0) return null;
+  const totalCount = entries.reduce((sum, [, arr]) => sum + arr.length, 0);
+
+  return (
+    <div className="mb-2">
+      <p className="mb-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-stone-500">
+        활동 배정 · {totalCount}명
+      </p>
+      <ul className="space-y-1.5">
+        {entries.map(([activity, members]) => {
+          const color = getGroupColor(activity);
+          if (members.length === 1) {
+            // 단일 멤버 — 한 줄 압축
+            const m = members[0];
+            return (
+              <li key={activity} className={`flex items-center gap-2 rounded-lg ${color.tint} px-3 py-1.5`}>
+                <ColorDot groupName={activity} />
+                <span className={`text-xs font-medium ${color.label}`}>{activity}</span>
+                <span className="text-xs text-stone-500">·</span>
+                <span className="text-xs text-stone-800">
+                  {m.isActivityLeader && (
+                    <>
+                      <span aria-hidden="true">⭐ </span>
+                      <span className="sr-only">활동 조장 </span>
+                    </>
+                  )}
+                  {m.name}
+                </span>
+              </li>
+            );
+          }
+          return (
+            <li key={activity} className={`rounded-lg ${color.tint} px-3 py-2`}>
+              <div className="mb-0.5 flex items-center gap-2">
+                <ColorDot groupName={activity} />
+                <span className={`text-xs font-semibold ${color.label}`}>{activity}</span>
+                <span className="text-xs text-stone-600">· {members.length}명</span>
+              </div>
+              <p className="pl-4 text-xs text-stone-700">
+                {members.map((m, i) => (
+                  <span key={m.id}>
+                    {i > 0 && BRIEFING_SEPARATOR}
+                    {m.isActivityLeader && (
+                      <>
+                        <span aria-hidden="true">⭐ </span>
+                        <span className="sr-only">활동 조장 </span>
+                      </>
+                    )}
+                    {m.name}
+                  </span>
+                ))}
+              </p>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * 메뉴 섹션 — 메인·음료 총량 + 조원별 배정(기본 접힘).
+ * menu 필드는 자유 텍스트이나 build 스크립트가 " · " 구분자로 결합하므로 split 휴리스틱 사용.
+ */
+function MenuSection({
+  infos,
+  userNameMap,
+}: {
+  infos: ScheduleMemberInfo[];
+  userNameMap: BriefingData["userNameMap"];
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  const { perPerson, mainCount, drinkCount } = useMemo(() => {
+    const perPerson: Array<{ id: string; name: string; main: string; drink: string }> = [];
+    const mainCount = new Map<string, number>();
+    const drinkCount = new Map<string, number>();
+
+    for (const info of infos) {
+      if (!info.menu) continue;
+      const parts = info.menu
+        .split(BRIEFING_SEPARATOR)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const main = parts[0] ?? "";
+      const drink = parts[1] ?? "";
+      perPerson.push({
+        id: info.id,
+        name: userNameMap[info.user_id] ?? "참가자",
+        main,
+        drink,
+      });
+      if (main) mainCount.set(main, (mainCount.get(main) ?? 0) + 1);
+      if (drink) drinkCount.set(drink, (drinkCount.get(drink) ?? 0) + 1);
+    }
+
+    perPerson.sort((a, b) => a.name.localeCompare(b.name, "ko"));
+    return { perPerson, mainCount, drinkCount };
+  }, [infos, userNameMap]);
+
+  if (perPerson.length === 0) return null;
+
+  const renderCountList = (map: Map<string, number>) =>
+    Array.from(map.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([name, n]) => (
+        <li key={name} className="flex items-center justify-between gap-2 text-xs">
+          <span className="text-stone-800">{name}</span>
+          <span className="text-stone-500">· {n}명</span>
+        </li>
+      ));
+
+  return (
+    <div className="mb-2">
+      <p className="mb-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-stone-500">
+        메뉴 배정 · {perPerson.length}명
+      </p>
+      <div className="space-y-1.5">
+        {mainCount.size > 0 && (
+          <div className="rounded-lg bg-stone-50 px-3 py-2">
+            <p className="mb-1 text-[0.6875rem] font-medium text-stone-500">메인</p>
+            <ul className="space-y-0.5">{renderCountList(mainCount)}</ul>
+          </div>
+        )}
+        {drinkCount.size > 0 && (
+          <div className="rounded-lg bg-stone-50 px-3 py-2">
+            <p className="mb-1 text-[0.6875rem] font-medium text-stone-500">음료</p>
+            <ul className="space-y-0.5">{renderCountList(drinkCount)}</ul>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          className="flex min-h-11 w-full items-center justify-between gap-2 rounded-lg bg-stone-50 px-3 py-2 text-xs font-medium text-stone-700 outline-none focus-visible:ring-2 focus-visible:ring-stone-400"
+        >
+          <span>조원별 배정 ({perPerson.length}명)</span>
+          <ChevronDown
+            className={`h-4 w-4 flex-shrink-0 transition-transform duration-200 ${
+              expanded ? "rotate-180" : ""
+            }`}
+            aria-hidden="true"
+          />
+        </button>
+        {expanded && (
+          <ul className="space-y-0.5 rounded-lg bg-stone-50 px-3 py-2">
+            {perPerson.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-baseline gap-1 text-xs">
+                <span className="font-medium text-stone-900">{p.name}</span>
+                <span className="text-stone-500">·</span>
+                <span className="text-stone-700">
+                  {[p.main, p.drink].filter(Boolean).join(" / ")}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 개인 특이사항 (미참여·조이동·임시역할·메모) — 개인 단위 유지.
+ * 수가 적고 예외적이라 축 전환보다 개인 매핑이 명확.
+ */
+function SpecialInfoList({
+  infos,
+  userNameMap,
+  groupNameMap,
+}: {
+  infos: ScheduleMemberInfo[];
+  userNameMap: BriefingData["userNameMap"];
+  groupNameMap: BriefingData["groupNameMap"];
+}) {
+  const sorted = useMemo(
+    () =>
+      [...infos]
+        .map((info) => ({ info, name: userNameMap[info.user_id] ?? "참가자" }))
+        .sort((a, b) => a.name.localeCompare(b.name, "ko")),
+    [infos, userNameMap]
+  );
+  if (sorted.length === 0) return null;
+  return (
+    <div className="mb-2">
+      <p className="mb-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-stone-500">
+        개인 특이사항
+      </p>
+      <ul className="space-y-1.5">
+        {sorted.map(({ info, name }) => (
+          <li key={info.id} className="rounded-lg bg-stone-50 px-3 py-2">
+            <div className="mb-1 flex flex-wrap items-center gap-1.5">
+              <span className="text-sm font-medium text-stone-900">{name}</span>
+              {info.excused_reason && (
+                <Chip label="미참여" value={info.excused_reason} />
+              )}
+              {info.temp_group_id && (
+                <Chip
+                  label="조이동"
+                  value={groupNameMap[info.temp_group_id] ?? "다른 조"}
+                  tone="warn"
+                />
+              )}
+              {info.temp_role === "leader" && (
+                <Chip label="임시역할" value="조장" tone="warn" />
+              )}
+            </div>
+            {info.note && <p className="text-xs text-stone-600">{info.note}</p>}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 export default function BriefingSheet({
@@ -191,7 +516,8 @@ export default function BriefingSheet({
           </DialogHeader>
         </div>
 
-        <div className="flex-1 space-y-6 overflow-y-auto px-5 pb-4 pt-1 text-sm">
+        {/* 스크롤 컨테이너: overflow-y-auto + overscroll-behavior-contain — 모바일 드래그 제스처 충돌 방지 */}
+        <div className="flex-1 space-y-6 overflow-y-auto overscroll-contain px-5 pb-4 pt-1 text-sm">
           {!hasAnyContent && (
             <p className="py-10 text-center text-sm text-muted-foreground">
               이 일차에 등록된 브리핑 항목이 없어요
@@ -222,44 +548,22 @@ export default function BriefingSheet({
             </section>
           )}
 
-          {/* 2. 가는편 항공사 (해당 일차에 outbound 일정 있을 때) */}
+          {/* 2. 가는편 항공사 — 전원 동일 압축 or 그룹별 이름 */}
           {hasOutboundAirlines && (
-            <section aria-labelledby="briefing-outbound">
-              <h3 id="briefing-outbound" className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
-                가는편 항공사
-              </h3>
-              <ul className="space-y-1.5">
-                {Array.from(outboundAirlineGroups.entries()).map(([airline, names]) => (
-                  <li key={airline} className="rounded-lg bg-sky-50 px-3 py-2">
-                    <div className="mb-0.5 flex items-baseline gap-2">
-                      <span className="text-sm font-semibold text-sky-900">{airline}</span>
-                      <span className="text-xs text-sky-700">{names.length}명</span>
-                    </div>
-                    <p className="text-xs text-stone-700">{names.join(", ")}</p>
-                  </li>
-                ))}
-              </ul>
-            </section>
+            <AirlineSection
+              labelId="briefing-outbound"
+              title="가는편 항공사"
+              groups={outboundAirlineGroups}
+            />
           )}
 
-          {/* 3. 오는편 항공사 (해당 일차에 return 일정 있을 때) */}
+          {/* 3. 오는편 항공사 — 동일 패턴 */}
           {hasReturnAirlines && (
-            <section aria-labelledby="briefing-return">
-              <h3 id="briefing-return" className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
-                오는편 항공사
-              </h3>
-              <ul className="space-y-1.5">
-                {Array.from(returnAirlineGroups.entries()).map(([airline, names]) => (
-                  <li key={airline} className="rounded-lg bg-sky-50 px-3 py-2">
-                    <div className="mb-0.5 flex items-baseline gap-2">
-                      <span className="text-sm font-semibold text-sky-900">{airline}</span>
-                      <span className="text-xs text-sky-700">{names.length}명</span>
-                    </div>
-                    <p className="text-xs text-stone-700">{names.join(", ")}</p>
-                  </li>
-                ))}
-              </ul>
-            </section>
+            <AirlineSection
+              labelId="briefing-return"
+              title="오는편 항공사"
+              groups={returnAirlineGroups}
+            />
           )}
 
           {/* 4. 일정별 상세 (선택 일차의 일정만) */}
@@ -269,87 +573,96 @@ export default function BriefingSheet({
                 일정별 안내
               </h3>
               <div className="space-y-3">
-                {scheduleBlocks.map((block) => (
-                  <article
-                    key={block.schedule.schedule_id}
-                    className="rounded-xl border border-stone-200 bg-white p-3"
-                  >
-                    <header className="mb-2 flex items-baseline justify-between gap-2">
-                      <h4 className="text-sm font-semibold text-stone-900">
-                        {block.schedule.title}
-                      </h4>
-                      {block.schedule.scheduled_time && (
-                        <span className="flex-shrink-0 text-xs text-stone-500">
-                          {formatTime(block.schedule.scheduled_time)}
-                        </span>
-                      )}
-                    </header>
+                {scheduleBlocks.map((block) => {
+                  const activityInfos = block.memberInfos
+                    .map((m) => m.info)
+                    .filter((info) => !!info.activity);
+                  const menuInfos = block.memberInfos
+                    .map((m) => m.info)
+                    .filter((info) => !!info.menu);
+                  // 개인 특이사항: 활동·메뉴 외 필드가 하나라도 있는 info
+                  const specialInfos = block.memberInfos
+                    .map((m) => m.info)
+                    .filter(
+                      (info) =>
+                        !!info.excused_reason ||
+                        !!info.temp_group_id ||
+                        info.temp_role === "leader" ||
+                        !!info.note
+                    );
 
-                    {/* 일정별 공지 — 모든 조에 공통 (있을 때만 렌더) */}
-                    {block.schedule.notice && (
-                      <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-                        <p className="mb-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-amber-800">
-                          공지
-                        </p>
-                        <p className="whitespace-pre-wrap text-xs leading-relaxed text-amber-900">
-                          {block.schedule.notice}
-                        </p>
-                      </div>
-                    )}
+                  return (
+                    <article
+                      key={block.schedule.schedule_id}
+                      className="rounded-xl border border-stone-200 bg-white"
+                    >
+                      {/* Sticky 헤더 — 스크롤 중 일정명 항상 가시 (iOS UITableView 패턴) */}
+                      <header className="sticky top-0 z-10 flex items-baseline justify-between gap-2 rounded-t-xl border-b border-stone-100 bg-white/95 px-3 py-2 backdrop-blur-sm">
+                        <h4 className="text-sm font-semibold text-stone-900">
+                          {block.schedule.title}
+                        </h4>
+                        {block.schedule.scheduled_time && (
+                          <span className="flex-shrink-0 text-xs text-stone-500">
+                            {formatTime(block.schedule.scheduled_time)}
+                          </span>
+                        )}
+                      </header>
 
-                    {/* 조 단위 정보 — 멤버 정보와 동일한 bg-stone-50 컨테이너 패턴 */}
-                    {block.groupInfo && (
-                      <div className="mb-2 space-y-1.5 rounded-lg bg-stone-50 px-3 py-2">
-                        {block.groupInfo.group_location && (
-                          <div className="flex flex-wrap gap-1">
-                            <Chip label="조 위치" value={block.groupInfo.group_location} tone="info" />
+                      <div className="p-3">
+                        {/* 일정별 공지 — 모든 조에 공통 */}
+                        {block.schedule.notice && (
+                          <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                            <p className="mb-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-amber-800">
+                              공지
+                            </p>
+                            <p className="whitespace-pre-wrap text-xs leading-relaxed text-amber-900">
+                              {block.schedule.notice}
+                            </p>
                           </div>
                         )}
-                        {block.groupInfo.note && (
-                          <p className="text-xs text-stone-600">{block.groupInfo.note}</p>
+
+                        {/* 조 단위 정보 */}
+                        {block.groupInfo && (
+                          <div className="mb-2 space-y-1.5 rounded-lg bg-stone-50 px-3 py-2">
+                            {block.groupInfo.group_location && (
+                              <div className="flex flex-wrap gap-1">
+                                <Chip label="조 위치" value={block.groupInfo.group_location} tone="info" />
+                              </div>
+                            )}
+                            {block.groupInfo.note && (
+                              <p className="text-xs text-stone-600">{block.groupInfo.note}</p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* 활동 배정 — Group-by-Activity 축 전환 */}
+                        {activityInfos.length > 0 && (
+                          <ActivitySection
+                            infos={activityInfos}
+                            userNameMap={briefing.userNameMap}
+                          />
+                        )}
+
+                        {/* 메뉴 배정 — 총량 요약 + 조원별 (기본 접힘) */}
+                        {menuInfos.length > 0 && (
+                          <MenuSection
+                            infos={menuInfos}
+                            userNameMap={briefing.userNameMap}
+                          />
+                        )}
+
+                        {/* 개인 특이사항 — 미참여·조이동·임시역할·메모 */}
+                        {specialInfos.length > 0 && (
+                          <SpecialInfoList
+                            infos={specialInfos}
+                            userNameMap={briefing.userNameMap}
+                            groupNameMap={briefing.groupNameMap}
+                          />
                         )}
                       </div>
-                    )}
-
-                    {/* 인원별 정보 */}
-                    {block.memberInfos.length > 0 && (
-                      <ul className="space-y-1.5">
-                        {block.memberInfos.map(({ info, name }) => (
-                          <li
-                            key={info.id}
-                            className="rounded-lg bg-stone-50 px-3 py-2"
-                          >
-                            <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                              <span className="text-sm font-medium text-stone-900">{name}</span>
-                              {info.excused_reason && (
-                                <Chip label="미참여" value={info.excused_reason} />
-                              )}
-                              {info.temp_group_id && (
-                                <Chip
-                                  label="조이동"
-                                  value={briefing.groupNameMap[info.temp_group_id] ?? "다른 조"}
-                                  tone="warn"
-                                />
-                              )}
-                              {info.temp_role === "leader" && (
-                                <Chip label="임시역할" value="조장" tone="warn" />
-                              )}
-                              {info.activity && (
-                                <Chip label="활동" value={info.activity} />
-                              )}
-                              {info.menu && (
-                                <Chip label="메뉴" value={info.menu} />
-                              )}
-                            </div>
-                            {info.note && (
-                              <p className="text-xs text-stone-600">{info.note}</p>
-                            )}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </article>
-                ))}
+                    </article>
+                  );
+                })}
               </div>
             </section>
           )}

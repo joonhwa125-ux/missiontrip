@@ -163,6 +163,44 @@ export const COLORS = {
   appBg: "#F5F3EF",
 } as const;
 
+/**
+ * 브리핑 시트 이름 나열 구분자 — 가운뎃점(U+00B7 interpunct).
+ * 한/영 혼용 방지 차원에서 단일 상수로 관리.
+ */
+export const BRIEFING_SEPARATOR = " · ";
+
+/**
+ * 색맹 친화 그룹 컬러 팔레트 (Tailwind 500 계열).
+ * 적록/청황 색맹 환경에서도 구별 가능하도록 hue·명도 충분히 분리.
+ * 색상만으로 정보 전달하지 않고 반드시 텍스트와 이중 표기 (KWCAG 1.3.3).
+ */
+export const GROUP_COLOR_PALETTE = [
+  { dot: "bg-sky-500", tint: "bg-sky-50", label: "text-sky-900" },       // 파랑
+  { dot: "bg-orange-500", tint: "bg-orange-50", label: "text-orange-900" }, // 주황
+  { dot: "bg-purple-500", tint: "bg-purple-50", label: "text-purple-900" }, // 자주
+  { dot: "bg-teal-500", tint: "bg-teal-50", label: "text-teal-900" },    // 청록
+  { dot: "bg-rose-500", tint: "bg-rose-50", label: "text-rose-900" },    // 분홍
+  { dot: "bg-amber-600", tint: "bg-amber-50", label: "text-amber-900" }, // 호박
+  { dot: "bg-emerald-500", tint: "bg-emerald-50", label: "text-emerald-900" }, // 녹색
+  { dot: "bg-indigo-500", tint: "bg-indigo-50", label: "text-indigo-900" }, // 남색
+] as const;
+
+/**
+ * 문자열(그룹명) → 팔레트 인덱스 결정적 매핑.
+ * 같은 그룹명은 세션 간에도 항상 같은 색상을 받음.
+ */
+export function hashStringToPaletteIndex(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash * 31 + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash) % GROUP_COLOR_PALETTE.length;
+}
+
+export function getGroupColor(groupName: string) {
+  return GROUP_COLOR_PALETTE[hashStringToPaletteIndex(groupName)];
+}
+
 // 조 배지 스타일 (AdminBottomSheet + GroupFeedView 공통)
 export const GROUP_BADGE_STYLE: Record<
   import("./types").GroupBadgeStatus,
