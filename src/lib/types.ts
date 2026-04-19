@@ -346,7 +346,7 @@ export interface ParsedMemberInfo {
   day_number: number;
   sort_order: number;
   user_name: string;
-  /** 항목 키: 조이동 / 임시역할 / 제외 / 활동 / 메뉴 / 메모 */
+  /** 항목 키: 조이동 / 임시역할 / 미참여 / 활동 / 메뉴 / 메모 */
   field: ParsedMemberInfoField;
   value: string;
 }
@@ -354,7 +354,7 @@ export interface ParsedMemberInfo {
 export type ParsedMemberInfoField =
   | "조이동"
   | "임시역할"
-  | "제외"
+  | "미참여"
   | "활동"
   | "메뉴"
   | "메모";

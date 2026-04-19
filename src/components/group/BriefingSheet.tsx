@@ -59,7 +59,7 @@ function isGroupInfoEmpty(info: ScheduleGroupInfo): boolean {
   );
 }
 
-/** 작은 칩 배지 컴포넌트 */
+/** label은 plain 텍스트, value만 배지로 노출 (항목명-값 시각 계층 분리) */
 function Chip({ label, value, tone = "neutral" }: { label: string; value: string; tone?: "neutral" | "warn" | "info" }) {
   const tones = {
     neutral: "bg-stone-100 text-stone-700",
@@ -67,9 +67,9 @@ function Chip({ label, value, tone = "neutral" }: { label: string; value: string
     info: "bg-indigo-100 text-indigo-800",
   } as const;
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${tones[tone]}`}>
-      <span className="text-[0.6875rem] text-stone-500">{label}</span>
-      <span>{value}</span>
+    <span className="inline-flex items-center gap-1 text-xs">
+      <span className="text-stone-500">{label}</span>
+      <span className={`rounded-full px-2 py-0.5 font-medium ${tones[tone]}`}>{value}</span>
     </span>
   );
 }
@@ -177,7 +177,7 @@ export default function BriefingSheet({
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="flex max-h-[85vh] w-[calc(100%-2rem)] max-w-lg flex-col overflow-hidden p-0">
-        <div className="flex-shrink-0 px-5 pb-2 pt-4">
+        <div className="flex-shrink-0 px-5 pb-1 pt-4">
           <DialogHeader className="text-left">
             <DialogTitle className="text-base">
               {groupName} 브리핑 · {selectedDay}일차
@@ -190,7 +190,7 @@ export default function BriefingSheet({
           </DialogHeader>
         </div>
 
-        <div className="flex-1 space-y-6 overflow-y-auto px-5 pb-4 pt-2 text-sm">
+        <div className="flex-1 space-y-6 overflow-y-auto px-5 pb-4 pt-1 text-sm">
           {!hasAnyContent && (
             <p className="py-10 text-center text-sm text-muted-foreground">
               이 일차에 등록된 브리핑 항목이 없어요
@@ -319,9 +319,7 @@ export default function BriefingSheet({
                             <div className="mb-1 flex flex-wrap items-center gap-1.5">
                               <span className="text-sm font-medium text-stone-900">{name}</span>
                               {info.excused_reason && (
-                                <span className="rounded-full bg-stone-200 px-2 py-0.5 text-[0.6875rem] font-medium text-stone-700">
-                                  제외 · {info.excused_reason}
-                                </span>
+                                <Chip label="미참여" value={info.excused_reason} />
                               )}
                               {info.temp_group_id && (
                                 <Chip

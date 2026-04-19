@@ -392,7 +392,7 @@ async function upsertScheduleMemberInfo(
       case "임시역할":
         existing.temp_role = mapTempRoleLabel(mi.value);
         break;
-      case "제외":
+      case "미참여":
         existing.excused_reason = mi.value;
         break;
       case "활동":
