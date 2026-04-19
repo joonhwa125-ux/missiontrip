@@ -13,16 +13,30 @@ export async function submitReport(
   pendingCount: number
 ): Promise<ActionResult> {
   const actor = await getCurrentUser();
-  if (!actor || !canCheckin(actor.role)) {
-    return { ok: false, error: "권한이 없어요" };
+  if (!actor) return { ok: false, error: "권한이 없어요" };
+
+  const supabase = createServiceClient();
+
+  // v2: 영구 권한 OR 해당 일정의 임시 조장 권한
+  // temp_leader는 actor.group_id가 원래 조이므로, smi.temp_group_id를 효용 조로 사용해야 한다.
+  let actorEffectiveGroupId: string | null = actor.group_id;
+  if (!canCheckin(actor.role)) {
+    const { data: smi } = await supabase
+      .from("schedule_member_info")
+      .select("temp_group_id")
+      .eq("user_id", actor.id)
+      .eq("schedule_id", scheduleId)
+      .eq("temp_role", "leader")
+      .maybeSingle();
+    if (!smi) return { ok: false, error: "권한이 없어요" };
+    actorEffectiveGroupId = smi.temp_group_id ?? actor.group_id;
   }
 
-  // 조장은 자신의 조만 보고 가능 (관리자는 전체 가능)
-  if (!isAdminRole(actor.role) && actor.group_id !== groupId) {
+  // 조장은 자신의 조(temp_leader는 실효 조)만 보고 가능. 관리자는 전체 가능
+  if (!isAdminRole(actor.role) && actorEffectiveGroupId !== groupId) {
     return { ok: false, error: "내 조의 보고만 할 수 있어요" };
   }
 
-  const supabase = createServiceClient();
   const { error } = await supabase.from("group_reports").upsert(
     {
       group_id: groupId,

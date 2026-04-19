@@ -137,7 +137,7 @@ export function MarkAbsentDialog({
                   className={cn(
                     "flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition-colors",
                     checked
-                      ? "border-main-action bg-[#FEF9E7]"
+                      ? "border-main-action bg-main-action-soft"
                       : "border-stone-200 bg-white hover:border-stone-300"
                   )}
                 >

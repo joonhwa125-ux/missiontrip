@@ -65,6 +65,8 @@ export default function GroupView({
   //                  0-flash 업데이트. 서버 router.refresh()도 병행되지만 briefingState가
   //                  먼저 최신화되어 깜빡임 해소.
   const [briefingState, setBriefingState] = useState<BriefingData | null>(briefing);
+  // briefingState 초기화 여부 — fetchLatestBriefing deps 고정용(briefingState 직접 의존 제거)
+  const briefingInitializedRef = useRef(briefing !== null);
 
   // prop→state 동기화 (router.refresh() 시 서버에서 새 props가 올 때 state도 갱신)
   const prevSchedulesRef = useRef(initialSchedules);
@@ -83,7 +85,10 @@ export default function GroupView({
   }
   if (prevBriefingRef.current !== briefing) {
     prevBriefingRef.current = briefing;
-    if (briefing) setBriefingState(briefing);
+    if (briefing) {
+      setBriefingState(briefing);
+      briefingInitializedRef.current = true;
+    }
   }
   // reported 초기값: DB 보고 이력 AND 현재 전원 확인 완료 시에만 true
   // → 세션 중 체크인한 경우 수동 보고 필수
@@ -153,7 +158,7 @@ export default function GroupView({
   // RLS는 permanent leader/admin 기준으로 설계되어 있으므로 해당 역할에서는 정상 동작한다
   // (temp_leader edge case는 병행 router.refresh로 커버됨).
   const fetchLatestBriefing = useCallback(async () => {
-    if (!briefingState) return; // 초기 null일 때는 스킵 (서버 props 도착 후 sync)
+    if (!briefingInitializedRef.current) return; // 초기 null일 때는 스킵 (서버 props 도착 후 sync)
     const supabase = createClient();
     await supabase.auth.getSession();
 
@@ -216,7 +221,7 @@ export default function GroupView({
         cachedAt: new Date().toISOString(),
       };
     });
-  }, [members, currentUser.group_id, schedules, briefingState]);
+  }, [members, currentUser.group_id, schedules]);
 
   // 일정 전환 시 체크인 상태 리셋 + 최신 데이터 fetch (key prop 제거 대응)
   const prevScheduleIdRef = useRef(currentSchedule?.id);

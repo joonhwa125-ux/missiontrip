@@ -6,7 +6,9 @@ import type { UserRole, GroupParty, ScheduleScope } from "./types";
 export const ALLOWED_EMAIL_DOMAIN = process.env.ALLOWED_EMAIL_DOMAIN ?? "@linkagelab.co.kr";
 
 // 오프라인 스토리지 키
-export const OFFLINE_PENDING_KEY = "mtrip_pending";
+// v2: OfflinePendingCheckin에 필드 추가(group_id_at_checkin, absence_reason, absence_location, is_absent)로
+//     구버전 레코드가 신규 스키마로 파싱되면 필드값이 누락된다. 키를 "_v2"로 올려 구버전 레코드를 격리.
+export const OFFLINE_PENDING_KEY = "mtrip_pending_v2";
 export const OFFLINE_PENDING_REPORTS_KEY = "mtrip_pending_reports";
 export const ACTIVE_SCHEDULE_KEY = "mtrip_active_schedule";
 
@@ -151,17 +153,6 @@ export function isLeaderRole(role: string): boolean {
 export function canCheckin(role: string): boolean {
   return ROLE_PERMISSIONS[role as keyof typeof ROLE_PERMISSIONS]?.canCheckin ?? false;
 }
-
-// 컬러 상수 (tailwind.config와 동기화)
-export const COLORS = {
-  mainAction: "#FEE500",
-  completeCard: "#EAF3DE",
-  completeCheck: "#059669",
-  progressBar: "#0ACF83",
-  offlineBanner: "#F1EFE8",
-  progressBadge: "#FEF9C3",
-  appBg: "#F5F3EF",
-} as const;
 
 /**
  * 브리핑 시트 이름 나열 구분자 — 가운뎃점(U+00B7 interpunct).

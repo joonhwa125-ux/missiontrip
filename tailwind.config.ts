@@ -10,8 +10,9 @@ const config: Config = {
       colors: {
         // PRD 컬러 시스템 (8.1)
         "main-action": "#FEE500",
+        "main-action-soft": "#FEF9E7",
         "complete-card": "#EAF3DE",
-        "complete-check": "#059669",
+        "complete-check": "#047857",
         "progress-bar": "#0ACF83",
         "offline-banner": "#F1EFE8",
         "progress-badge": "#FEF9C3",

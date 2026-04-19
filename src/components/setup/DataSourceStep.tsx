@@ -361,8 +361,8 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
               className={cn(
                 "flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed px-4 py-3 text-sm transition-colors",
                 userFileName
-                  ? "border-main-action bg-[#FEF9E7] text-foreground"
-                  : "border-gray-300 bg-[#F5F3EF] text-muted-foreground hover:border-main-action hover:bg-[#FEF9E7]"
+                  ? "border-main-action bg-main-action-soft text-foreground"
+                  : "border-gray-300 bg-[#F5F3EF] text-muted-foreground hover:border-main-action hover:bg-main-action-soft"
               )}
             >
               <UploadIcon aria-hidden />
@@ -392,8 +392,8 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
               className={cn(
                 "flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed px-4 py-3 text-sm transition-colors",
                 scheduleFileName
-                  ? "border-main-action bg-[#FEF9E7] text-foreground"
-                  : "border-gray-300 bg-[#F5F3EF] text-muted-foreground hover:border-main-action hover:bg-[#FEF9E7]"
+                  ? "border-main-action bg-main-action-soft text-foreground"
+                  : "border-gray-300 bg-[#F5F3EF] text-muted-foreground hover:border-main-action hover:bg-main-action-soft"
               )}
             >
               <UploadIcon aria-hidden />
@@ -430,8 +430,8 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
                   className={cn(
                     "flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed px-4 py-3 text-sm transition-colors",
                     groupInfoFileName
-                      ? "border-main-action bg-[#FEF9E7] text-foreground"
-                      : "border-gray-300 bg-white text-muted-foreground hover:border-main-action hover:bg-[#FEF9E7]"
+                      ? "border-main-action bg-main-action-soft text-foreground"
+                      : "border-gray-300 bg-white text-muted-foreground hover:border-main-action hover:bg-main-action-soft"
                   )}
                 >
                   <UploadIcon aria-hidden />
@@ -461,8 +461,8 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
                   className={cn(
                     "flex min-h-11 w-full items-center gap-2 rounded-xl border border-dashed px-4 py-3 text-sm transition-colors",
                     memberInfoFileName
-                      ? "border-main-action bg-[#FEF9E7] text-foreground"
-                      : "border-gray-300 bg-white text-muted-foreground hover:border-main-action hover:bg-[#FEF9E7]"
+                      ? "border-main-action bg-main-action-soft text-foreground"
+                      : "border-gray-300 bg-white text-muted-foreground hover:border-main-action hover:bg-main-action-soft"
                   )}
                 >
                   <UploadIcon aria-hidden />

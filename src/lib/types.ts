@@ -167,8 +167,8 @@ export interface GroupStatusSummary {
 }
 
 // 오프라인 대기 체크인
-// NOTE: v2에서 group_id_at_checkin, absence_reason, absence_location 추가
-//       localStorage 키 버전을 mtrip_pending → mtrip_pending_v2로 올려서 구버전 레코드 방지
+// v2: group_id_at_checkin, absence_reason, absence_location, is_absent 필드 추가.
+//     localStorage 키 "mtrip_pending_v2"로 버전업 완료 (constants.ts OFFLINE_PENDING_KEY).
 export interface OfflinePendingCheckin {
   user_id: string;
   schedule_id: string;
