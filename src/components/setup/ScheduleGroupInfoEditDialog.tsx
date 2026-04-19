@@ -95,9 +95,9 @@ export default function ScheduleGroupInfoEditDialog({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "조별 배정 수정" : "조별 배정 추가"}</DialogTitle>
+          <DialogTitle>{isEdit ? "조 브리핑 수정" : "조 브리핑 추가"}</DialogTitle>
           <DialogDescription className="sr-only">
-            일정×조 메타데이터(층수/순환/장소/메모)
+            일정별 조에게 공지되는 안내 (층수/순환/장소/메모)
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3 py-1">

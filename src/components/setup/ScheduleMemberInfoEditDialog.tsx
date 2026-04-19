@@ -218,9 +218,9 @@ export default function ScheduleMemberInfoEditDialog({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEdit ? "인원별 배정 수정" : "인원별 배정 추가"}</DialogTitle>
+          <DialogTitle>{isEdit ? "개인 안내 수정" : "개인 안내 추가"}</DialogTitle>
           <DialogDescription className="sr-only">
-            일정×참가자 메타데이터 (조이동/임시역할/제외/활동/메뉴/메모)
+            일정별 참가자 특이사항 (조이동/임시역할/제외/활동/메뉴/메모)
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3 py-1">

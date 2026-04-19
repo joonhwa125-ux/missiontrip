@@ -66,7 +66,7 @@ export default function CurrentDataView({
   const router = useRouter();
   const [, startTransition] = useTransition();
   const { broadcast } = useBroadcast();
-  const [tab, setTab] = useState<"schedules" | "users" | "assignments">("schedules");
+  const [tab, setTab] = useState<"schedules" | "users" | "group_info" | "member_info">("schedules");
   const [editSchedule, setEditSchedule] = useState<Schedule | null>(null);
   const [editUser, setEditUser] = useState<SetupUser | null>(null);
   const [deleteScheduleTarget, setDeleteScheduleTarget] = useState<Schedule | null>(null);
@@ -127,26 +127,29 @@ export default function CurrentDataView({
         </div>
       )}
 
-      {/* 서브 탭 — DataSourceStep과 동일한 segment control */}
+      {/* 데이터 리소스 탭 — 각 리소스를 flat하게 노출 (Airtable/Supabase Studio 패턴) */}
       <div role="tablist" aria-label="데이터 종류" className="mb-4 flex gap-1 rounded-xl bg-gray-100 p-1">
-        {(["schedules", "users", "assignments"] as const).map((t) => (
+        {(
+          [
+            { key: "schedules", label: `일정 (${schedules.length}개)` },
+            { key: "users", label: `참가자 (${users.length}명)` },
+            { key: "group_info", label: `조 브리핑 (${groupInfos.length})` },
+            { key: "member_info", label: `개인 안내 (${memberInfos.length})` },
+          ] as const
+        ).map((t) => (
           <button
-            key={t}
+            key={t.key}
             role="tab"
-            aria-selected={tab === t}
-            onClick={() => setTab(t)}
+            aria-selected={tab === t.key}
+            onClick={() => setTab(t.key)}
             className={cn(
-              "min-h-11 flex-1 rounded-lg text-sm font-medium transition-colors",
-              tab === t
+              "min-h-11 flex-1 rounded-lg text-xs font-medium transition-colors sm:text-sm",
+              tab === t.key
                 ? "bg-white font-bold shadow-sm"
                 : "text-muted-foreground"
             )}
           >
-            {t === "schedules"
-              ? `일정 (${schedules.length}개)`
-              : t === "users"
-                ? `참가자 (${users.length}명)`
-                : `배정 (${groupInfos.length + memberInfos.length}건)`}
+            {t.label}
           </button>
         ))}
       </div>
@@ -237,9 +240,10 @@ export default function CurrentDataView({
         </div>
       )}
 
-      {/* 배정 관리 (v2 Phase G) */}
-      {tab === "assignments" && (
+      {/* 조 브리핑 · 개인 안내 (v2 Phase G) — AssignmentManagementView를 section prop으로 구동 */}
+      {(tab === "group_info" || tab === "member_info") && (
         <AssignmentManagementView
+          section={tab}
           schedules={schedules}
           groups={groups}
           users={users.map((u) => ({ id: u.id, name: u.name, group_id: u.group_id, role: u.role }))}

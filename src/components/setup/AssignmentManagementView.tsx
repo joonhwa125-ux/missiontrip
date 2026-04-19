@@ -27,7 +27,6 @@ import {
 } from "@/actions/setup";
 import { useBroadcast } from "@/hooks/useRealtime";
 import { CHANNEL_GLOBAL, EVENT_MEMBER_UPDATED } from "@/lib/constants";
-import { cn } from "@/lib/utils";
 import type {
   Schedule,
   ScheduleGroupInfo,
@@ -48,15 +47,16 @@ interface SimpleUser {
   role?: import("@/lib/types").UserRole;
 }
 
+export type AssignmentSection = "group_info" | "member_info";
+
 interface Props {
+  section: AssignmentSection;
   schedules: Schedule[];
   groups: SimpleGroup[];
   users: SimpleUser[];
   groupInfos: ScheduleGroupInfo[];
   memberInfos: ScheduleMemberInfo[];
 }
-
-type Section = "group_info" | "member_info";
 
 interface UndoState {
   message: string;
@@ -68,6 +68,7 @@ function scheduleLabel(s: Schedule): string {
 }
 
 export default function AssignmentManagementView({
+  section,
   schedules,
   groups,
   users,
@@ -76,7 +77,6 @@ export default function AssignmentManagementView({
 }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
-  const [section, setSection] = useState<Section>("group_info");
   const { broadcast } = useBroadcast();
 
   // Phase H: 배정 CRUD 후 조장/관리자 페이지에 "member_updated" 실시간 전파.
@@ -216,7 +216,7 @@ export default function AssignmentManagementView({
       () => {
         setDeleteSgiId(null);
         setUndo({
-          message: `${groupName} · ${scheduleName} 조별 배정을 삭제했어요`,
+          message: `${groupName} · ${scheduleName} 조 브리핑을 삭제했어요`,
           restore: async () => {
             const res = await updateScheduleGroupInfo(
               restorePayload.schedule_id,
@@ -291,7 +291,7 @@ export default function AssignmentManagementView({
           const deleteResult = await deleteScheduleMemberInfo(child.id);
           if (!deleteResult.ok) {
             setErrorMsg(
-              `기존 대체 조장 정리 중 오류: ${deleteResult.error ?? "알 수 없는 오류"}. 배정 탭에서 수동으로 확인해주세요.`
+              `기존 대체 조장 정리 중 오류: ${deleteResult.error ?? "알 수 없는 오류"}. 개인 안내 탭에서 수동으로 확인해주세요.`
             );
             router.refresh();
             broadcastMemberUpdate();
@@ -324,7 +324,7 @@ export default function AssignmentManagementView({
         );
         if (!replacementResult.ok) {
           setErrorMsg(
-            `이동자 배정은 저장됐지만 대체 조장 지정 실패: ${replacementResult.error ?? "알 수 없는 오류"}. 배정 탭에서 수동으로 추가해주세요.`
+            `이동자 배정은 저장됐지만 대체 조장 지정 실패: ${replacementResult.error ?? "알 수 없는 오류"}. 개인 안내 탭에서 수동으로 추가해주세요.`
           );
           router.refresh();
           broadcastMemberUpdate();
@@ -373,8 +373,8 @@ export default function AssignmentManagementView({
         setUndo({
           message:
             childCount > 0
-              ? `${userName} · ${scheduleName} 배정 + 대체 조장 ${childCount}건 삭제됨`
-              : `${userName} · ${scheduleName} 인원별 배정을 삭제했어요`,
+              ? `${userName} · ${scheduleName} 개인 안내 + 대체 조장 ${childCount}건 삭제됨`
+              : `${userName} · ${scheduleName} 개인 안내를 삭제했어요`,
           restore: async () => {
             // 1. 메인 복구 (부모 관계도 보존)
             const mainRes = await updateScheduleMemberInfo(
@@ -400,7 +400,7 @@ export default function AssignmentManagementView({
             if (childSnapshots.length > 0) {
               if (!newMainId) {
                 setErrorMsg(
-                  "메인 배정은 복구됐지만 id를 확인할 수 없어 대체 조장 배정 복구를 건너뛰었어요. 배정 탭에서 수동 확인해주세요."
+                  "메인 배정은 복구됐지만 id를 확인할 수 없어 대체 조장 배정 복구를 건너뛰었어요. 개인 안내 탭에서 수동 확인해주세요."
                 );
               } else {
                 const failedChildren: string[] = [];
@@ -426,7 +426,7 @@ export default function AssignmentManagementView({
                 }
                 if (failedChildren.length > 0) {
                   setErrorMsg(
-                    `메인 배정은 복구됐지만 대체 조장 복구 실패: ${failedChildren.join(", ")}. 배정 탭에서 수동으로 추가해주세요.`
+                    `메인 배정은 복구됐지만 대체 조장 복구 실패: ${failedChildren.join(", ")}. 개인 안내 탭에서 수동으로 추가해주세요.`
                   );
                 }
               }
@@ -461,46 +461,17 @@ export default function AssignmentManagementView({
         </div>
       )}
 
-      {/* 섹션 서브탭 (조별 / 인원별) */}
-      <div
-        role="tablist"
-        aria-label="배정 종류"
-        className="mb-4 flex gap-1 rounded-xl bg-gray-100 p-1"
-      >
-        {(
-          [
-            { key: "group_info", label: `조별 (${groupInfos.length})` },
-            { key: "member_info", label: `인원별 (${memberInfos.length})` },
-          ] as const
-        ).map((t) => (
-          <button
-            key={t.key}
-            role="tab"
-            aria-selected={section === t.key}
-            onClick={() => setSection(t.key)}
-            className={cn(
-              "min-h-11 flex-1 rounded-lg text-sm font-medium transition-colors",
-              section === t.key
-                ? "bg-white font-bold shadow-sm"
-                : "text-muted-foreground"
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* 조별 배정 섹션 */}
+      {/* 조 브리핑 섹션 */}
       {section === "group_info" && (
         <div>
           <div className="mb-2 flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
-              일정×조 메타데이터 (층수/순환/장소/메모)
+              일정별 조에게 공지되는 안내 (층수/순환/장소/메모)
             </p>
             <button
               onClick={() => setSgiDialog({ mode: "create" })}
               className="flex min-h-11 items-center gap-1 rounded-xl bg-main-action px-3 text-sm font-bold"
-              aria-label="조별 배정 추가"
+              aria-label="조 브리핑 추가"
               disabled={schedules.length === 0 || groups.length === 0}
             >
               <PlusIcon className="h-4 w-4" aria-hidden />
@@ -524,7 +495,7 @@ export default function AssignmentManagementView({
                 {sortedGroupInfos.length === 0 && (
                   <tr>
                     <td colSpan={7} className="py-8 text-center text-sm text-muted-foreground">
-                      등록된 조별 배정이 없어요
+                      등록된 조 브리핑이 없어요
                     </td>
                   </tr>
                 )}
@@ -559,14 +530,14 @@ export default function AssignmentManagementView({
                               })
                             }
                             className="min-h-11 rounded-lg bg-gray-100 px-2 text-xs font-medium"
-                            aria-label="조별 배정 수정"
+                            aria-label="조 브리핑 수정"
                           >
                             수정
                           </button>
                           <button
                             onClick={() => setDeleteSgiId(g.id)}
                             className="min-h-11 rounded-lg bg-red-50 px-2 text-xs font-medium text-red-600"
-                            aria-label="조별 배정 삭제"
+                            aria-label="조 브리핑 삭제"
                           >
                             삭제
                           </button>
@@ -581,17 +552,17 @@ export default function AssignmentManagementView({
         </div>
       )}
 
-      {/* 인원별 배정 섹션 */}
+      {/* 개인 안내 섹션 */}
       {section === "member_info" && (
         <div>
           <div className="mb-2 flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
-              일정×참가자 메타데이터 (조이동/임시역할/제외/활동/메뉴/메모)
+              일정별 참가자 특이사항 (조이동/임시역할/제외/활동/메뉴/메모)
             </p>
             <button
               onClick={() => setSmiDialog({ mode: "create" })}
               className="flex min-h-11 items-center gap-1 rounded-xl bg-main-action px-3 text-sm font-bold"
-              aria-label="인원별 배정 추가"
+              aria-label="개인 안내 추가"
               disabled={schedules.length === 0 || users.length === 0}
             >
               <PlusIcon className="h-4 w-4" aria-hidden />
@@ -617,7 +588,7 @@ export default function AssignmentManagementView({
                 {sortedMemberInfos.length === 0 && (
                   <tr>
                     <td colSpan={9} className="py-8 text-center text-sm text-muted-foreground">
-                      등록된 인원별 배정이 없어요
+                      등록된 개인 안내가 없어요
                     </td>
                   </tr>
                 )}
@@ -667,14 +638,14 @@ export default function AssignmentManagementView({
                             }
                             }
                             className="min-h-11 rounded-lg bg-gray-100 px-2 text-xs font-medium"
-                            aria-label="인원별 배정 수정"
+                            aria-label="개인 안내 수정"
                           >
                             수정
                           </button>
                           <button
                             onClick={() => setDeleteSmiId(m.id)}
                             className="min-h-11 rounded-lg bg-red-50 px-2 text-xs font-medium text-red-600"
-                            aria-label="인원별 배정 삭제"
+                            aria-label="개인 안내 삭제"
                           >
                             삭제
                           </button>
@@ -717,7 +688,7 @@ export default function AssignmentManagementView({
       <Dialog open={!!deleteSgiId} onOpenChange={(o) => !o && setDeleteSgiId(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>조별 배정을 삭제할까요?</DialogTitle>
+            <DialogTitle>조 브리핑을 삭제할까요?</DialogTitle>
             <DialogDescription>
               조장 화면의 브리핑에서 해당 항목이 사라져요. 5초 안에 되돌릴 수 있어요.
             </DialogDescription>
@@ -741,9 +712,9 @@ export default function AssignmentManagementView({
       <Dialog open={!!deleteSmiId} onOpenChange={(o) => !o && setDeleteSmiId(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>인원별 배정을 삭제할까요?</DialogTitle>
+            <DialogTitle>개인 안내를 삭제할까요?</DialogTitle>
             <DialogDescription>
-              해당 참가자의 이 일정 배정 정보가 사라져요. 5초 안에 되돌릴 수 있어요.
+              해당 참가자의 이 일정 안내가 사라져요. 5초 안에 되돌릴 수 있어요.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

@@ -831,7 +831,7 @@ export async function updateScheduleGroupInfo(
       .eq("id", existingId)
       .select("id")
       .single();
-    if (error) return { ok: false, error: "조별 배정 수정 중 오류가 발생했어요" };
+    if (error) return { ok: false, error: "조 브리핑 수정 중 오류가 발생했어요" };
     revalidateMainPaths();
     return { ok: true, data: { id: data.id } };
   }
@@ -841,7 +841,7 @@ export async function updateScheduleGroupInfo(
     .upsert(normalized, { onConflict: "schedule_id,group_id" })
     .select("id")
     .single();
-  if (error) return { ok: false, error: "조별 배정 저장 중 오류가 발생했어요" };
+  if (error) return { ok: false, error: "조 브리핑 저장 중 오류가 발생했어요" };
 
   revalidateMainPaths();
   return { ok: true, data: { id: data.id } };
@@ -859,7 +859,7 @@ export async function deleteScheduleGroupInfo(
     .from("schedule_group_info")
     .delete()
     .eq("id", id);
-  if (error) return { ok: false, error: "조별 배정 삭제 중 오류가 발생했어요" };
+  if (error) return { ok: false, error: "조 브리핑 삭제 중 오류가 발생했어요" };
 
   revalidateMainPaths();
   return { ok: true };
@@ -924,7 +924,7 @@ export async function updateScheduleMemberInfo(
       .eq("id", existingId)
       .select("id")
       .single();
-    if (error) return { ok: false, error: "인원별 배정 수정 중 오류가 발생했어요" };
+    if (error) return { ok: false, error: "개인 안내 수정 중 오류가 발생했어요" };
     revalidateMainPaths();
     return { ok: true, data: { id: data.id } };
   }
@@ -934,7 +934,7 @@ export async function updateScheduleMemberInfo(
     .upsert(normalized, { onConflict: "schedule_id,user_id" })
     .select("id")
     .single();
-  if (error) return { ok: false, error: "인원별 배정 저장 중 오류가 발생했어요" };
+  if (error) return { ok: false, error: "개인 안내 저장 중 오류가 발생했어요" };
 
   revalidateMainPaths();
   return { ok: true, data: { id: data.id } };
@@ -952,7 +952,7 @@ export async function deleteScheduleMemberInfo(
     .from("schedule_member_info")
     .delete()
     .eq("id", id);
-  if (error) return { ok: false, error: "인원별 배정 삭제 중 오류가 발생했어요" };
+  if (error) return { ok: false, error: "개인 안내 삭제 중 오류가 발생했어요" };
 
   revalidateMainPaths();
   return { ok: true };
