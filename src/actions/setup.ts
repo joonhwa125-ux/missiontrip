@@ -105,7 +105,7 @@ function buildPreviewData(
 
   const leaderErrors = validateLeaderCount(groups, users);
 
-  // 크로스 참조 검증 — 인원별/조별배정의 일정(일차+순서), 이름, 조 이름이 실제 존재하는지
+  // 크로스 참조 검증 — 조 브리핑/개인 안내의 일정(일차+순서), 이름, 조 이름이 실제 존재하는지
   const crossRefErrors = validateMetadataReferences(
     groupInfos,
     memberInfos,
@@ -336,7 +336,7 @@ async function upsertScheduleGroupInfo(
     .from("schedule_group_info")
     .upsert(payload, { onConflict: "schedule_id,group_id" });
 
-  return error ? { error: `조별배정 등록 실패: ${error.message}` } : {};
+  return error ? { error: `조 브리핑 등록 실패: ${error.message}` } : {};
 }
 
 // v2: Schedule Member Info UPSERT (일정×사용자 메타데이터)
@@ -416,7 +416,7 @@ async function upsertScheduleMemberInfo(
     .from("schedule_member_info")
     .upsert(payload, { onConflict: "schedule_id,user_id" });
 
-  return error ? { error: `인원별배정 등록 실패: ${error.message}` } : {};
+  return error ? { error: `개인 안내 등록 실패: ${error.message}` } : {};
 }
 
 // DB에 데이터 반영 (Groups → Users → Schedules 순서)
@@ -783,7 +783,7 @@ function validateLeaderCount(
 // ============================================================================
 
 /**
- * 단일 조별 배정 upsert. 신규 생성 + 기존 수정 + Undo 재삽입 모두 커버.
+ * 단일 조 브리핑 upsert. 신규 생성 + 기존 수정 + Undo 재삽입 모두 커버.
  *
  * - id가 주어지면 해당 id로 UPDATE 시도
  * - id가 없으면 (schedule_id, group_id) 유일키로 UPSERT
@@ -847,7 +847,7 @@ export async function updateScheduleGroupInfo(
   return { ok: true, data: { id: data.id } };
 }
 
-/** 단일 조별 배정 삭제 */
+/** 단일 조 브리핑 삭제 */
 export async function deleteScheduleGroupInfo(
   id: string
 ): Promise<ActionResult> {
@@ -866,7 +866,7 @@ export async function deleteScheduleGroupInfo(
 }
 
 /**
- * 단일 인원별 배정 upsert. 신규 생성 + 기존 수정 + Undo 재삽입 모두 커버.
+ * 단일 개인 안내 upsert. 신규 생성 + 기존 수정 + Undo 재삽입 모두 커버.
  * payload의 temp_role은 'leader'/'member'만 허용.
  */
 export async function updateScheduleMemberInfo(
@@ -940,7 +940,7 @@ export async function updateScheduleMemberInfo(
   return { ok: true, data: { id: data.id } };
 }
 
-/** 단일 인원별 배정 삭제 */
+/** 단일 개인 안내 삭제 */
 export async function deleteScheduleMemberInfo(
   id: string
 ): Promise<ActionResult> {

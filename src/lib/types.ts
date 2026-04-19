@@ -330,7 +330,7 @@ export interface ParsedSchedule {
   airline_leg: AirlineLeg | null;
 }
 
-/** v2: 일정×조 배정 파싱 레코드 — Google Sheets "조별배정" 시트 */
+/** v2: 일정×조 파싱 레코드 — Google Sheets "조 브리핑" 시트 */
 export interface ParsedGroupInfo {
   day_number: number;
   sort_order: number;
@@ -341,7 +341,7 @@ export interface ParsedGroupInfo {
   note: string | null;
 }
 
-/** v2: 일정×사용자 배정 파싱 레코드 — Google Sheets "인원별배정" 시트 */
+/** v2: 일정×사용자 파싱 레코드 — Google Sheets "개인 안내" 시트 */
 export interface ParsedMemberInfo {
   day_number: number;
   sort_order: number;
@@ -363,9 +363,9 @@ export interface SetupPreviewData {
   groups: ParsedGroup[];
   users: ParsedUser[];
   schedules: ParsedSchedule[];
-  /** v2: 조별배정 — 비어있어도 정상 (opt-in) */
+  /** v2: 조 브리핑 — 비어있어도 정상 (opt-in) */
   groupInfos: ParsedGroupInfo[];
-  /** v2: 인원별배정 — 비어있어도 정상 (opt-in) */
+  /** v2: 개인 안내 — 비어있어도 정상 (opt-in) */
   memberInfos: ParsedMemberInfo[];
   errors: ValidationError[];
 }

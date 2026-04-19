@@ -49,9 +49,9 @@ interface Props {
   users: SetupUser[];
   groups: SetupGroup[];
   currentUserId: string;
-  /** v2 Phase G: 조별 배정 (schedule_group_info) */
+  /** v2 Phase G: 조 브리핑 (schedule_group_info) */
   groupInfos?: ScheduleGroupInfo[];
-  /** v2 Phase G: 인원별 배정 (schedule_member_info) */
+  /** v2 Phase G: 개인 안내 (schedule_member_info) */
   memberInfos?: ScheduleMemberInfo[];
 }
 

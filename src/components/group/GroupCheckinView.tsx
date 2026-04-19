@@ -361,7 +361,7 @@ export default function GroupCheckinView({
                     <span className="text-[#888780]">/</span>
                     <span className="font-medium text-[#1A1A1A]">{members.length}명</span>
                     {excusedMembers.length > 0 && (
-                      <span className="ml-1 text-xs text-stone-500">(제외 {excusedMembers.length})</span>
+                      <span className="ml-1 text-xs text-stone-500">(미참여 {excusedMembers.length})</span>
                     )}
                   </span>
                 )}
@@ -397,7 +397,7 @@ export default function GroupCheckinView({
                 <span className="text-[#888780]">/</span>
                 <span className="font-medium text-[#1A1A1A]">{members.length}명</span>
                 {excusedMembers.length > 0 && (
-                  <span className="ml-1 text-xs text-stone-500">(제외 {excusedMembers.length})</span>
+                  <span className="ml-1 text-xs text-stone-500">(미참여 {excusedMembers.length})</span>
                 )}
               </span>
             )}
@@ -508,7 +508,7 @@ export default function GroupCheckinView({
               id="excused-section-heading"
               className="mb-1.5 flex items-center gap-2 px-1 text-xs font-semibold uppercase tracking-wide text-stone-500"
             >
-              제외
+              미참여
               <span className="rounded-full bg-stone-200 px-2 py-0.5 text-[0.6875rem] font-medium text-stone-700">
                 {excusedMembers.length}명
               </span>
@@ -590,7 +590,7 @@ function ExcusedMemberCard({ member, reason }: { member: Member; reason: string 
         <p className="text-base font-medium text-stone-500 truncate">{member.name}</p>
         <span className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-stone-200 px-2 py-0.5 text-xs font-medium text-stone-600">
           <MinusIcon className="h-3 w-3" aria-hidden />
-          제외
+          미참여
         </span>
         {shortReason && (
           <span className="inline-block max-w-[10rem] truncate rounded-full bg-white px-2 py-0.5 text-xs text-stone-500">

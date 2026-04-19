@@ -557,7 +557,7 @@ export default function AssignmentManagementView({
         <div>
           <div className="mb-2 flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
-              일정별 참가자 특이사항 (조이동/임시역할/제외/활동/메뉴/메모)
+              일정별 참가자 특이사항 (조이동/임시역할/미참여/활동/메뉴/메모)
             </p>
             <button
               onClick={() => setSmiDialog({ mode: "create" })}
@@ -577,7 +577,7 @@ export default function AssignmentManagementView({
                   <th className="min-w-[64px] px-2 py-2">이름</th>
                   <th className="min-w-[72px] px-2 py-2">조이동</th>
                   <th className="min-w-[56px] px-2 py-2">임시역할</th>
-                  <th className="min-w-[88px] px-2 py-2">제외</th>
+                  <th className="min-w-[88px] px-2 py-2">미참여</th>
                   <th className="min-w-[72px] px-2 py-2">활동</th>
                   <th className="min-w-[72px] px-2 py-2">메뉴</th>
                   <th className="min-w-[120px] px-2 py-2">메모</th>

@@ -48,11 +48,11 @@ export default async function SetupPage() {
       .select("id, name, email, phone, role, group_id, party, shuttle_bus, return_shuttle_bus, airline, return_airline, trip_role")
       .order("name"),
     service.from("groups").select("id, name, bus_name").order("name"),
-    // v2 Phase G: 조별 배정
+    // v2 Phase G: 조 브리핑
     service
       .from("schedule_group_info")
       .select("id, schedule_id, group_id, location_detail, rotation, sub_location, note, created_at, updated_at, updated_by"),
-    // v2 Phase G: 인원별 배정
+    // v2 Phase G: 개인 안내
     service
       .from("schedule_member_info")
       .select("id, schedule_id, user_id, temp_group_id, temp_role, excused_reason, activity, menu, note, caused_by_smi_id, created_at, updated_at, updated_by"),

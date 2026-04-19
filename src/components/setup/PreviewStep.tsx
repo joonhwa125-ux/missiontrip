@@ -119,8 +119,8 @@ export default function PreviewStep({
             {data.users.some((u) => u.trip_role) && (
               <span>· 여행역할 {data.users.filter((u) => u.trip_role).length}명</span>
             )}
-            {hasGroupInfo && <span>· 조별배정 {data.groupInfos.length}건</span>}
-            {hasMemberInfo && <span>· 인원별배정 {data.memberInfos.length}건</span>}
+            {hasGroupInfo && <span>· 조 브리핑 {data.groupInfos.length}건</span>}
+            {hasMemberInfo && <span>· 개인 안내 {data.memberInfos.length}건</span>}
           </div>
         </div>
       )}
@@ -162,7 +162,7 @@ export default function PreviewStep({
               tab === "group_info" ? "bg-white shadow-sm" : "text-muted-foreground"
             )}
           >
-            조별배정
+            조 브리핑
           </button>
         )}
         {hasMemberInfo && (
@@ -175,7 +175,7 @@ export default function PreviewStep({
               tab === "member_info" ? "bg-white shadow-sm" : "text-muted-foreground"
             )}
           >
-            인원별배정
+            개인 안내
           </button>
         )}
       </div>

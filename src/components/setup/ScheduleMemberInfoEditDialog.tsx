@@ -220,7 +220,7 @@ export default function ScheduleMemberInfoEditDialog({
         <DialogHeader>
           <DialogTitle>{isEdit ? "개인 안내 수정" : "개인 안내 추가"}</DialogTitle>
           <DialogDescription className="sr-only">
-            일정별 참가자 특이사항 (조이동/임시역할/제외/활동/메뉴/메모)
+            일정별 참가자 특이사항 (조이동/임시역할/미참여/활동/메뉴/메모)
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3 py-1">
@@ -284,7 +284,7 @@ export default function ScheduleMemberInfoEditDialog({
             </div>
           </div>
           <div>
-            <label htmlFor={ids.excused} className="mb-1 block text-xs font-medium text-muted-foreground">제외 사유</label>
+            <label htmlFor={ids.excused} className="mb-1 block text-xs font-medium text-muted-foreground">미참여 사유</label>
             <input
               id={ids.excused}
               value={form.excused_reason ?? ""}

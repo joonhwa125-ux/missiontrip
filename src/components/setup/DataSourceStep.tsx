@@ -111,7 +111,7 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
     if (groupInfoUrl.trim()) {
       const sid = extractSheetId(groupInfoUrl);
       if (!sid || sid !== sheetId1) {
-        setError("조별배정 URL은 같은 스프레드시트여야 해요");
+        setError("조 브리핑 URL은 같은 스프레드시트여야 해요");
         return;
       }
       gidGroupInfo = extractGid(groupInfoUrl) ?? "0";
@@ -119,7 +119,7 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
     if (memberInfoUrl.trim()) {
       const sid = extractSheetId(memberInfoUrl);
       if (!sid || sid !== sheetId1) {
-        setError("인원별배정 URL은 같은 스프레드시트여야 해요");
+        setError("개인 안내 URL은 같은 스프레드시트여야 해요");
         return;
       }
       gidMemberInfo = extractGid(memberInfoUrl) ?? "0";
@@ -290,15 +290,15 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
             />
           </div>
 
-          {/* v2 옵션: 조별배정 / 인원별배정 */}
+          {/* v2 옵션: 조 브리핑 / 개인 안내 */}
           <details className="mb-4 rounded-xl bg-gray-50 px-4 py-3">
             <summary className="cursor-pointer text-sm font-medium text-gray-700">
-              배정 정보 (선택) — 층수 · 활동 · 조 이동 · 메뉴 등
+              조 브리핑 · 개인 안내 (선택) — 층수 · 활동 · 조 이동 · 메뉴 등
             </summary>
             <div className="mt-3 space-y-3">
               <div>
                 <label htmlFor="ds-group-info-url" className="mb-1 block text-xs text-muted-foreground">
-                  조별배정 탭 URL
+                  조 브리핑 탭 URL
                 </label>
                 <input
                   id="ds-group-info-url"
@@ -311,14 +311,14 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
               </div>
               <div>
                 <label htmlFor="ds-member-info-url" className="mb-1 block text-xs text-muted-foreground">
-                  인원별배정 탭 URL
+                  개인 안내 탭 URL
                 </label>
                 <input
                   id="ds-member-info-url"
                   type="url"
                   value={memberInfoUrl}
                   onChange={(e) => { setMemberInfoUrl(e.target.value); setError(null); }}
-                  placeholder="일차/순서/이름/항목(조이동·임시역할·제외·활동·메뉴·메모)/값"
+                  placeholder="일차/순서/이름/항목(조이동·임시역할·미참여·활동·메뉴·메모)/값"
                   className="w-full rounded-xl border bg-white px-3 py-2.5 text-sm"
                 />
               </div>
@@ -401,21 +401,21 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
             </button>
           </div>
 
-          {/* v2 옵션: 조별배정 / 인원별배정 */}
+          {/* v2 옵션: 조 브리핑 / 개인 안내 */}
           <details className="mb-3 rounded-xl bg-gray-50 px-4 py-3">
             <summary className="cursor-pointer text-sm font-medium text-gray-700">
-              배정 정보 (선택) — 층수 · 활동 · 조 이동 · 메뉴 등
+              조 브리핑 · 개인 안내 (선택) — 층수 · 활동 · 조 이동 · 메뉴 등
             </summary>
             <div className="mt-3 space-y-3">
               <div>
                 <label className="mb-1 block text-xs text-muted-foreground">
-                  조별배정 CSV (일차, 순서, 조, 층수, 순환, 장소상세, 메모)
+                  조 브리핑 CSV (일차, 순서, 조, 층수, 순환, 장소상세, 메모)
                 </label>
                 <input
                   ref={groupInfoFileRef}
                   type="file"
                   accept=".csv"
-                  aria-label="조별배정 CSV 파일 선택"
+                  aria-label="조 브리핑 CSV 파일 선택"
                   className="sr-only"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
@@ -440,13 +440,13 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
               </div>
               <div>
                 <label className="mb-1 block text-xs text-muted-foreground">
-                  인원별배정 CSV (일차, 순서, 이름, 항목, 값)
+                  개인 안내 CSV (일차, 순서, 이름, 항목, 값)
                 </label>
                 <input
                   ref={memberInfoFileRef}
                   type="file"
                   accept=".csv"
-                  aria-label="인원별배정 CSV 파일 선택"
+                  aria-label="개인 안내 CSV 파일 선택"
                   className="sr-only"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
