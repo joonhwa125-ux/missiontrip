@@ -10,10 +10,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { formatTime } from "@/lib/utils";
-import {
-  BRIEFING_SEPARATOR,
-  getGroupColor,
-} from "@/lib/constants";
+import { BRIEFING_SEPARATOR } from "@/lib/constants";
 import type {
   BriefingData,
   ScheduleGroupInfo,
@@ -74,17 +71,6 @@ function Chip({ label, value, tone = "neutral" }: { label: string; value: string
   );
 }
 
-/** 그룹 컬러 닷 — 색상+텍스트 이중 표기로 KWCAG 1.3.3 준수 */
-function ColorDot({ groupName }: { groupName: string }) {
-  const color = getGroupColor(groupName);
-  return (
-    <span
-      className={`inline-block h-2 w-2 flex-shrink-0 rounded-full ${color.dot}`}
-      aria-hidden="true"
-    />
-  );
-}
-
 /**
  * 항공사별 인원 그룹핑 (삽입 순서 보존)
  * @returns Map<airline, 이름 배열>
@@ -103,7 +89,8 @@ function groupByAirline(
 }
 
 /**
- * 항공사 섹션 — 전원 동일이면 한 줄 압축, 분기면 그룹별 이름 + 컬러 닷.
+ * 항공사 섹션 — 전원 동일이면 한 줄 압축, 분기면 그룹별 이름.
+ * Semantic 혼동 방지 차원에서 색상 닷/배경 없음 — 타이포그래피·간격으로 시각 위계.
  */
 function AirlineSection({
   labelId,
@@ -126,30 +113,26 @@ function AirlineSection({
         {title}
       </h3>
       {isAllSame ? (
-        <div className="flex items-center gap-2 rounded-lg bg-sky-50 px-3 py-2">
-          <ColorDot groupName={entries[0][0]} />
-          <p className="text-xs text-sky-900">
-            <span className="font-semibold">전원 {entries[0][0]}</span>
-            <span className="ml-1 text-sky-700">· {totalCount}명</span>
-          </p>
-        </div>
+        <p className="rounded-lg bg-stone-50 px-3 py-2 text-sm">
+          <span className="font-semibold text-stone-900">전원 {entries[0][0]}</span>
+          <span className="ml-1 text-stone-500">· {totalCount}명</span>
+        </p>
       ) : (
-        <ul className="space-y-1.5">
+        <div className="space-y-2.5">
           {entries.map(([airline, names]) => (
-            <li key={airline} className="rounded-lg bg-sky-50 px-3 py-2">
-              <div className="mb-0.5 flex items-center gap-2">
-                <ColorDot groupName={airline} />
-                <span className="text-sm font-semibold text-sky-900">{airline}</span>
-                <span className="text-xs text-sky-700">
+            <div key={airline}>
+              <p className="mb-1 text-sm">
+                <span className="font-semibold text-stone-900">{airline}</span>
+                <span className="ml-1 text-stone-500">
                   · {names.length}/{totalCount}명
                 </span>
-              </div>
-              <p className="pl-4 text-xs text-stone-700">
+              </p>
+              <p className="text-xs leading-relaxed text-stone-700">
                 {names.join(BRIEFING_SEPARATOR)}
               </p>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </section>
   );
@@ -204,18 +187,18 @@ function ActivitySection({
       <p className="mb-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-stone-500">
         활동 배정 · {totalCount}명
       </p>
-      <ul className="space-y-1.5">
+      <ul className="space-y-2.5">
         {entries.map(([activity, members]) => {
-          const color = getGroupColor(activity);
           if (members.length === 1) {
             // 단일 멤버 — 한 줄 압축
             const m = members[0];
             return (
-              <li key={activity} className={`flex items-center gap-2 rounded-lg ${color.tint} px-3 py-1.5`}>
-                <ColorDot groupName={activity} />
-                <span className={`text-xs font-medium ${color.label}`}>{activity}</span>
-                <span className="text-xs text-stone-500">·</span>
-                <span className="text-xs text-stone-800">
+              <li key={activity} className="text-xs leading-relaxed">
+                <span className="font-semibold text-stone-900">{activity}</span>
+                <span className="text-stone-500">
+                  {" · "}1명{" · "}
+                </span>
+                <span className="text-stone-800">
                   {m.isActivityLeader && (
                     <>
                       <span aria-hidden="true">⭐ </span>
@@ -228,13 +211,12 @@ function ActivitySection({
             );
           }
           return (
-            <li key={activity} className={`rounded-lg ${color.tint} px-3 py-2`}>
-              <div className="mb-0.5 flex items-center gap-2">
-                <ColorDot groupName={activity} />
-                <span className={`text-xs font-semibold ${color.label}`}>{activity}</span>
-                <span className="text-xs text-stone-600">· {members.length}명</span>
-              </div>
-              <p className="pl-4 text-xs text-stone-700">
+            <li key={activity}>
+              <p className="mb-0.5 text-xs">
+                <span className="font-semibold text-stone-900">{activity}</span>
+                <span className="ml-1 text-stone-500">· {members.length}명</span>
+              </p>
+              <p className="text-xs leading-relaxed text-stone-700">
                 {members.map((m, i) => (
                   <span key={m.id}>
                     {i > 0 && BRIEFING_SEPARATOR}
