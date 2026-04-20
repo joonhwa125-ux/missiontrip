@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import GroupView from "@/components/group/GroupView";
 import { hasActiveOrPastTempLeaderRole } from "@/lib/auth";
 import { getEffectiveRoster } from "@/lib/roster";
+import { matchesAirlineFilter } from "@/lib/constants";
 import type {
   CheckIn,
   Schedule,
@@ -262,11 +263,29 @@ export default async function GroupPage() {
 
   // 브리핑에 등장하는 일정 — sgi/smi 레코드 있는 일정 + airline_leg 있는 비행 일정 + notice(공지) 있는 일정
   //  (비행·공지 있는 일정은 sgi/smi 없어도 섹션 렌더 트리거)
+  //  단, airline_leg/notice 트리거는 이 조가 실제로 참여하는 일정에 한정 —
+  //  scope(선발/후발)·shuttle_type(셔틀 배정)·airline_filter(항공사) 기준으로 필터링.
+  //  GroupFeedView의 mySchedules 필터와 동일 로직 (조장 피드에 보이지 않는 일정의 공지는 브리핑에도 안 나옴).
+  const hasAdvance = (members ?? []).some((m) => m.party === "advance");
+  const hasRear = (members ?? []).some((m) => m.party === "rear");
+  const isScheduleVisibleToGroup = (s: Schedule): boolean => {
+    if (s.shuttle_type === "departure") return !!currentUser.shuttle_bus;
+    if (s.shuttle_type === "return") return !!currentUser.return_shuttle_bus;
+    const scopeOk =
+      s.scope === "all" ||
+      (s.scope === "advance" && hasAdvance) ||
+      (s.scope === "rear" && hasRear);
+    if (!scopeOk) return false;
+    return matchesAirlineFilter(s.airline_filter, members ?? []);
+  };
+
   const briefingScheduleIds = new Set<string>();
   for (const s of (sgiRows ?? []) as ScheduleGroupInfo[]) briefingScheduleIds.add(s.schedule_id);
   for (const s of smiRows) briefingScheduleIds.add(s.schedule_id);
   for (const s of (schedules ?? []) as Schedule[]) {
-    if (s.airline_leg || s.notice) briefingScheduleIds.add(s.id);
+    if (!(s.airline_leg || s.notice)) continue;
+    if (!isScheduleVisibleToGroup(s)) continue;
+    briefingScheduleIds.add(s.id);
   }
   const scheduleSummaries = ((schedules ?? []) as Schedule[])
     .filter((s) => briefingScheduleIds.has(s.id))

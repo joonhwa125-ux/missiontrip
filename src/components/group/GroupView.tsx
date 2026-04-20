@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/useToast";
 import { useAutoActivate } from "@/hooks/useAutoActivate";
 import { COPY } from "@/lib/constants";
 import { filterMembersByScope } from "@/lib/utils";
-import { memberMatchesAirlineFilter } from "@/lib/constants";
+import { memberMatchesAirlineFilter, matchesAirlineFilter } from "@/lib/constants";
 import { createClient } from "@/lib/supabase/client";
 import GroupFeedView from "./GroupFeedView";
 import GroupCheckinView from "./GroupCheckinView";
@@ -211,11 +211,27 @@ export default function GroupView({
 
     // 브리핑에 등장하는 일정만 scheduleSummaries에 포함 (서버 로직과 동일)
     // airline_leg 또는 notice가 있는 일정도 포함 (항공사 섹션 · 공지 섹션 트리거)
+    // 단, 이 조가 참여하는 일정(scope/shuttle_type/airline_filter)에 한정.
+    const hasAdvance = members.some((m) => m.party === "advance");
+    const hasRear = members.some((m) => m.party === "rear");
+    const isScheduleVisibleToGroup = (s: Schedule): boolean => {
+      if (s.shuttle_type === "departure") return !!currentUser.shuttle_bus;
+      if (s.shuttle_type === "return") return !!currentUser.return_shuttle_bus;
+      const scopeOk =
+        s.scope === "all" ||
+        (s.scope === "advance" && hasAdvance) ||
+        (s.scope === "rear" && hasRear);
+      if (!scopeOk) return false;
+      return matchesAirlineFilter(s.airline_filter, members);
+    };
+
     const briefingScheduleIds = new Set<string>();
     for (const s of sgiRows) briefingScheduleIds.add(s.schedule_id);
     for (const s of smiRows) briefingScheduleIds.add(s.schedule_id);
     for (const s of schedules) {
-      if (s.airline_leg || s.notice) briefingScheduleIds.add(s.id);
+      if (!(s.airline_leg || s.notice)) continue;
+      if (!isScheduleVisibleToGroup(s)) continue;
+      briefingScheduleIds.add(s.id);
     }
     const newScheduleSummaries = schedules
       .filter((s) => briefingScheduleIds.has(s.id))
@@ -244,7 +260,7 @@ export default function GroupView({
         cachedAt: new Date().toISOString(),
       };
     });
-  }, [members, currentUser.group_id, schedules]);
+  }, [members, currentUser.group_id, currentUser.shuttle_bus, currentUser.return_shuttle_bus, schedules]);
 
   // Phase B: viewSchedule 전환 시(feed↔checkin 진입, 다른 일정 탭 등) 체크인 상태 리셋 + fetch
   const prevViewScheduleIdRef = useRef(viewSchedule?.id);
