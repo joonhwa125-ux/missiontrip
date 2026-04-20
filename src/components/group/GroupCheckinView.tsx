@@ -27,7 +27,17 @@ interface Props {
   currentUser: { id: string; group_id: string; shuttle_bus: string | null; return_shuttle_bus: string | null };
   groupName: string;
   members: Member[];
-  activeSchedule: Schedule | null;
+  /**
+   * Phase B: 조장이 탭한 일정. 대기/진행중/완료 모두 가능.
+   * 과거에는 `activeSchedule: Schedule | null`이었으나 조장 뷰가 비활성 일정도
+   * 열람할 수 있도록 확장됨에 따라 non-null로 강제. feed 뷰로의 복귀는 부모가 처리.
+   */
+  schedule: Schedule;
+  /**
+   * Phase B: 체크인/취소/불참/보고 버튼 편집 가능 여부.
+   * 진행중 일정만 true. 대기/완료는 false (서버 가드로 이중 방어).
+   */
+  isEditable: boolean;
   checkIns: CheckIn[];
   setCheckIns: Dispatch<SetStateAction<CheckIn[]>>;
   onBack: () => void;
@@ -103,7 +113,8 @@ export default function GroupCheckinView({
   currentUser,
   groupName,
   members,
-  activeSchedule,
+  schedule,
+  isEditable,
   checkIns,
   setCheckIns,
   onBack,
@@ -122,15 +133,15 @@ export default function GroupCheckinView({
 
   const { isOnline, pendingCount, addPending, addPendingReport } = useOfflineSync();
   const { broadcast } = useBroadcast();
-  const broadcastCheckin = useBroadcastCheckin(currentUser.group_id, activeSchedule?.id, activeSchedule?.shuttle_type ?? null);
+  const broadcastCheckin = useBroadcastCheckin(currentUser.group_id, schedule.id, schedule.shuttle_type ?? null);
 
   const handleCheckin = useCallback(
     async (userId: string) => {
-      if (!activeSchedule) return;
+      if (!isEditable) return; // Phase B: 대기/완료 일정은 편집 불가
       const temp: CheckIn = {
         id: `temp-${userId}`,
         user_id: userId,
-        schedule_id: activeSchedule.id,
+        schedule_id: schedule.id,
         checked_at: new Date().toISOString(),
         checked_by: "leader",
         checked_by_user_id: currentUser.id,
@@ -145,7 +156,7 @@ export default function GroupCheckinView({
       if (!isOnline) {
         const saved = addPending({
           user_id: userId,
-          schedule_id: activeSchedule.id,
+          schedule_id: schedule.id,
           checked_by: "leader",
           checked_by_user_id: currentUser.id,
           checked_at: temp.checked_at,
@@ -161,7 +172,7 @@ export default function GroupCheckinView({
 
       startTransition(async () => {
         try {
-          const res = await createCheckin(userId, activeSchedule.id, activeSchedule.shuttle_type ?? null);
+          const res = await createCheckin(userId, schedule.id, schedule.shuttle_type ?? null);
           if (res.ok) {
             await broadcastCheckin(userId, "insert");
           } else {
@@ -174,11 +185,11 @@ export default function GroupCheckinView({
         }
       });
     },
-    [activeSchedule, isOnline, addPending, currentUser.id, currentUser.group_id, broadcastCheckin, setCheckIns, showToast]
+    [isEditable, schedule.id, schedule.shuttle_type, isOnline, addPending, currentUser.id, currentUser.group_id, broadcastCheckin, setCheckIns, showToast]
   );
 
   const handleCancelConfirm = useCallback(async () => {
-    if (!cancelTarget || !activeSchedule) return;
+    if (!cancelTarget || !isEditable) return; // Phase B: 편집 불가 시 차단
     const userId = cancelTarget.member.id;
     setCancelTarget(null);
     onReportReset();
@@ -190,12 +201,12 @@ export default function GroupCheckinView({
     });
     startTransition(async () => {
       try {
-        const res = await deleteCheckin(userId, activeSchedule.id, activeSchedule.shuttle_type ?? null);
+        const res = await deleteCheckin(userId, schedule.id, schedule.shuttle_type ?? null);
         if (res.ok) {
           await broadcastCheckin(userId, "delete");
           // 보고 무효화 브로드캐스트 — 일반 일정만 (셔틀 보고는 shuttle_reports 기반, group_id 무의미)
-          if (!activeSchedule.shuttle_type) {
-            const invalidatePayload = { group_id: currentUser.group_id, schedule_id: activeSchedule.id };
+          if (!schedule.shuttle_type) {
+            const invalidatePayload = { group_id: currentUser.group_id, schedule_id: schedule.id };
             await Promise.allSettled([
               broadcast(CHANNEL_GLOBAL, EVENT_REPORT_INVALIDATED, invalidatePayload),
               broadcast(CHANNEL_ADMIN, EVENT_REPORT_INVALIDATED, invalidatePayload),
@@ -210,16 +221,16 @@ export default function GroupCheckinView({
         showToast("서버 연결에 실패했어요. 다시 시도해주세요.");
       }
     });
-  }, [cancelTarget, activeSchedule, broadcastCheckin, setCheckIns, showToast, onReportReset, currentUser.group_id, broadcast]);
+  }, [cancelTarget, isEditable, schedule.id, schedule.shuttle_type, broadcastCheckin, setCheckIns, showToast, onReportReset, currentUser.group_id, broadcast]);
 
   const handleAbsentConfirm = useCallback(async (reason: string | null, location: string | null) => {
-    if (!absentTarget || !activeSchedule) return;
+    if (!absentTarget || !isEditable) return; // Phase B
     const userId = absentTarget.id;
     setAbsentTarget(null);
     const temp: CheckIn = {
       id: `absent-${userId}`,
       user_id: userId,
-      schedule_id: activeSchedule.id,
+      schedule_id: schedule.id,
       checked_at: new Date().toISOString(),
       checked_by: "leader",
       checked_by_user_id: currentUser.id,
@@ -232,7 +243,7 @@ export default function GroupCheckinView({
     setCheckIns((prev) => [...prev.filter((c) => c.user_id !== userId), temp]);
     startTransition(async () => {
       try {
-        const res = await markAbsent(userId, activeSchedule.id, activeSchedule.shuttle_type ?? null, reason, location);
+        const res = await markAbsent(userId, schedule.id, schedule.shuttle_type ?? null, reason, location);
         if (res.ok) {
           await broadcastCheckin(userId, "insert", true);
         } else {
@@ -244,16 +255,16 @@ export default function GroupCheckinView({
         showToast("서버 연결에 실패했어요. 다시 시도해주세요.");
       }
     });
-  }, [absentTarget, activeSchedule, currentUser.id, currentUser.group_id, broadcastCheckin, setCheckIns, showToast]);
+  }, [absentTarget, isEditable, schedule.id, schedule.shuttle_type, currentUser.id, currentUser.group_id, broadcastCheckin, setCheckIns, showToast]);
 
   const handleReport = useCallback(async () => {
-    if (!activeSchedule) return;
+    if (!isEditable) return; // Phase B
     const unchecked = members.filter(
       (m) => !checkIns.some((c) => c.user_id === m.id)
     ).length;
     const confirmed = checkIns.length;
 
-    const shuttleType = activeSchedule.shuttle_type;
+    const shuttleType = schedule.shuttle_type;
     const shuttleBus = shuttleType === "departure"
       ? currentUser.shuttle_bus
       : shuttleType === "return"
@@ -268,8 +279,8 @@ export default function GroupCheckinView({
     if (!isOnline) {
       const saved = addPendingReport(
         shuttleType
-          ? { group_id: null, shuttle_bus: shuttleBus, schedule_id: activeSchedule.id, pending_count: unchecked }
-          : { group_id: currentUser.group_id, shuttle_bus: null, schedule_id: activeSchedule.id, pending_count: unchecked }
+          ? { group_id: null, shuttle_bus: shuttleBus, schedule_id: schedule.id, pending_count: unchecked }
+          : { group_id: currentUser.group_id, shuttle_bus: null, schedule_id: schedule.id, pending_count: unchecked }
       );
       if (saved) {
         onReported();
@@ -283,8 +294,8 @@ export default function GroupCheckinView({
     startTransition(async () => {
       try {
         const res = shuttleType
-          ? await submitShuttleReport(shuttleBus!, activeSchedule.id, unchecked)
-          : await submitReport(currentUser.group_id, activeSchedule.id, unchecked);
+          ? await submitShuttleReport(shuttleBus!, schedule.id, unchecked)
+          : await submitReport(currentUser.group_id, schedule.id, unchecked);
         if (res.ok) {
           onReported();
           showToast(COPY.reportButtonDone(confirmed, members.length));
@@ -292,7 +303,7 @@ export default function GroupCheckinView({
           if (!shuttleType) {
             const reportPayload = {
               group_id: currentUser.group_id,
-              schedule_id: activeSchedule.id,
+              schedule_id: schedule.id,
               pending_count: unchecked,
             };
             await Promise.allSettled([
@@ -302,7 +313,7 @@ export default function GroupCheckinView({
           } else {
             const shuttlePayload = {
               shuttle_bus: shuttleBus!,
-              schedule_id: activeSchedule.id,
+              schedule_id: schedule.id,
               pending_count: unchecked,
             };
             await Promise.allSettled([
@@ -317,7 +328,7 @@ export default function GroupCheckinView({
         showToast("서버 연결에 실패했어요. 다시 시도해주세요.");
       }
     });
-  }, [activeSchedule, members, checkIns, currentUser.group_id, currentUser.shuttle_bus, currentUser.return_shuttle_bus, broadcast, isOnline, addPendingReport, showToast, onReported]);
+  }, [isEditable, schedule.id, schedule.shuttle_type, members, checkIns, currentUser.group_id, currentUser.shuttle_bus, currentUser.return_shuttle_bus, broadcast, isOnline, addPendingReport, showToast, onReported]);
 
   // CR-005: checkIns → 불참/확인/미확인 정확히 분리
   //         Phase F: 제외 인원은 members에서 이미 빠져있으므로 별도 고려 불필요
@@ -351,7 +362,7 @@ export default function GroupCheckinView({
           <div className="relative flex items-center justify-center min-h-11">
             <div className="text-center">
               <h1 className="text-lg font-bold">
-                {activeSchedule?.location ?? activeSchedule?.title ?? "대기 중"}
+                {schedule.location ?? schedule.title}
               </h1>
               <div className="flex items-center justify-center gap-2">
                 <p className="text-sm text-muted-foreground">{groupName}</p>
@@ -387,7 +398,7 @@ export default function GroupCheckinView({
             </button>
             <div className="flex-1 min-w-0">
               <h1 className="text-lg font-bold">
-                {activeSchedule?.location ?? activeSchedule?.title ?? "대기 중"}
+                {schedule.location ?? schedule.title}
               </h1>
               <p className="text-sm text-muted-foreground">{groupName}</p>
             </div>
@@ -404,6 +415,36 @@ export default function GroupCheckinView({
           </div>
         )}
       </header>
+
+      {/* Phase B: 상태별 상단 배너 — 대기·완료 일정은 읽기 전용임을 안내 */}
+      {!isEditable && (
+        <div
+          className={cn(
+            "px-4 py-2.5 text-sm",
+            schedule.activated_at
+              ? "bg-stone-100 text-stone-700"  // 완료
+              : "bg-indigo-50 text-indigo-800"  // 대기
+          )}
+          role="status"
+          aria-live="polite"
+        >
+          {schedule.activated_at ? (
+            <>
+              <span className="font-semibold">완료된 일정이에요</span>
+              <span className="ml-1.5 text-stone-500">· 수정이 필요하면 관리자에게 카카오워크로 문의해주세요</span>
+            </>
+          ) : (
+            <>
+              <span className="font-semibold">
+                {schedule.scheduled_time
+                  ? `${new Date(schedule.scheduled_time).toLocaleTimeString("ko-KR", { timeZone: "Asia/Seoul", hour: "2-digit", minute: "2-digit", hour12: false })} 시작 예정`
+                  : "시작 전 일정"}
+              </span>
+              <span className="ml-1.5 text-indigo-600">· 시작되면 체크인할 수 있어요</span>
+            </>
+          )}
+        </div>
+      )}
 
       {/* 이니셜 원 행 */}
       <div className="border-b bg-white">
@@ -489,6 +530,7 @@ export default function GroupCheckinView({
                   user={m}
                   checkIn={checkIns.find((c) => c.user_id === m.id) ?? null}
                   joinedFrom={transferredInMap?.get(m.id) ?? null}
+                  isEditable={isEditable}
                   onCheckin={handleCheckin}
                   onCancel={(mm) => {
                     const ci = checkIns.find((c) => c.user_id === mm.id);
@@ -538,7 +580,15 @@ export default function GroupCheckinView({
             {COPY.offline(pendingCount)}
           </div>
         )}
-        {reported ? (
+        {/* Phase B: 편집 불가 일정(대기/완료)은 보고 버튼 비활성 + 상태 안내 */}
+        {!isEditable ? (
+          <button
+            aria-disabled="true"
+            className="w-full min-h-11 rounded-xl bg-gray-100 py-4 text-base font-medium text-gray-400 cursor-not-allowed"
+          >
+            {schedule.activated_at ? "완료된 일정이에요" : "아직 시작 전이에요"}
+          </button>
+        ) : reported ? (
           <button
             className="flex w-full items-center justify-center gap-2 min-h-11 rounded-xl border border-[#EBE8E3] bg-app-bg py-4 text-base font-medium text-muted-foreground"
           >

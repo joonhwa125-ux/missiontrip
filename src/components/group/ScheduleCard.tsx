@@ -9,7 +9,8 @@ interface Props {
   checkIns: CheckIn[];
   scheduleCounts: Record<string, number>;
   scheduleAbsentCounts: Record<string, number>;
-  onEnterCheckin: () => void;
+  /** Phase B: 모든 상태(진행중/대기/완료) 카드에서 호출. 탭된 일정 객체를 전달한다. */
+  onEnterCheckin: (schedule: Schedule) => void;
 }
 
 export default function ScheduleCard({
@@ -20,6 +21,7 @@ export default function ScheduleCard({
   scheduleAbsentCounts,
   onEnterCheckin,
 }: Props) {
+  const handleEnter = () => onEnterCheckin(schedule);
   const status = getScheduleStatus(schedule);
   const timeDisplay = schedule.scheduled_time ? formatTime(schedule.scheduled_time) : null;
   const scopeMembers = filterMembersByScope(members, schedule.scope);
@@ -48,7 +50,7 @@ export default function ScheduleCard({
     return (
       <div className="rounded-2xl bg-white ring-2 ring-main-action shadow-sm p-4">
         <button
-          onClick={onEnterCheckin}
+          onClick={handleEnter}
           className="w-full text-left min-h-11 rounded-lg"
           aria-label={`${schedule.title} 체크인 화면으로 이동`}
         >
@@ -95,23 +97,29 @@ export default function ScheduleCard({
 
   if (status === "waiting") {
     return (
-      <div className="rounded-2xl bg-white shadow-sm p-4">
-        {/* 헤더: 예정 배지 + 집결시간 배지 + 후발 배지 */}
-        <div className="mb-1.5 flex items-center gap-1">
-          <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
-            예정
-          </span>
-          {timeDisplay && (
-            <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
-              집결 {timeDisplay}
+      <div className="rounded-2xl bg-white shadow-sm">
+        <button
+          onClick={handleEnter}
+          className="w-full text-left min-h-11 p-4 rounded-2xl"
+          aria-label={`${schedule.title} 조원 미리 확인`}
+        >
+          {/* 헤더: 예정 배지 + 집결시간 배지 + 후발 배지 */}
+          <div className="mb-1.5 flex items-center gap-1">
+            <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
+              예정
             </span>
+            {timeDisplay && (
+              <span className="rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">
+                집결 {timeDisplay}
+              </span>
+            )}
+            {scopeBadge}
+          </div>
+          <p className="font-medium">{primaryText}</p>
+          {schedule.location && (
+            <p className="mt-0.5 text-sm text-muted-foreground">{schedule.title}</p>
           )}
-          {scopeBadge}
-        </div>
-        <p className="font-medium">{primaryText}</p>
-        {schedule.location && (
-          <p className="mt-0.5 text-sm text-muted-foreground">{schedule.title}</p>
-        )}
+        </button>
       </div>
     );
   }
@@ -120,40 +128,46 @@ export default function ScheduleCard({
   const completedAbsent = scheduleAbsentCounts[schedule.id] ?? 0;
 
   return (
-    <div className="rounded-2xl bg-stone-50/80 shadow-sm p-4">
-      {/* 헤더: 완료 배지 + 집결시간 배지 + 후발 배지 */}
-      <div className="mb-1.5 flex items-center gap-1">
-        <span className="inline-flex items-center gap-0.5 rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-500">
-          <CheckIcon className="h-3 w-3" aria-hidden />
-          완료
-        </span>
-        {timeDisplay && (
-          <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-400">
-            집결 {timeDisplay}
+    <div className="rounded-2xl bg-stone-50/80 shadow-sm">
+      <button
+        onClick={handleEnter}
+        className="w-full text-left min-h-11 p-4 rounded-2xl"
+        aria-label={`${schedule.title} 체크인 기록 보기`}
+      >
+        {/* 헤더: 완료 배지 + 집결시간 배지 + 후발 배지 */}
+        <div className="mb-1.5 flex items-center gap-1">
+          <span className="inline-flex items-center gap-0.5 rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-500">
+            <CheckIcon className="h-3 w-3" aria-hidden />
+            완료
           </span>
-        )}
-        {scopeBadge}
-      </div>
-      {/* 장소/일정명 + 카운트 */}
-      <div>
-        <p className="font-medium">{primaryText}</p>
-        {schedule.location ? (
-          <div className="mt-0.5 flex items-baseline justify-between gap-2">
-            <p className="text-sm text-muted-foreground">{schedule.title}</p>
-            {total > 0 && (
-              <p className="flex-shrink-0 flex items-center gap-0.5 text-xs text-muted-foreground">
-                <CheckIcon className="h-3 w-3 text-stone-400" aria-hidden />
-                {completedCount}/{total}명{completedAbsent > 0 && ` (불참 ${completedAbsent})`}
-              </p>
-            )}
-          </div>
-        ) : total > 0 ? (
-          <p className="mt-1 flex items-center gap-0.5 text-xs text-muted-foreground">
-            <CheckIcon className="h-3 w-3 text-stone-400" aria-hidden />
-            {completedCount}/{total}명{completedAbsent > 0 && ` (불참 ${completedAbsent})`}
-          </p>
-        ) : null}
-      </div>
+          {timeDisplay && (
+            <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-medium text-stone-400">
+              집결 {timeDisplay}
+            </span>
+          )}
+          {scopeBadge}
+        </div>
+        {/* 장소/일정명 + 카운트 */}
+        <div>
+          <p className="font-medium">{primaryText}</p>
+          {schedule.location ? (
+            <div className="mt-0.5 flex items-baseline justify-between gap-2">
+              <p className="text-sm text-muted-foreground">{schedule.title}</p>
+              {total > 0 && (
+                <p className="flex-shrink-0 flex items-center gap-0.5 text-xs text-muted-foreground">
+                  <CheckIcon className="h-3 w-3 text-stone-400" aria-hidden />
+                  {completedCount}/{total}명{completedAbsent > 0 && ` (불참 ${completedAbsent})`}
+                </p>
+              )}
+            </div>
+          ) : total > 0 ? (
+            <p className="mt-1 flex items-center gap-0.5 text-xs text-muted-foreground">
+              <CheckIcon className="h-3 w-3 text-stone-400" aria-hidden />
+              {completedCount}/{total}명{completedAbsent > 0 && ` (불참 ${completedAbsent})`}
+            </p>
+          ) : null}
+        </div>
+      </button>
     </div>
   );
 }

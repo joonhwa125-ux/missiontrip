@@ -202,12 +202,13 @@ export function MarkAbsentDialog({
             아니요
           </DialogClose>
           <button
-            onClick={handleSubmit}
-            disabled={!canSubmit}
+            onClick={canSubmit ? handleSubmit : undefined}
             aria-disabled={!canSubmit}
             className={cn(
-              "min-h-11 flex-1 rounded-xl text-sm font-medium text-white transition-opacity",
-              canSubmit ? "bg-gray-700" : "bg-gray-300"
+              "min-h-11 flex-1 rounded-xl text-sm font-medium text-white transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+              canSubmit
+                ? "bg-gray-700 focus-visible:ring-gray-800"
+                : "bg-gray-300 cursor-not-allowed focus-visible:ring-gray-400"
             )}
           >
             불참 처리

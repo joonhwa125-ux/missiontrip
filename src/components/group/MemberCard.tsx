@@ -15,9 +15,11 @@ interface Props {
   onAbsent: (user: Member) => void;
   /** v2 Phase F: 다른 조에서 합류한 조원이면 원래 조명 — "합류" 배지 표시 */
   joinedFrom?: string | null;
+  /** Phase B: 편집 가능 여부. false면 버튼 aria-disabled + 클릭 무시 (대기/완료 일정) */
+  isEditable?: boolean;
 }
 
-export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsent, joinedFrom }: Props) {
+export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsent, joinedFrom, isEditable = true }: Props) {
   const isAbsent = checkIn?.is_absent === true;
   const isChecked = checkIn && !isAbsent;
   // v2: 불참 사유 표시용 — "기타: ..." 형식이면 prefix 제거하고 본문만 노출
@@ -77,16 +79,28 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
       <div className="flex items-center gap-1.5">
         {isAbsent ? (
           <button
-            onClick={() => onCancel(user)}
-            className="min-h-11 min-w-16 rounded-xl border border-rose-300 px-3 text-sm font-medium text-rose-500"
+            onClick={isEditable ? () => onCancel(user) : undefined}
+            aria-disabled={!isEditable}
+            className={cn(
+              "min-h-11 min-w-16 rounded-xl border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+              isEditable
+                ? "border-rose-300 text-rose-500 focus-visible:ring-rose-500"
+                : "border-stone-200 text-stone-500 cursor-not-allowed focus-visible:ring-stone-400"
+            )}
             aria-label={`${user.name} 불참 취소`}
           >
             {COPY.cancelButton}
           </button>
         ) : isChecked ? (
           <button
-            onClick={() => onCancel(user)}
-            className="min-h-11 min-w-16 rounded-xl border border-rose-300 px-3 text-sm font-medium text-rose-500"
+            onClick={isEditable ? () => onCancel(user) : undefined}
+            aria-disabled={!isEditable}
+            className={cn(
+              "min-h-11 min-w-16 rounded-xl border px-3 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+              isEditable
+                ? "border-rose-300 text-rose-500 focus-visible:ring-rose-500"
+                : "border-stone-200 text-stone-500 cursor-not-allowed focus-visible:ring-stone-400"
+            )}
             aria-label={`${user.name} 체크인 취소`}
           >
             {COPY.cancelButton}
@@ -94,15 +108,27 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
         ) : (
           <>
             <button
-              onClick={() => onAbsent(user)}
-              className="min-h-11 min-w-11 rounded-xl border border-stone-300 px-3 text-sm font-bold text-stone-700"
+              onClick={isEditable ? () => onAbsent(user) : undefined}
+              aria-disabled={!isEditable}
+              className={cn(
+                "min-h-11 min-w-11 rounded-xl border px-3 text-sm font-bold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                isEditable
+                  ? "border-stone-300 text-stone-700 focus-visible:ring-stone-500"
+                  : "border-stone-200 text-stone-500 cursor-not-allowed focus-visible:ring-stone-400"
+              )}
               aria-label={`${user.name} 불참 처리`}
             >
               {COPY.absent}
             </button>
             <button
-              onClick={() => onCheckin(user.id)}
-              className="min-h-11 min-w-[4.5rem] rounded-xl bg-main-action px-3 text-sm font-bold shadow-sm"
+              onClick={isEditable ? () => onCheckin(user.id) : undefined}
+              aria-disabled={!isEditable}
+              className={cn(
+                "min-h-11 min-w-[4.5rem] rounded-xl px-3 text-sm font-bold shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                isEditable
+                  ? "bg-main-action focus-visible:ring-amber-600"
+                  : "bg-stone-100 text-stone-500 cursor-not-allowed focus-visible:ring-stone-400"
+              )}
               aria-label={`${user.name} 탑승 확인`}
             >
               {COPY.checkinButton}

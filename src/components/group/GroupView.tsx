@@ -115,6 +115,11 @@ export default function GroupView({
     setCurrentSchedule(activeSchedule);
   }
 
+  // Phase B: 조장이 탭한 일정 (활성/대기/완료 모두 가능).
+  // null이면 feed 뷰. non-null이면 checkin 뷰가 이 일정을 대상으로 렌더.
+  // currentSchedule(DB 활성)과는 독립 — 조장은 대기·완료 일정도 열람 가능.
+  const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
+
   // W-3: 보고 무효화 중 self-echo 차단용 ref (취소→재체크인 사이에만 true)
   const reportInvalidatedRef = useRef(false);
   // F-4: 전원완료→미완료 전환만 감지 (초기 마운트 스킵)
@@ -128,28 +133,34 @@ export default function GroupView({
     const handlePopState = () => {
       if (viewRef.current === "checkin") {
         setView("feed");
+        // Phase B: feed 복귀 시 selectedSchedule도 정리 — view ↔ selected 상태 불일치 방지
+        setSelectedSchedule(null);
       }
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  // 타겟 fetch: 현재 일정의 체크인만 클라이언트에서 직접 조회 (router.refresh() 대신)
+  // Phase B: 현재 뷰가 바라보는 일정. feed 뷰는 currentSchedule(DB 활성),
+  //          checkin 뷰는 selectedSchedule(조장이 탭한 일정). checkIns state는 이 일정 기준.
+  const viewSchedule = view === "checkin" ? selectedSchedule : currentSchedule;
+
+  // 타겟 fetch: viewSchedule의 체크인을 클라이언트에서 직접 조회
   const fetchLatestCheckIns = useCallback(async () => {
-    if (!currentSchedule) return;
+    if (!viewSchedule) return;
     const supabase = createClient();
     // 탭 복귀 시 auth 세션 복원 보장 (RLS 쿼리 전 필수)
     await supabase.auth.getSession();
     const { data } = await supabase
       .from("check_ins")
       .select("id, user_id, schedule_id, checked_at, checked_by, checked_by_user_id, offline_pending, is_absent")
-      .eq("schedule_id", currentSchedule.id);
+      .eq("schedule_id", viewSchedule.id);
     if (!data) return;
     // 빈 결과이고 기존 데이터가 있으면 덮어쓰지 않기 (auth 미복원 방어)
     if (data.length === 0 && checkIns.length > 0) return;
     const memberIdSet = new Set(members.map((m) => m.id));
     setCheckIns(data.filter((ci) => memberIdSet.has(ci.user_id)) as CheckIn[]);
-  }, [currentSchedule, members, checkIns.length]);
+  }, [viewSchedule, members, checkIns.length]);
 
   // 백그라운드 복귀 시 타겟 fetch (router.refresh() 대신 — 0-flash 방지)
   useVisibilityRefresh(fetchLatestCheckIns);
@@ -229,17 +240,17 @@ export default function GroupView({
     });
   }, [members, currentUser.group_id, schedules]);
 
-  // 일정 전환 시 체크인 상태 리셋 + 최신 데이터 fetch (key prop 제거 대응)
-  const prevScheduleIdRef = useRef(currentSchedule?.id);
+  // Phase B: viewSchedule 전환 시(feed↔checkin 진입, 다른 일정 탭 등) 체크인 상태 리셋 + fetch
+  const prevViewScheduleIdRef = useRef(viewSchedule?.id);
   useEffect(() => {
-    if (prevScheduleIdRef.current === currentSchedule?.id) return;
-    prevScheduleIdRef.current = currentSchedule?.id;
+    if (prevViewScheduleIdRef.current === viewSchedule?.id) return;
+    prevViewScheduleIdRef.current = viewSchedule?.id;
     // 즉시 리셋 (이전 일정 데이터 잔류 방지)
     setCheckIns([]);
     setReported(false);
     // 새 일정 데이터 fetch
     fetchLatestCheckIns();
-  }, [currentSchedule?.id, fetchLatestCheckIns]);
+  }, [viewSchedule?.id, fetchLatestCheckIns]);
 
   // Realtime 구독 — GroupView 레벨 (feed <-> checkin 전환 시에도 유지)
   useRealtime(currentUser.group_id, false, {
@@ -254,6 +265,7 @@ export default function GroupView({
         if (shuttle_type && !hasShuttle) {
           showToast(`새로운 일정이 시작되었어요: ${title}`);
           setView("feed");
+          setSelectedSchedule(null); // Phase B: view ↔ selected 정합성
           history.replaceState(null, "");
           router.refresh();
           return;
@@ -283,6 +295,7 @@ export default function GroupView({
       if (viewRef.current === "checkin") {
         showToast(COPY.scheduleDeactivated);
         setView("feed");
+        setSelectedSchedule(null); // Phase B: view ↔ selected 정합성
         // history.pushState로 추가된 엔트리 정리 — stale 히스토리 방지
         history.replaceState(null, "");
       }
@@ -308,8 +321,10 @@ export default function GroupView({
       }
     },
     onCheckinUpdated: ({ user_id, action, is_absent }) => {
-      // 내 조 체크인 상세 업데이트
+      // 내 조 체크인 상세 업데이트 — 활성 일정 기준으로만 발생
+      // Phase B: 조장이 과거/대기 일정 열람 중이면 반영 금지 (체크인 목록 오염 방지)
       if (!currentSchedule) return;
+      if (viewSchedule?.id !== currentSchedule.id) return;
       setCheckIns((prev) => {
         if (action === "insert") {
           if (prev.some((c) => c.user_id === user_id)) return prev;
@@ -339,24 +354,29 @@ export default function GroupView({
     },
   });
 
+  // Phase B: 현재 뷰 일정이 DB 활성 일정과 같을 때만 effectiveRoster(transfer/excused) 적용.
+  //          대기/완료 일정 열람 시에는 base members 사용 (server effectiveRoster는 active 전용).
+  const isViewingActive = viewSchedule !== null && viewSchedule.id === currentSchedule?.id;
+
   // 셔틀 일정: 해당 버스 인원 / 일반 일정: 조 인원 scope 필터
-  // Phase F: non-shuttle 일정이면서 effectiveRoster가 주어진 경우, base 대신 roster의 activeMembers 사용
-  //         (이동OUT 제외 + 이동IN 포함, 제외 인원도 포함 — 아래에서 별도 분리)
+  // Phase F: active 일정 + effectiveRoster 주어진 경우 roster.activeMembers 사용 (이동 반영)
+  //         대기/완료 일정은 base members 사용
   const effectiveMembers = useMemo(() => {
-    if (currentSchedule?.shuttle_type === "departure") return shuttleMembers;
-    if (currentSchedule?.shuttle_type === "return") return returnShuttleMembers;
-    const rosterSource = effectiveRoster?.activeMembers ?? members;
-    const byScope = filterMembersByScope(rosterSource, currentSchedule?.scope ?? "all");
+    if (viewSchedule?.shuttle_type === "departure") return shuttleMembers;
+    if (viewSchedule?.shuttle_type === "return") return returnShuttleMembers;
+    const rosterSource = (isViewingActive && effectiveRoster?.activeMembers) ? effectiveRoster.activeMembers : members;
+    const byScope = filterMembersByScope(rosterSource, viewSchedule?.scope ?? "all");
     // airline_filter: 해당 편 탑승자만 체크인 대상 (예: 티웨이 일정엔 티웨이 탑승자만)
-    return byScope.filter((m) => memberMatchesAirlineFilter(currentSchedule?.airline_filter ?? null, m));
-  }, [currentSchedule?.shuttle_type, currentSchedule?.scope, currentSchedule?.airline_filter, members, shuttleMembers, returnShuttleMembers, effectiveRoster]);
+    return byScope.filter((m) => memberMatchesAirlineFilter(viewSchedule?.airline_filter ?? null, m));
+  }, [viewSchedule?.shuttle_type, viewSchedule?.scope, viewSchedule?.airline_filter, members, shuttleMembers, returnShuttleMembers, effectiveRoster, isViewingActive]);
 
   // Phase F: 제외 인원 (scope + airline_filter 적용) — 체크인 카운트에서 제외하고 별도 섹션에 표시
+  // Phase B: active 일정만 effectiveRoster 사용. 대기/완료는 제외 정보 없음.
   const scopedExcused = useMemo(() => {
-    if (!effectiveRoster || currentSchedule?.shuttle_type) return [];
-    const byScope = filterMembersByScope(effectiveRoster.excusedMembers, currentSchedule?.scope ?? "all");
-    return byScope.filter((m) => memberMatchesAirlineFilter(currentSchedule?.airline_filter ?? null, m));
-  }, [effectiveRoster, currentSchedule?.scope, currentSchedule?.airline_filter, currentSchedule?.shuttle_type]);
+    if (!isViewingActive || !effectiveRoster || viewSchedule?.shuttle_type) return [];
+    const byScope = filterMembersByScope(effectiveRoster.excusedMembers, viewSchedule?.scope ?? "all");
+    return byScope.filter((m) => memberMatchesAirlineFilter(viewSchedule?.airline_filter ?? null, m));
+  }, [effectiveRoster, viewSchedule?.scope, viewSchedule?.airline_filter, viewSchedule?.shuttle_type, isViewingActive]);
 
   // Phase F: main roster = effectiveMembers - 제외
   const excusedIdSet = useMemo(() => new Set(scopedExcused.map((m) => m.id)), [scopedExcused]);
@@ -366,20 +386,22 @@ export default function GroupView({
   );
 
   // Phase F: transferredIn 배지용 (user_id → origin_group_name)
+  // Phase B: active 일정만 roster 적용
   const transferredInMap = useMemo(() => {
     const map = new Map<string, string>();
-    if (!effectiveRoster) return map;
+    if (!isViewingActive || !effectiveRoster) return map;
     for (const t of effectiveRoster.transferredIn) map.set(t.id, t.origin_group_name);
     return map;
-  }, [effectiveRoster]);
+  }, [effectiveRoster, isViewingActive]);
 
   // Phase F: memberInfoMap — 섹션 헤더 그루핑 (activity/excused_reason 조회용)
+  // Phase B: active 일정만 roster 적용
   const memberInfoMap = useMemo(() => {
     const map = new Map<string, ScheduleMemberInfo>();
-    if (!effectiveRoster) return map;
+    if (!isViewingActive || !effectiveRoster) return map;
     for (const info of effectiveRoster.memberInfos) map.set(info.user_id, info);
     return map;
-  }, [effectiveRoster]);
+  }, [effectiveRoster, isViewingActive]);
 
   // 체크인 취소 시 reported 자동 리셋 — 전원 미완료가 되면 보고 무효화
   // Phase F: 제외 인원은 보고 완료 판정에서 제외 (mainMembers 기준)
@@ -411,20 +433,21 @@ export default function GroupView({
     reportInvalidatedRef.current = true;
   }, []);
 
-  // CR-010: 체크인 진입 시 히스토리 푸시
-  const handleEnterCheckin = useCallback(() => {
+  // Phase B: 체크인 진입 — 탭된 일정을 selectedSchedule로 설정
+  const handleEnterCheckin = useCallback((schedule: Schedule) => {
+    setSelectedSchedule(schedule);
     history.pushState(null, "");
     setView("checkin");
   }, []);
 
-  // CR-010: 뒤로가기 시 히스토리 pop
+  // CR-010: 뒤로가기 시 히스토리 pop. popstate 리스너가 view="feed"로 복귀시킴
   const handleBack = useCallback(() => {
     history.back();
   }, []);
 
   return (
     <div className="flex min-h-full flex-col">
-      {view === "feed" ? (
+      {view === "feed" || !selectedSchedule ? (
         <GroupFeedView
           schedules={schedules}
           members={members}
@@ -446,7 +469,8 @@ export default function GroupView({
           excusedMembers={scopedExcused}
           transferredInMap={transferredInMap}
           memberInfoMap={memberInfoMap}
-          activeSchedule={currentSchedule}
+          schedule={selectedSchedule}
+          isEditable={selectedSchedule.is_active}
           checkIns={checkIns}
           setCheckIns={setCheckIns}
           onBack={handleBack}
@@ -470,6 +494,7 @@ export default function GroupView({
               <button
                 onClick={() => {
                   setView("feed");
+                  setSelectedSchedule(null); // Phase B: view ↔ selected 정합성
                   showToast("");
                 }}
                 className="ml-2 min-h-11 font-medium underline"

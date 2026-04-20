@@ -29,7 +29,8 @@ interface Props {
   checkIns: CheckIn[];
   scheduleCounts: Record<string, number>;
   scheduleAbsentCounts: Record<string, number>;
-  onEnterCheckin: () => void;
+  /** Phase B: 탭된 일정을 인자로 전달 — 진행중/대기/완료 모두 진입 가능 */
+  onEnterCheckin: (schedule: Schedule) => void;
   /** 조장 브리핑 (v2 Phase E) — null이면 배너 숨김 */
   briefing: BriefingData | null;
   groupId: string;

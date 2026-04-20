@@ -598,20 +598,23 @@ export default function AdminView({
         <DialogContent hideClose className="flex h-[100dvh] max-h-[100dvh] w-full max-w-lg flex-col gap-0 overflow-hidden rounded-none border-none p-0" aria-describedby={undefined}>
           <DialogTitle className="sr-only">{adminGroupName} 체크인 다이얼로그</DialogTitle>
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <GroupCheckinView
-              currentUser={currentUser}
-              groupName={adminGroupName}
-              members={adminCheckinMembers}
-              activeSchedule={activeSchedule}
-              checkIns={sheetCheckIns}
-              setCheckIns={setSheetCheckIns}
-              onBack={closeCheckinSheet}
-              closeMode
-              showToast={showToast}
-              reported={sheetReported}
-              onReported={handleSheetReported}
-              onReportReset={handleSheetReportReset}
-            />
+            {activeSchedule && (
+              <GroupCheckinView
+                currentUser={currentUser}
+                groupName={adminGroupName}
+                members={adminCheckinMembers}
+                schedule={activeSchedule}
+                isEditable={activeSchedule.is_active}
+                checkIns={sheetCheckIns}
+                setCheckIns={setSheetCheckIns}
+                onBack={closeCheckinSheet}
+                closeMode
+                showToast={showToast}
+                reported={sheetReported}
+                onReported={handleSheetReported}
+                onReportReset={handleSheetReportReset}
+              />
+            )}
           </div>
         </DialogContent>
       </Dialog>

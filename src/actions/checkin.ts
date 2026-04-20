@@ -7,6 +7,33 @@ import { revalidateMainPaths } from "./_shared";
 import type { ActionResult, OfflinePendingCheckin, CheckedBy, ShuttleType } from "@/lib/types";
 
 /**
+ * Phase B: 일정이 현재 활성 상태인지 서버 측에서 검증.
+ * 조장 뷰가 대기/완료 일정도 탐색 허용(읽기 전용)하도록 확장되었기 때문에
+ * 쓰기 작업은 is_active=true인 일정에 대해서만 허용한다.
+ *
+ * ## 반환값
+ * - `{ ok: true }`: 활성 일정. 진행 가능.
+ * - `{ ok: false, error }`: 존재하지 않거나 비활성. 체크인/취소/불참 거부.
+ */
+async function requireActiveSchedule(
+  supabase: ReturnType<typeof createServiceClient>,
+  scheduleId: string
+): Promise<ActionResult> {
+  const { data, error } = await supabase
+    .from("schedules")
+    .select("is_active")
+    .eq("id", scheduleId)
+    .maybeSingle();
+  if (error || !data) {
+    return { ok: false, error: "일정을 찾을 수 없어요" };
+  }
+  if (!data.is_active) {
+    return { ok: false, error: "진행 중인 일정이 아니에요. 수정이 필요하면 관리자에게 문의해주세요." };
+  }
+  return { ok: true };
+}
+
+/**
  * v2: actor가 특정 일정의 임시 조장인지 확인.
  * member 역할이어도 temp_role='leader'면 해당 일정에 한해 체크인 가능.
  */
@@ -158,6 +185,10 @@ export async function createCheckin(
 
   const supabase = createServiceClient();
 
+  // Phase B: 활성 일정에만 쓰기 허용 (조장 뷰가 대기/완료도 열람 가능해짐)
+  const activeCheck = await requireActiveSchedule(supabase, scheduleId);
+  if (!activeCheck.ok) return activeCheck;
+
   // v2: 역할 기반 OR 임시 조장 기반 권한 체크
   const allowed = await canActorCheckin(supabase, actor, scheduleId);
   if (!allowed) return { ok: false, error: "권한이 없어요" };
@@ -205,6 +236,10 @@ export async function deleteCheckin(
   if (!actor) return { ok: false, error: "권한이 없어요" };
 
   const supabase = createServiceClient();
+
+  // Phase B: 완료된 일정의 체크인 취소는 완전 차단 (②C 정책)
+  const activeCheck = await requireActiveSchedule(supabase, scheduleId);
+  if (!activeCheck.ok) return activeCheck;
 
   const allowed = await canActorCheckin(supabase, actor, scheduleId);
   if (!allowed) return { ok: false, error: "권한이 없어요" };
@@ -284,6 +319,10 @@ export async function markAbsent(
 
   const supabase = createServiceClient();
 
+  // Phase B: 활성 일정에만 불참 처리 허용
+  const activeCheck = await requireActiveSchedule(supabase, scheduleId);
+  if (!activeCheck.ok) return activeCheck;
+
   const allowed = await canActorCheckin(supabase, actor, scheduleId);
   if (!allowed) return { ok: false, error: "권한이 없어요" };
 
@@ -348,17 +387,33 @@ export async function syncOfflineCheckins(
 
   const supabase = createServiceClient();
 
+  // Phase B 정책 일관성: 오프라인 큐에 담긴 체크인이 네트워크 복귀 시점에
+  //   일정이 이미 종료된 상태라면 서버에 반영하지 않는다 (쓰기는 활성 일정에만 허용).
+  //   활성 일정에 해당하는 item만 필터링 후 RPC에 전달.
+  const uniqueScheduleIds = Array.from(new Set(checkins.map((c) => c.schedule_id)));
+  const { data: scheduleRows } = await supabase
+    .from("schedules")
+    .select("id, is_active")
+    .in("id", uniqueScheduleIds);
+  const activeScheduleIds = new Set(
+    (scheduleRows ?? []).filter((s) => s.is_active).map((s) => s.id)
+  );
+  const filteredCheckins = checkins.filter((c) => activeScheduleIds.has(c.schedule_id));
+  if (filteredCheckins.length === 0) {
+    return { ok: true, data: 0 };
+  }
+
   // 권한 체크: 영구 권한자가 아니면 각 item의 schedule_id에 대해 temp_leader 권한 확인
   if (!canCheckin(actor.role)) {
-    const uniqueScheduleIds = Array.from(new Set(checkins.map((c) => c.schedule_id)));
-    for (const sid of uniqueScheduleIds) {
+    const filteredScheduleIds = Array.from(new Set(filteredCheckins.map((c) => c.schedule_id)));
+    for (const sid of filteredScheduleIds) {
       const ok = await isTempLeaderFor(supabase, actor.id, sid);
       if (!ok) return { ok: false, error: "권한이 없어요" };
     }
   }
 
   const { data, error } = await supabase.rpc("sync_offline_checkins", {
-    checkins,
+    checkins: filteredCheckins,
   });
 
   if (error) {
