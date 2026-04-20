@@ -182,14 +182,23 @@ export default function AdminScheduleCard({
   }
 
   if (status === "waiting") {
+    const stop = (e: React.SyntheticEvent) => e.stopPropagation();
     return (
       <div
-        className="rounded-2xl bg-white shadow-sm p-4"
-        role="region"
-        aria-label={`예정 일정: ${schedule.title}`}
+        role="button"
+        tabIndex={0}
+        onClick={onSummaryTap}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onSummaryTap();
+          }
+        }}
+        className="cursor-pointer rounded-2xl bg-white shadow-sm p-4 text-left transition-colors active:bg-gray-50"
+        aria-label={`예정 일정: ${schedule.title} — 탭하여 참여 대상 미리 보기`}
       >
         {/* 헤더: 예정 배지 + 집결시간 배지 + 후발 배지 */}
-        <div className="mb-2 flex items-center gap-1">
+        <div className="mb-2 flex items-center gap-1" onClick={stop} onKeyDown={stop}>
           <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
             예정
           </span>
@@ -204,7 +213,7 @@ export default function AdminScheduleCard({
             {subtitle}
           </div>
           <button
-            onClick={onActivate}
+            onClick={(e) => { e.stopPropagation(); onActivate(); }}
             className={statusBtnClass}
             aria-label={`${schedule.title} 체크인 시작`}
           >
