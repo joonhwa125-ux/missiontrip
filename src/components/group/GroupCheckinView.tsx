@@ -531,6 +531,7 @@ export default function GroupCheckinView({
                   checkIn={checkIns.find((c) => c.user_id === m.id) ?? null}
                   joinedFrom={transferredInMap?.get(m.id) ?? null}
                   isEditable={isEditable}
+                  memberInfo={memberInfoMap?.get(m.id) ?? null}
                   onCheckin={handleCheckin}
                   onCancel={(mm) => {
                     const ci = checkIns.find((c) => c.user_id === mm.id);

@@ -395,13 +395,26 @@ export default function GroupView({
   }, [effectiveRoster, isViewingActive]);
 
   // Phase F: memberInfoMap — 섹션 헤더 그루핑 (activity/excused_reason 조회용)
-  // Phase B: active 일정만 roster 적용
+  // Phase B: active 일정은 effectiveRoster 사용.
+  // Phase C Tier 1: 대기/완료 일정도 briefingState.memberInfos에서 fallback 조회
+  //                 → 임시조장 배지 · 메모가 일정 상태와 무관하게 일관 표시.
   const memberInfoMap = useMemo(() => {
     const map = new Map<string, ScheduleMemberInfo>();
-    if (!isViewingActive || !effectiveRoster) return map;
-    for (const info of effectiveRoster.memberInfos) map.set(info.user_id, info);
+    if (!viewSchedule) return map;
+    if (isViewingActive && effectiveRoster) {
+      for (const info of effectiveRoster.memberInfos) map.set(info.user_id, info);
+      return map;
+    }
+    // 대기/완료 일정: briefing 데이터에서 해당 schedule_id 필터링
+    if (briefingState) {
+      for (const info of briefingState.memberInfos) {
+        if (info.schedule_id === viewSchedule.id) {
+          map.set(info.user_id, info);
+        }
+      }
+    }
     return map;
-  }, [effectiveRoster, isViewingActive]);
+  }, [viewSchedule, isViewingActive, effectiveRoster, briefingState]);
 
   // 체크인 취소 시 reported 자동 리셋 — 전원 미완료가 되면 보고 무효화
   // Phase F: 제외 인원은 보고 완료 판정에서 제외 (mainMembers 기준)

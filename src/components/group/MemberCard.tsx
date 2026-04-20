@@ -3,7 +3,7 @@
 import { COPY } from "@/lib/constants";
 import { formatTime, cn } from "@/lib/utils";
 import { CheckIcon, MinusIcon } from "@/components/ui/icons";
-import type { CheckIn, GroupMember } from "@/lib/types";
+import type { CheckIn, GroupMember, ScheduleMemberInfo } from "@/lib/types";
 
 type Member = GroupMember;
 
@@ -17,9 +17,13 @@ interface Props {
   joinedFrom?: string | null;
   /** Phase B: 편집 가능 여부. false면 버튼 aria-disabled + 클릭 무시 (대기/완료 일정) */
   isEditable?: boolean;
+  /** Phase C Tier 1: 이 일정 한정 특이사항 — 임시조장 배지 + 메모 표시 */
+  memberInfo?: ScheduleMemberInfo | null;
 }
 
-export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsent, joinedFrom, isEditable = true }: Props) {
+export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsent, joinedFrom, isEditable = true, memberInfo }: Props) {
+  const isTempLeader = memberInfo?.temp_role === "leader";
+  const noteText = memberInfo?.note?.trim() || null;
   const isAbsent = checkIn?.is_absent === true;
   const isChecked = checkIn && !isAbsent;
   // v2: 불참 사유 표시용 — "기타: ..." 형식이면 prefix 제거하고 본문만 노출
@@ -32,7 +36,7 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
   return (
     <li
       className={cn(
-        "flex min-h-[4.5rem] items-center justify-between rounded-2xl border px-4 transition-colors",
+        "rounded-2xl border transition-colors",
         isAbsent
           ? "border-[#EBE8E3] bg-gray-100"
           : isChecked
@@ -40,8 +44,18 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
           : "border-[#E0DDD8] bg-white"
       )}
     >
-      <div className={cn("min-w-0", (isChecked || isAbsent || joinedFrom) && "flex items-center gap-2 flex-wrap")}>
+      <div className="flex min-h-[4.5rem] items-center justify-between px-4">
+      <div className={cn("min-w-0", (isChecked || isAbsent || joinedFrom || isTempLeader) && "flex items-center gap-2 flex-wrap")}>
         <p className={cn("min-w-0 text-base font-medium truncate", (isChecked || isAbsent) && "text-muted-foreground")}>{user.name}</p>
+        {isTempLeader && (
+          <span
+            className="inline-flex flex-shrink-0 items-center gap-1 rounded-full bg-teal-100 px-2 py-0.5 text-xs font-semibold text-teal-800"
+            aria-label="이 일정 임시 조장"
+          >
+            <span aria-hidden>★</span>
+            임시조장
+          </span>
+        )}
         {joinedFrom && (
           <span
             className="inline-flex flex-shrink-0 items-center gap-0.5 rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-800"
@@ -136,6 +150,16 @@ export default function MemberCard({ user, checkIn, onCheckin, onCancel, onAbsen
           </>
         )}
       </div>
+      </div>
+      {noteText && (
+        <div
+          className="flex items-start gap-1.5 border-t border-stone-200/70 bg-stone-50/60 px-4 py-2 text-xs text-stone-700"
+          aria-label={`${user.name} 메모`}
+        >
+          <span aria-hidden className="flex-shrink-0 pt-0.5 text-sm leading-none">📌</span>
+          <span className="min-w-0 whitespace-pre-wrap break-words">{noteText}</span>
+        </div>
+      )}
     </li>
   );
 }
