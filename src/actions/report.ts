@@ -3,7 +3,7 @@
 import { createServiceClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { canCheckin, isAdminRole } from "@/lib/constants";
-import { revalidateMainPaths } from "./_shared";
+import { revalidateMainPaths, requireActiveSchedule } from "./_shared";
 import type { ActionResult } from "@/lib/types";
 
 // 조장 보고 (UPSERT — 재보고 허용)
@@ -16,6 +16,10 @@ export async function submitReport(
   if (!actor) return { ok: false, error: "권한이 없어요" };
 
   const supabase = createServiceClient();
+
+  // Phase B: 활성 일정에만 보고 허용 (오프라인 큐가 일정 종료 후 flush되는 시나리오 방어)
+  const activeCheck = await requireActiveSchedule(supabase, scheduleId);
+  if (!activeCheck.ok) return activeCheck;
 
   // v2: 영구 권한 OR 해당 일정의 임시 조장 권한
   // temp_leader는 actor.group_id가 원래 조이므로, smi.temp_group_id를 효용 조로 사용해야 한다.
@@ -67,6 +71,10 @@ export async function submitShuttleReport(
   }
 
   const supabase = createServiceClient();
+
+  // Phase B: 활성 일정에만 보고 허용
+  const activeCheck = await requireActiveSchedule(supabase, scheduleId);
+  if (!activeCheck.ok) return activeCheck;
 
   // 조장은 자신의 버스만 보고 가능 (셔틀 타입에 맞는 필드만 검증, 관리자는 전체 가능)
   if (!isAdminRole(actor.role)) {

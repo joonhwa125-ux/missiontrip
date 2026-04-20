@@ -115,10 +115,16 @@ export default function GroupView({
     setCurrentSchedule(activeSchedule);
   }
 
-  // Phase B: 조장이 탭한 일정 (활성/대기/완료 모두 가능).
-  // null이면 feed 뷰. non-null이면 checkin 뷰가 이 일정을 대상으로 렌더.
-  // currentSchedule(DB 활성)과는 독립 — 조장은 대기·완료 일정도 열람 가능.
-  const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
+  // Phase B: 조장이 탭한 일정 ID (활성/대기/완료 모두 가능).
+  // M-1 수정 (2026-04-20): Schedule 객체 전체를 state로 들고 있으면 마운트 시점 스냅샷이
+  //   고정되어 관리자가 시각 변경·활성화 broadcast를 쏴도 조장 뷰가 stale 상태로 남음.
+  //   ID만 저장하고 `schedules` 최신 배열에서 derive → 항상 최신 값 반영.
+  //   schedule이 삭제되거나 삭제됐을 경우 find 결과가 undefined → viewSchedule null → feed 복귀.
+  const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null);
+  const selectedSchedule = useMemo(
+    () => selectedScheduleId ? schedules.find((s) => s.id === selectedScheduleId) ?? null : null,
+    [schedules, selectedScheduleId]
+  );
 
   // W-3: 보고 무효화 중 self-echo 차단용 ref (취소→재체크인 사이에만 true)
   const reportInvalidatedRef = useRef(false);
@@ -134,7 +140,7 @@ export default function GroupView({
       if (viewRef.current === "checkin") {
         setView("feed");
         // Phase B: feed 복귀 시 selectedSchedule도 정리 — view ↔ selected 상태 불일치 방지
-        setSelectedSchedule(null);
+        setSelectedScheduleId(null);
       }
     };
     window.addEventListener("popstate", handlePopState);
@@ -265,7 +271,7 @@ export default function GroupView({
         if (shuttle_type && !hasShuttle) {
           showToast(`새로운 일정이 시작되었어요: ${title}`);
           setView("feed");
-          setSelectedSchedule(null); // Phase B: view ↔ selected 정합성
+          setSelectedScheduleId(null); // Phase B: view ↔ selected 정합성
           history.replaceState(null, "");
           router.refresh();
           return;
@@ -295,7 +301,7 @@ export default function GroupView({
       if (viewRef.current === "checkin") {
         showToast(COPY.scheduleDeactivated);
         setView("feed");
-        setSelectedSchedule(null); // Phase B: view ↔ selected 정합성
+        setSelectedScheduleId(null); // Phase B: view ↔ selected 정합성
         // history.pushState로 추가된 엔트리 정리 — stale 히스토리 방지
         history.replaceState(null, "");
       }
@@ -448,7 +454,7 @@ export default function GroupView({
 
   // Phase B: 체크인 진입 — 탭된 일정을 selectedSchedule로 설정
   const handleEnterCheckin = useCallback((schedule: Schedule) => {
-    setSelectedSchedule(schedule);
+    setSelectedScheduleId(schedule.id);
     history.pushState(null, "");
     setView("checkin");
   }, []);
@@ -507,7 +513,7 @@ export default function GroupView({
               <button
                 onClick={() => {
                   setView("feed");
-                  setSelectedSchedule(null); // Phase B: view ↔ selected 정합성
+                  setSelectedScheduleId(null); // Phase B: view ↔ selected 정합성
                   showToast("");
                 }}
                 className="ml-2 min-h-11 font-medium underline"
