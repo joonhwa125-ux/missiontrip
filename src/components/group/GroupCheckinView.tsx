@@ -431,7 +431,7 @@ export default function GroupCheckinView({
           {schedule.activated_at ? (
             <>
               <span className="font-semibold">완료된 일정이에요</span>
-              <span className="ml-1.5 text-stone-500">· 수정이 필요하면 관리자에게 카카오워크로 문의해주세요</span>
+              <span className="ml-1.5 text-stone-500">· 수정은 카카오워크로 문의</span>
             </>
           ) : (
             <>
