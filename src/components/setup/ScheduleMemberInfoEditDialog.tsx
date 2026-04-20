@@ -99,7 +99,8 @@ export default function ScheduleMemberInfoEditDialog({
       activity: form.activity?.trim() || null,
       menu: form.menu?.trim() || null,
       note: form.note?.trim() || null,
-      // 대체 조장은 이동+조장 조건일 때만 유효
+      // 대체 조장은 원래 조에 조장 공백이 발생할 때만 유효
+      // (영구 조장 이동 + 다른 영구·임시 조장 없음)
       replacement_leader_user_id: showReplacementSection
         ? form.replacement_leader_user_id || null
         : null,
@@ -122,16 +123,19 @@ export default function ScheduleMemberInfoEditDialog({
   };
 
   // Phase J+: 대체 조장 지정 관련 계산
-  //  - 조건: 이동자의 원래 조(users.group_id)가 temp_group_id와 다를 때
-  //          AND temp_role === 'leader' (조장 권한을 가져감)
-  //          → 원래 조에 조장 공백 위험
+  //  - 원래 설계: 이동자가 새 조에서 조장 역할을 가져갈 때만(= temp_role==='leader') 공백 체크.
+  //  - 2026-04-20 확장(A안): 영구 조장이 새 조에서 조장 역할 없이(temp_role=null/member)
+  //    단순 멤버로 이동하는 경우에도 **원래 조는 조장 공백** 상태가 되므로,
+  //    temp_role과 무관하게 **영구 조장 이동 자체**를 트리거로 삼는다.
+  //    이는 liam.j 같은 영구 조장이 특정 일정에 다른 조에 합류하는 시나리오를 커버한다.
   const selectedUser = useMemo(
     () => users.find((u) => u.id === form.user_id),
     [users, form.user_id]
   );
   const originalGroupId = selectedUser?.group_id ?? null;
-  const isTransferringAsLeader =
-    form.temp_role === "leader" &&
+  const isPermanentLeaderTransferring =
+    !!selectedUser?.role &&
+    isLeaderRole(selectedUser.role) &&
     !!form.temp_group_id &&
     !!originalGroupId &&
     form.temp_group_id !== originalGroupId;
@@ -208,9 +212,10 @@ export default function ScheduleMemberInfoEditDialog({
     [groups, originalGroupId]
   );
 
-  // 경고 표시 조건: 이동자가 조장 권한을 가져가는데 원래 조에 남는 조장이 없음
+  // 경고 표시 조건: 영구 조장이 이동하는데 원래 조에 남는 조장이 없음
+  // (temp_role 값 무관 — 영구 조장이 원래 조를 떠나는 것만으로 공백 발생)
   const showReplacementSection =
-    isTransferringAsLeader &&
+    isPermanentLeaderTransferring &&
     originalGroupOtherPermanentLeaders.length === 0 &&
     !existingTempLeaderInOriginal;
 
