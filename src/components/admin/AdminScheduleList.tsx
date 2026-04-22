@@ -107,7 +107,7 @@ export default function AdminScheduleList({
   };
 
   return (
-    <div className="px-4 py-4 pb-24">
+    <div className="pb-24">
       <div className="space-y-2">
         {schedules.map((s) => (
           <AdminScheduleCard
