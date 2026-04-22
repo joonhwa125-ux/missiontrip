@@ -485,7 +485,7 @@ export default function AdminView({
               동행체크
             </span>
             <span className="flex-shrink-0 rounded-full bg-gray-900 px-1.5 py-1 font-semibold text-white text-xs leading-none">
-              관리자
+              조장
             </span>
           </span>
         }

@@ -25,7 +25,7 @@ import type {
 type Member = GroupMember;
 
 interface Props {
-  currentUser: { id: string; group_id: string; shuttle_bus: string | null; return_shuttle_bus: string | null };
+  currentUser: { id: string; role: string; group_id: string; shuttle_bus: string | null; return_shuttle_bus: string | null };
   groupName: string;
   members: Member[];
   shuttleMembers: Member[];
@@ -495,6 +495,7 @@ export default function GroupView({
           groupId={currentUser.group_id}
           groupName={groupName}
           briefing={briefingState}
+          currentUserRole={currentUser.role}
         />
       ) : (
         <GroupCheckinView

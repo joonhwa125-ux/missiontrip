@@ -130,7 +130,7 @@ export function memberMatchesAirlineFilter(
 // 역할 라우팅
 export const ROLE_ROUTES: Record<string, string> = {
   leader: "/group",
-  member: "/no-access",
+  member: "/group",
   admin: "/admin",
   admin_leader: "/admin",
 };

@@ -45,8 +45,8 @@ export default async function GroupPage() {
 
   if (!currentUser) redirect("/");
 
-  // 기본 권한: leader / admin / admin_leader
-  const isPermanentLeader = ["leader", "admin", "admin_leader"].includes(currentUser.role);
+  // 기본 권한: leader / admin / admin_leader + 이번 요구사항으로 member 도 허용
+  const isPermanentLeader = ["leader", "admin", "admin_leader", "member"].includes(currentUser.role);
   // v2: 임시 조장 권한 (schedule_member_info.temp_role='leader')도 접근 허용
   const hasTempLeader = isPermanentLeader ? false : await hasActiveOrPastTempLeaderRole(currentUser.id);
   if (!isPermanentLeader && !hasTempLeader) redirect("/");
@@ -96,9 +96,13 @@ export default async function GroupPage() {
       .select("id, title, location, day_number, sort_order, scheduled_time, scope, is_active, shuttle_type, airline_leg, airline_filter, notice, activated_at, created_at")
       .order("day_number")
       .order("sort_order"),
-    supabase.from("groups").select("id, name, bus_name").order("name"),
+    supabase.from("groups").select("id, name, bus_name").in("name", ["1조", "2조", "16조"]).order("name"),
     supabase.from("users").select("id, group_id, party, name, role"),
   ]);
+
+  // members filtering isn't strict here since we fetched filtered groups above, but let's filter allMembers array explicitly
+  const allowedGroupIds = new Set((allGroups ?? []).map(g => g.id));
+  const filteredAllMembers = (allMembers ?? []).filter(m => allowedGroupIds.has(m.group_id));
 
   // 출발/귀가 셔틀 버스 배정자인 경우 해당 버스 인원 추가 조회
   let shuttleMembers: GroupMember[] = [];
@@ -257,7 +261,7 @@ export default async function GroupPage() {
   const relevantUserIds = new Set<string>(baseMemberIds);
   for (const smi of smiRows) relevantUserIds.add(smi.user_id);
   const userNameMap: Record<string, string> = {};
-  for (const m of allMembers ?? []) {
+  for (const m of filteredAllMembers) {
     if (relevantUserIds.has(m.id)) userNameMap[m.id] = m.name;
   }
 
@@ -340,7 +344,7 @@ export default async function GroupPage() {
 
   return (
     <GroupView
-      currentUser={{ id: currentUser.id, group_id: effectiveGroupId, shuttle_bus: currentUser.shuttle_bus ?? null, return_shuttle_bus: currentUser.return_shuttle_bus ?? null }}
+      currentUser={{ id: currentUser.id, role: currentUser.role, group_id: effectiveGroupId, shuttle_bus: currentUser.shuttle_bus ?? null, return_shuttle_bus: currentUser.return_shuttle_bus ?? null }}
       groupName={group?.name ?? "내 조"}
       members={(members ?? []).map((m) => ({
         id: m.id,

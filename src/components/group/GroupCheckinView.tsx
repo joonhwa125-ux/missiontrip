@@ -24,7 +24,7 @@ import type { Schedule, CheckIn, GroupMember, ScheduleMemberInfo } from "@/lib/t
 type Member = GroupMember;
 
 interface Props {
-  currentUser: { id: string; group_id: string; shuttle_bus: string | null; return_shuttle_bus: string | null };
+  currentUser: { id: string; role: string; group_id: string; shuttle_bus: string | null; return_shuttle_bus: string | null };
   groupName: string;
   members: Member[];
   /**
@@ -138,6 +138,7 @@ export default function GroupCheckinView({
   const handleCheckin = useCallback(
     async (userId: string) => {
       if (!isEditable) return; // Phase B: 대기/완료 일정은 편집 불가
+      if (currentUser.role === "member" && currentUser.id !== userId) return; // 조원은 본인만 가능
       const temp: CheckIn = {
         id: `temp-${userId}`,
         user_id: userId,
@@ -190,6 +191,7 @@ export default function GroupCheckinView({
 
   const handleCancelConfirm = useCallback(async () => {
     if (!cancelTarget || !isEditable) return; // Phase B: 편집 불가 시 차단
+    if (currentUser.role === "member" && currentUser.id !== cancelTarget.member.id) return;
     const userId = cancelTarget.member.id;
     setCancelTarget(null);
     onReportReset();
@@ -225,6 +227,7 @@ export default function GroupCheckinView({
 
   const handleAbsentConfirm = useCallback(async (reason: string | null, location: string | null) => {
     if (!absentTarget || !isEditable) return; // Phase B
+    if (currentUser.role === "member" && currentUser.id !== absentTarget.id) return;
     const userId = absentTarget.id;
     setAbsentTarget(null);
     const temp: CheckIn = {
@@ -258,7 +261,7 @@ export default function GroupCheckinView({
   }, [absentTarget, isEditable, schedule.id, schedule.shuttle_type, currentUser.id, currentUser.group_id, broadcastCheckin, setCheckIns, showToast]);
 
   const handleReport = useCallback(async () => {
-    if (!isEditable) return; // Phase B
+    if (!isEditable || currentUser.role === "member") return; // Phase B 및 조원 거부
     const unchecked = members.filter(
       (m) => !checkIns.some((c) => c.user_id === m.id)
     ).length;
@@ -530,7 +533,7 @@ export default function GroupCheckinView({
                   user={m}
                   checkIn={checkIns.find((c) => c.user_id === m.id) ?? null}
                   joinedFrom={transferredInMap?.get(m.id) ?? null}
-                  isEditable={isEditable}
+                  isEditable={isEditable && (currentUser.role !== "member" || currentUser.id === m.id)}
                   memberInfo={memberInfoMap?.get(m.id) ?? null}
                   onCheckin={handleCheckin}
                   onCancel={(mm) => {
@@ -588,6 +591,13 @@ export default function GroupCheckinView({
             className="w-full min-h-11 rounded-xl bg-gray-100 py-4 text-base font-medium text-gray-400 cursor-not-allowed"
           >
             {schedule.activated_at ? "완료된 일정이에요" : "아직 시작 전이에요"}
+          </button>
+        ) : currentUser.role === "member" ? (
+          <button
+            aria-disabled="true"
+            className="w-full min-h-11 rounded-xl bg-gray-100 py-4 text-base font-medium text-gray-400 cursor-not-allowed"
+          >
+            보고는 조장만 할 수 있어요
           </button>
         ) : reported ? (
           <button

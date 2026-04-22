@@ -33,8 +33,10 @@ async function isTempLeaderFor(
 async function canActorCheckin(
   supabase: ReturnType<typeof createServiceClient>,
   actor: { id: string; role: string },
+  targetUserId: string,
   scheduleId: string
 ): Promise<boolean> {
+  if (actor.id === targetUserId) return true;
   if (canCheckin(actor.role)) return true;
   return await isTempLeaderFor(supabase, actor.id, scheduleId);
 }
@@ -162,8 +164,8 @@ export async function createCheckin(
   const activeCheck = await requireActiveSchedule(supabase, scheduleId);
   if (!activeCheck.ok) return activeCheck;
 
-  // v2: 역할 기반 OR 임시 조장 기반 권한 체크
-  const allowed = await canActorCheckin(supabase, actor, scheduleId);
+  // v2: 역할 기반 OR 임시 조장 기반 권한 체크 (본인 포함)
+  const allowed = await canActorCheckin(supabase, actor, userId, scheduleId);
   if (!allowed) return { ok: false, error: "권한이 없어요" };
 
   const access = await validateGroupAccess(supabase, actor, userId, scheduleId, shuttleType);
@@ -214,7 +216,7 @@ export async function deleteCheckin(
   const activeCheck = await requireActiveSchedule(supabase, scheduleId);
   if (!activeCheck.ok) return activeCheck;
 
-  const allowed = await canActorCheckin(supabase, actor, scheduleId);
+  const allowed = await canActorCheckin(supabase, actor, userId, scheduleId);
   if (!allowed) return { ok: false, error: "권한이 없어요" };
 
   const access = await validateGroupAccess(supabase, actor, userId, scheduleId, shuttleType);
@@ -296,7 +298,7 @@ export async function markAbsent(
   const activeCheck = await requireActiveSchedule(supabase, scheduleId);
   if (!activeCheck.ok) return activeCheck;
 
-  const allowed = await canActorCheckin(supabase, actor, scheduleId);
+  const allowed = await canActorCheckin(supabase, actor, userId, scheduleId);
   if (!allowed) return { ok: false, error: "권한이 없어요" };
 
   const access = await validateGroupAccess(supabase, actor, userId, scheduleId, shuttleType);
@@ -378,9 +380,9 @@ export async function syncOfflineCheckins(
 
   // 권한 체크: 영구 권한자가 아니면 각 item의 schedule_id에 대해 temp_leader 권한 확인
   if (!canCheckin(actor.role)) {
-    const filteredScheduleIds = Array.from(new Set(filteredCheckins.map((c) => c.schedule_id)));
-    for (const sid of filteredScheduleIds) {
-      const ok = await isTempLeaderFor(supabase, actor.id, sid);
+    for (const c of filteredCheckins) {
+      if (c.user_id === actor.id) continue;
+      const ok = await isTempLeaderFor(supabase, actor.id, c.schedule_id);
       if (!ok) return { ok: false, error: "권한이 없어요" };
     }
   }

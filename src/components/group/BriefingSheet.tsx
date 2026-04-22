@@ -594,12 +594,21 @@ export default function BriefingSheet({
                         {/* 일정별 공지 — 모든 조에 공통 */}
                         {block.schedule.notice && (
                           <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-                            <p className="mb-0.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-amber-800">
+                            <p className="mb-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-amber-800">
                               공지
                             </p>
-                            <p className="whitespace-pre-wrap text-xs leading-relaxed text-amber-900">
-                              {block.schedule.notice}
-                            </p>
+                            <ul className="space-y-1.5 text-xs leading-relaxed text-amber-900">
+                              {block.schedule.notice
+                                .split(/(?:·|\n)/)
+                                .map((line) => line.trim())
+                                .filter(Boolean)
+                                .map((item, idx) => (
+                                  <li key={idx} className="flex items-start gap-1.5">
+                                    <span className="mt-[-1px] text-amber-600/70 select-none">•</span>
+                                    <span>{item}</span>
+                                  </li>
+                                ))}
+                            </ul>
                           </div>
                         )}
 
