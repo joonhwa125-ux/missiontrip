@@ -152,11 +152,6 @@ export default function GroupFeedView({
               <Image src="/1.png" alt="" width={40} height={40} quality={100} className="inline-block" aria-hidden="true" priority />
               동행체크
             </span>
-            {currentUserRole !== "member" && (
-              <span className="flex-shrink-0 rounded-full bg-gray-900 px-1.5 py-1 font-semibold text-white text-xs leading-none">
-                조장
-              </span>
-            )}
           </span>
         }
         rightSlot={<SettingsDropdown />}

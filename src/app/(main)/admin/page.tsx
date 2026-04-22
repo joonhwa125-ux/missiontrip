@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { isAdminRole, matchesAirlineFilter } from "@/lib/constants";
+import { getBriefingData } from "@/actions/briefing";
 import AdminView from "@/components/admin/AdminView";
 import type { Group, Schedule, ScheduleMemberInfo } from "@/lib/types";
 
@@ -130,6 +131,15 @@ export default async function AdminPage() {
     return matchesAirlineFilter(s.airline_filter, filteredMembers);
   });
 
+  const briefing = await getBriefingData({
+    supabase,
+    effectiveGroupId: currentUser.group_id,
+    members: members as AdminMember[],
+    allGroups: groups as Group[],
+    schedules: schedules as Schedule[],
+    currentUser,
+  });
+
   return (
     <AdminView
       currentUser={{ id: currentUser.id, role: currentUser.role, group_id: currentUser.group_id, shuttle_bus: currentUser.shuttle_bus ?? null, return_shuttle_bus: currentUser.return_shuttle_bus ?? null }}
@@ -141,6 +151,7 @@ export default async function AdminPage() {
       initialReportsMap={reportsMap}
       initialShuttleReportsMap={shuttleReportsMap}
       initialMemberInfosMap={memberInfosMap}
+      briefing={briefing}
     />
   );
 }

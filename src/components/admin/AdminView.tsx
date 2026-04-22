@@ -16,6 +16,8 @@ import AdminBottomSheet from "./AdminBottomSheet";
 import ScheduleAddDialog from "./ScheduleAddDialog";
 import TimeEditDialog from "./TimeEditDialog";
 import GroupCheckinView from "@/components/group/GroupCheckinView";
+import BriefingBanner from "@/components/group/BriefingBanner";
+import BriefingSheet from "@/components/group/BriefingSheet";
 import {
   Dialog,
   DialogContent,
@@ -23,7 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { UsersIcon, PlusIcon } from "@/components/ui/icons";
 import SettingsDropdown from "@/components/common/SettingsDropdown";
-import type { Group, Schedule, AdminMember, AdminCheckIn, AdminReport, AdminShuttleReport, CheckIn, ScheduleMemberInfo } from "@/lib/types";
+import type { Group, Schedule, AdminMember, AdminCheckIn, AdminReport, AdminShuttleReport, CheckIn, ScheduleMemberInfo, BriefingData } from "@/lib/types";
 
 interface Props {
   currentUser: { id: string; role: string; group_id: string; shuttle_bus: string | null; return_shuttle_bus: string | null };
@@ -36,6 +38,7 @@ interface Props {
   initialShuttleReportsMap: Record<string, AdminShuttleReport[]>;
   /** Phase J: 활성화된 일정별 schedule_member_info 매핑 (effective roster/임시 조장 표시용) */
   initialMemberInfosMap: Record<string, ScheduleMemberInfo[]>;
+  briefing: BriefingData;
 }
 
 /** 클라이언트에서 직접 체크인/보고 데이터 조회 (RLS email 기반 권한 통제) */
@@ -82,6 +85,7 @@ export default function AdminView({
   initialReportsMap,
   initialShuttleReportsMap,
   initialMemberInfosMap,
+  briefing,
 }: Props) {
   const router = useRouter();
   const [schedules, setSchedules] = useState(initialSchedules);
@@ -247,6 +251,7 @@ export default function AdminView({
   // 내 조 체크인 Sheet
   const [checkinSheetOpen, setCheckinSheetOpen] = useState(false);
   const [sheetCheckIns, setSheetCheckIns] = useState<CheckIn[]>([]);
+  const [briefingOpen, setBriefingOpen] = useState(false);
 
   // 내 조 정보 파생
   const adminGroupName = useMemo(
@@ -471,7 +476,39 @@ export default function AdminView({
       if (next.length === list.length) return prev;
       return { ...prev, [sid]: next };
     });
+    });
   }, [activeSchedule, currentUser.group_id]);
+
+  // J-3: 브리핑 배너 카운트 연산 (현재 선택된 일차 기준)
+  const { roleCount, specialCount } = useMemo(() => {
+    let rc = 0;
+    if (selectedDay === 1) {
+      rc = briefing.roleAssignments.filter((r) => !!r.trip_role).length;
+    }
+    const specialKeys = new Set<string>();
+    for (const info of briefing.memberInfos) {
+      if (
+        info.excused_reason ||
+        info.temp_group_id ||
+        info.temp_role === "leader" ||
+        info.note
+      ) {
+        specialKeys.add(`${info.schedule_id}:${info.user_id}`);
+      }
+    }
+    for (const info of briefing.groupInfos) {
+      if (info.group_location || info.note) {
+        specialKeys.add(`${info.schedule_id}:group`);
+      }
+    }
+    for (const s of briefing.scheduleSummaries) {
+      // 선택된 일차(selectedDay)에 해당하는 일정의 공지만 카운트 (중복 방지용 key)
+      if (s.day_number === selectedDay && s.notice) {
+        specialKeys.add(`${s.schedule_id}:notice`);
+      }
+    }
+    return { roleCount: rc, specialCount: specialKeys.size };
+  }, [briefing, selectedDay]);
 
   return (
     <div className="flex min-h-full flex-col">
@@ -483,9 +520,6 @@ export default function AdminView({
             <span className="inline-flex items-center gap-1">
               <Image src="/1.png" alt="" width={40} height={40} quality={100} className="inline-block" aria-hidden="true" priority />
               동행체크
-            </span>
-            <span className="flex-shrink-0 rounded-full bg-gray-900 px-1.5 py-1 font-semibold text-white text-xs leading-none">
-              조장
             </span>
           </span>
         }
@@ -545,7 +579,17 @@ export default function AdminView({
           />
 
           {/* 일정 카드 목록 */}
-          <div id="admin-schedule-panel" role="tabpanel" className="flex-1">
+          <div id="admin-schedule-panel" role="tabpanel" className="flex-1 px-4 py-4">
+            {/* 조장 브리핑 배너 */}
+            {(roleCount > 0 || specialCount > 0) && (
+              <div className="mb-3">
+                <BriefingBanner
+                  roleCount={roleCount}
+                  specialCount={specialCount}
+                  onOpen={() => setBriefingOpen(true)}
+                />
+              </div>
+            )}
             <AdminScheduleList
               schedules={daySchedules}
               allSchedules={schedules}
@@ -618,6 +662,16 @@ export default function AdminView({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* 브리핑 바텀시트 */}
+      <BriefingSheet
+        open={briefingOpen}
+        onClose={() => setBriefingOpen(false)}
+        groupName={adminGroupName}
+        briefing={briefing}
+        isFromCache={false}
+        selectedDay={selectedDay}
+      />
 
       {/* 토스트 */}
       {toast && (
