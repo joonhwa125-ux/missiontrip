@@ -5,7 +5,6 @@ import { useBroadcast } from "@/hooks/useRealtime";
 import { useBroadcastCheckin } from "@/hooks/useBroadcastCheckin";
 import { useOfflineSync } from "@/hooks/useOfflineSync";
 import { createCheckin, deleteCheckin, markAbsent } from "@/actions/checkin";
-import { submitReport, submitShuttleReport } from "@/actions/report";
 import Image from "next/image";
 import MemberCard from "./MemberCard";
 import { CancelCheckinDialog, MarkAbsentDialog } from "./CheckinDialogs";
@@ -14,8 +13,6 @@ import {
   COPY,
   CHANNEL_GLOBAL,
   CHANNEL_ADMIN,
-  EVENT_GROUP_REPORTED,
-  EVENT_SHUTTLE_REPORTED,
   EVENT_REPORT_INVALIDATED,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -121,7 +118,6 @@ export default function GroupCheckinView({
   closeMode,
   showToast,
   reported,
-  onReported,
   onReportReset,
   excusedMembers = [],
   transferredInMap,
@@ -131,7 +127,7 @@ export default function GroupCheckinView({
   const [absentTarget, setAbsentTarget] = useState<Member | null>(null);
   const [, startTransition] = useTransition();
 
-  const { isOnline, pendingCount, addPending, addPendingReport } = useOfflineSync();
+  const { isOnline, pendingCount, addPending } = useOfflineSync();
   const { broadcast } = useBroadcast();
   const broadcastCheckin = useBroadcastCheckin(currentUser.group_id, schedule.id, schedule.shuttle_type ?? null);
 
@@ -259,79 +255,6 @@ export default function GroupCheckinView({
       }
     });
   }, [absentTarget, isEditable, schedule.id, schedule.shuttle_type, currentUser.id, currentUser.group_id, broadcastCheckin, setCheckIns, showToast]);
-
-  const handleReport = useCallback(async () => {
-    if (!isEditable || currentUser.role === "member") return; // Phase B 및 조원 거부
-    const unchecked = members.filter(
-      (m) => !checkIns.some((c) => c.user_id === m.id)
-    ).length;
-    const confirmed = checkIns.length;
-
-    const shuttleType = schedule.shuttle_type;
-    const shuttleBus = shuttleType === "departure"
-      ? currentUser.shuttle_bus
-      : shuttleType === "return"
-        ? currentUser.return_shuttle_bus
-        : null;
-
-    if (shuttleType && !shuttleBus) {
-      showToast("셔틀 버스 배정 정보가 없어요");
-      return;
-    }
-
-    if (!isOnline) {
-      const saved = addPendingReport(
-        shuttleType
-          ? { group_id: null, shuttle_bus: shuttleBus, schedule_id: schedule.id, pending_count: unchecked }
-          : { group_id: currentUser.group_id, shuttle_bus: null, schedule_id: schedule.id, pending_count: unchecked }
-      );
-      if (saved) {
-        onReported();
-        showToast(COPY.reportButtonDone(confirmed, members.length));
-      } else {
-        showToast("저장 공간이 부족해요. 기기 저장소를 확인해주세요.");
-      }
-      return;
-    }
-
-    startTransition(async () => {
-      try {
-        const res = shuttleType
-          ? await submitShuttleReport(shuttleBus!, schedule.id, unchecked)
-          : await submitReport(currentUser.group_id, schedule.id, unchecked);
-        if (res.ok) {
-          onReported();
-          showToast(COPY.reportButtonDone(confirmed, members.length));
-          // broadcast 실패는 DB 보고 성공에 영향 없음 — 각자 독립 처리
-          if (!shuttleType) {
-            const reportPayload = {
-              group_id: currentUser.group_id,
-              schedule_id: schedule.id,
-              pending_count: unchecked,
-            };
-            await Promise.allSettled([
-              broadcast(CHANNEL_GLOBAL, EVENT_GROUP_REPORTED, reportPayload),
-              broadcast(CHANNEL_ADMIN, EVENT_GROUP_REPORTED, reportPayload),
-            ]);
-          } else {
-            const shuttlePayload = {
-              shuttle_bus: shuttleBus!,
-              schedule_id: schedule.id,
-              pending_count: unchecked,
-            };
-            await Promise.allSettled([
-              broadcast(CHANNEL_GLOBAL, EVENT_SHUTTLE_REPORTED, shuttlePayload),
-              broadcast(CHANNEL_ADMIN, EVENT_SHUTTLE_REPORTED, shuttlePayload),
-            ]);
-          }
-        } else {
-          showToast(res.error ?? "보고 처리 중 오류가 발생했어요. 다시 시도해주세요.");
-        }
-      } catch {
-        showToast("서버 연결에 실패했어요. 다시 시도해주세요.");
-      }
-    });
-  }, [isEditable, schedule.id, schedule.shuttle_type, members, checkIns, currentUser.group_id, currentUser.shuttle_bus, currentUser.return_shuttle_bus, broadcast, isOnline, addPendingReport, showToast, onReported]);
 
   // CR-005: checkIns → 불참/확인/미확인 정확히 분리
   //         Phase F: 제외 인원은 members에서 이미 빠져있으므로 별도 고려 불필요
@@ -518,7 +441,8 @@ export default function GroupCheckinView({
 
       {/* 조원 카드 리스트 — 전원 완료 시에도 취소 가능하도록 항상 표시 */}
       {/*  Phase F: 섹션 그루핑 (activity 또는 airline), 단일 섹션이면 헤더 없이 flat */}
-      <div className="px-4 pb-28 pt-3" aria-label="조원 탑승 현황">
+      {/*  pb-20: 오프라인 배너가 fixed로 하단에 뜰 때 마지막 카드를 가리지 않도록 여백 확보 */}
+      <div className="px-4 pb-20 pt-3" aria-label="조원 탑승 현황">
         {sections.map((section, idx) => (
           <section key={section.key} className={idx > 0 ? "mt-4" : undefined}>
             {section.label && (
@@ -572,55 +496,20 @@ export default function GroupCheckinView({
         )}
       </div>
 
-      {/* CR-006+016: 보고 버튼 + 오프라인 배너를 하나의 fixed 컨테이너로 통합 */}
-      <div className="fixed bottom-0 left-1/2 w-full max-w-lg -translate-x-1/2 border-t bg-white px-4 py-3 pb-safe">
-        {/* 오프라인 배너 — 보고 버튼 위에 인라인 표시 */}
-        {!isOnline && (
+      {/* 오프라인 배너 — 하단 고정 (오프라인 시에만 표시) */}
+      {!isOnline && (
+        <div
+          className="fixed bottom-0 left-1/2 w-full max-w-lg -translate-x-1/2 border-t bg-white px-4 py-3 pb-safe"
+        >
           <div
-            className="mb-2 rounded-lg bg-offline-banner px-3 py-2 text-center text-sm"
+            className="rounded-lg bg-offline-banner px-3 py-2 text-center text-sm"
             aria-live="polite"
             role="status"
           >
             {COPY.offline(pendingCount)}
           </div>
-        )}
-        {/* Phase B: 편집 불가 일정(대기/완료)은 보고 버튼 비활성 + 상태 안내 */}
-        {!isEditable ? (
-          <button
-            aria-disabled="true"
-            className="w-full min-h-11 rounded-xl bg-gray-100 py-4 text-base font-medium text-gray-400 cursor-not-allowed"
-          >
-            {schedule.activated_at ? "완료된 일정이에요" : "아직 시작 전이에요"}
-          </button>
-        ) : currentUser.role === "member" ? (
-          <button
-            aria-disabled="true"
-            className="w-full min-h-11 rounded-xl bg-gray-100 py-4 text-base font-medium text-gray-400 cursor-not-allowed"
-          >
-            보고는 조장만 할 수 있어요
-          </button>
-        ) : reported ? (
-          <button
-            className="flex w-full items-center justify-center gap-2 min-h-11 rounded-xl border border-[#EBE8E3] bg-app-bg py-4 text-base font-medium text-muted-foreground"
-          >
-            <CheckIcon className="h-5 w-5 text-complete-check" aria-hidden />
-            {COPY.reportButtonDone(processedCount, members.length)}
-          </button>
-        ) : (
-          <button
-            aria-disabled={!allComplete}
-            onClick={allComplete ? handleReport : undefined}
-            className={cn(
-              "w-full min-h-11 rounded-xl py-4 text-base transition-colors",
-              allComplete
-                ? "bg-main-action font-bold"
-                : "bg-gray-200 text-gray-400 font-medium"
-            )}
-          >
-            {allComplete ? COPY.reportButtonComplete : COPY.reportButtonPending(uncheckedCount)}
-          </button>
-        )}
-      </div>
+        </div>
+      )}
 
       <CancelCheckinDialog
         open={!!cancelTarget}
