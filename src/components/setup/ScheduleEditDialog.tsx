@@ -88,12 +88,13 @@ export default function ScheduleEditDialog({ schedule, onSave, onClose }: Props)
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="flex-shrink-0 px-6 pb-2 pt-6">
           <DialogTitle>일정 수정</DialogTitle>
           <DialogDescription className="sr-only">일정 정보를 수정해요</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-3 py-1">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-6 py-2">
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">장소</label>
             <input
@@ -221,7 +222,8 @@ export default function ScheduleEditDialog({ schedule, onSave, onClose }: Props)
               일정별 공통 안내. 모든 조장에게 동일하게 브리핑 시트에 노출돼요
             </p>
           </div>
-          <DialogFooter className="pt-2">
+          </div>
+          <DialogFooter className="flex-shrink-0 border-t border-stone-100 px-6 py-4">
             <button
               type="button"
               onClick={onClose}

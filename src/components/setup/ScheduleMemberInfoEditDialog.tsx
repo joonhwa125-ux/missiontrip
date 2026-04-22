@@ -221,14 +221,15 @@ export default function ScheduleMemberInfoEditDialog({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="flex-shrink-0 px-6 pb-2 pt-6">
           <DialogTitle>{isEdit ? "개인 안내 수정" : "개인 안내 추가"}</DialogTitle>
           <DialogDescription className="sr-only">
             일정별 참가자 특이사항 (조이동/임시역할/미참여/활동/메뉴/메모)
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-3 py-1">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-6 py-2">
           <div>
             <label htmlFor={ids.schedule} className="mb-1 block text-xs font-medium text-muted-foreground">일정</label>
             <select
@@ -372,7 +373,8 @@ export default function ScheduleMemberInfoEditDialog({
               )}
             </div>
           )}
-          <DialogFooter className="pt-2">
+          </div>
+          <DialogFooter className="flex-shrink-0 border-t border-stone-100 px-6 py-4">
             <button
               type="button"
               onClick={onClose}
