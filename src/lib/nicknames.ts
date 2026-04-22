@@ -38,10 +38,10 @@ export const NICKNAMES: Record<string, string> = {
   "kayla.k": "케일라",
   "kimi.03": "키미", // 매뉴얼 p.7
   "lowell.0704": "로웰",
-  "mari.gold": "매리", // 추정 — 원 호칭이 다르면 수정
+  "mari.gold": "마리",
   "mindy.b": "민디",
   "teo.0615": "테오", // 매뉴얼 p.20
-  "world.wide": "월드", // 추정 — 원 호칭이 다르면 수정
+  "world.wide": "월드",
 
   // ── 16조 (3명, 8호차 갈매기 · 칸조) ──
   "kan.k": "칸", // 조장 · 매뉴얼 p.20

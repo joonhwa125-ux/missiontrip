@@ -773,10 +773,13 @@ export default function BriefingSheet({
     [briefing.roleAssignments, hasReturnFlight]
   );
 
-  // 편명·시각 — 해당 일차 비행 일정의 notice에서 "HH:MM ... (TW|7C|...)NNN ... 출발" 패턴 추출
+  // 편명·시각 — 해당 일차 비행 일정의 notice에서 "HH:MM ... (TW|7C|...)NNN" 패턴 추출.
+  // 같은 bullet 안에 있는 시각만 편명과 연결한다 — `·`(bullet 구분자)·`|`(섹션 구분자)가
+  // 사이에 끼면 매칭 중단. 이 제약이 없으면 "08:00 집결 완료 · 10:20 TW709 출발"에서
+  // 집결 시각(08:00)이 편명과 매칭되어 잘못 표시된다.
   const { outboundFlightInfo, returnFlightInfo } = useMemo(() => {
     const FLIGHT_RE =
-      /(\d{1,2}:\d{2})[^|]*?(TW|7C|RS|KE|OZ|BX|LJ|ZE|4V)(\d+)[^|]*?출발/;
+      /(\d{1,2}:\d{2})[^|·]*?(TW|7C|RS|KE|OZ|BX|LJ|ZE|4V)(\d+)/;
     const extract = (leg: "outbound" | "return"): string | undefined => {
       const flights = briefing.scheduleSummaries.filter(
         (s) => s.day_number === selectedDay && s.airline_leg === leg
