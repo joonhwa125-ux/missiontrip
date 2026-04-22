@@ -35,7 +35,6 @@ interface Props {
   briefing: BriefingData | null;
   groupId: string;
   groupName: string;
-  currentUserRole: string;
 }
 
 export default function GroupFeedView({
@@ -50,7 +49,6 @@ export default function GroupFeedView({
   briefing,
   groupId,
   groupName,
-  currentUserRole,
 }: Props) {
   const { isOnline, pendingCount } = useOfflineSync();
   const [briefingOpen, setBriefingOpen] = useState(false);

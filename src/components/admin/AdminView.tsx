@@ -476,7 +476,6 @@ export default function AdminView({
       if (next.length === list.length) return prev;
       return { ...prev, [sid]: next };
     });
-    });
   }, [activeSchedule, currentUser.group_id]);
 
   // J-3: 브리핑 배너 카운트 연산 (현재 선택된 일차 기준)

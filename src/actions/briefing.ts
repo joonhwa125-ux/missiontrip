@@ -43,7 +43,7 @@ export async function getBriefingData({
   const relevantUserIds = new Set<string>(baseMemberIds);
   for (const smi of smiRows) relevantUserIds.add(smi.user_id);
   
-  let extraNames: Record<string, string> = {};
+  const extraNames: Record<string, string> = {};
   const missingIds = Array.from(relevantUserIds).filter(id => !members.find(m => m.id === id));
   if (missingIds.length > 0) {
     const { data: extraUsers } = await supabase.from("users").select("id, name").in("id", missingIds);
@@ -109,5 +109,6 @@ export async function getBriefingData({
     scheduleSummaries,
     groupNameMap,
     userNameMap,
+    cachedAt: new Date().toISOString(),
   };
 }

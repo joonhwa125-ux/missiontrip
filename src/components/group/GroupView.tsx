@@ -495,7 +495,6 @@ export default function GroupView({
           groupId={currentUser.group_id}
           groupName={groupName}
           briefing={briefingState}
-          currentUserRole={currentUser.role}
         />
       ) : (
         <GroupCheckinView

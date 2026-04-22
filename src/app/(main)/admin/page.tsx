@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { isAdminRole, matchesAirlineFilter } from "@/lib/constants";
 import { getBriefingData } from "@/actions/briefing";
 import AdminView from "@/components/admin/AdminView";
-import type { Group, Schedule, ScheduleMemberInfo } from "@/lib/types";
+import type { Group, Schedule, ScheduleMemberInfo, AdminMember } from "@/lib/types";
 
 export const metadata: Metadata = { title: "관리자" };
 
