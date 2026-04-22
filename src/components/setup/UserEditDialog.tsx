@@ -100,12 +100,13 @@ export default function UserEditDialog({ user, groups, onSave, onClose }: Props)
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[85vh] flex-col gap-0 overflow-hidden p-0">
+        <DialogHeader className="flex-shrink-0 px-6 pb-2 pt-6">
           <DialogTitle>참가자 수정</DialogTitle>
           <DialogDescription className="sr-only">참가자 정보를 수정해요</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-3 py-1">
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-6 py-2">
           <div>
             <label className="mb-1 block text-xs font-medium text-muted-foreground">
               이름 <span aria-hidden="true">*</span>
@@ -222,7 +223,8 @@ export default function UserEditDialog({ user, groups, onSave, onClose }: Props)
               aria-label="여행 역할"
             />
           </div>
-          <DialogFooter className="pt-2">
+          </div>
+          <DialogFooter className="flex-shrink-0 border-t border-stone-100 px-6 py-4">
             <button
               type="button"
               onClick={onClose}

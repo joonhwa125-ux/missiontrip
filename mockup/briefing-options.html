@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>브리핑 배너 3안 비교</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      background: #ECEAE5;
+      color: #1F2937;
+      -webkit-font-smoothing: antialiased;
+    }
+    .page {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin: 0 0 8px;
+    }
+    .subtitle {
+      color: #6B7280;
+      margin: 0 0 32px;
+      font-size: 0.95rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 20px;
+    }
+    .option {
+      display: flex;
+      flex-direction: column;
+    }
+    .label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #6B7280;
+      margin-bottom: 4px;
+    }
+    .title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin: 0 0 6px;
+    }
+    .meta {
+      font-size: 0.8rem;
+      color: #6B7280;
+      margin-bottom: 14px;
+      line-height: 1.6;
+    }
+    .meta code {
+      background: #F3F2EE;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 0.78rem;
+    }
+
+    /* 앱 컨테이너 - 실제 앱 배경 재현 */
+    .app {
+      background: #F5F3EF;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      flex: 1;
+    }
+
+    /* 브리핑 배너 공통 */
+    .banner {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: 0;
+      text-align: left;
+      min-height: 44px;
+      margin-bottom: 10px;
+      transition: transform 0.15s;
+    }
+    .banner:hover { transform: translateY(-1px); }
+    .banner .left {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .banner .right {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 22px;
+      min-width: 22px;
+      padding: 0 6px;
+      border-radius: 11px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    /* === 옵션 A: 웜 다크 브라운 === */
+    .banner-a {
+      background: #2D2A26;
+      color: #FFFBF5;
+      box-shadow: 0 4px 12px rgba(45, 42, 38, 0.18);
+    }
+    .banner-a .badge { background: #FEE500; color: #1F2937; }
+    .banner-a .chevron { color: rgba(255,255,255,0.6); }
+
+    /* === 옵션 B: 소프트 차콜 === */
+    .banner-b {
+      background: #3C3835;
+      color: #FAFAF9;
+      box-shadow: 0 4px 12px rgba(60, 56, 53, 0.16);
+    }
+    .banner-b .badge { background: #FEE500; color: #1F2937; }
+    .banner-b .chevron { color: rgba(255,255,255,0.6); }
+
+    /* === 옵션 C: 진한 베이지 + 좌측 액센트 === */
+    .banner-c {
+      background: #E7DFD1;
+      color: #1F2937;
+      border-left: 4px solid #FEE500;
+      padding-left: 14px;
+    }
+    .banner-c .badge { background: #1F2937; color: #FFFBF5; }
+    .banner-c .chevron { color: rgba(31,41,55,0.5); }
+
+    /* === 참고: 현재 적용 (순수 다크) === */
+    .banner-current {
+      background: #111827;
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(17, 24, 39, 0.12);
+    }
+    .banner-current .badge { background: #FEE500; color: #1F2937; }
+    .banner-current .chevron { color: rgba(255,255,255,0.7); }
+
+    /* 일정 카드 샘플 (배너와 구분감 확인용) */
+    .schedule-card {
+      background: #FFFFFF;
+      border-radius: 12px;
+      padding: 14px 16px;
+      margin-top: 8px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+    .chip {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #E0E7FF;
+      color: #3730A3;
+      margin-right: 6px;
+    }
+    .chip.time { background: #DBEAFE; color: #1E40AF; }
+    .schedule-card .title-s {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin: 6px 0 2px;
+    }
+    .schedule-card .loc {
+      font-size: 0.78rem;
+      color: #6B7280;
+    }
+
+    /* 아이콘 크기 */
+    svg.icon { width: 16px; height: 16px; stroke-width: 2; flex-shrink: 0; }
+
+    .note {
+      margin-top: 32px;
+      padding: 16px 20px;
+      background: #FFFBE8;
+      border-left: 4px solid #FEE500;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      line-height: 1.6;
+    }
+    .note strong { font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1>브리핑 배너 디자인 비교</h1>
+    <p class="subtitle">앱 배경(#F5F3EF) 위에 배너 + 일정 카드를 실제 배치와 동일하게 재현</p>
+
+    <div class="grid">
+
+      <!-- 참고: 현재 적용 (비교 기준) -->
+      <section class="option">
+        <div class="label">현재 적용 중 (비교 기준)</div>
+        <h2 class="title">순수 다크 #111827</h2>
+        <p class="meta">
+          배경 <code>#111827 gray-900</code> · 텍스트 흰색 · 배지 카카오 노랑<br>
+          사용자 피드백: <strong>"강렬함"</strong>
+        </p>
+        <div class="app">
+          <button class="banner banner-current">
+            <span class="left">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+              <span>오늘의 브리핑</span>
+            </span>
+            <span class="right">
+              <span class="badge">14</span>
+              <svg class="icon chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </span>
+          </button>
+          <div class="schedule-card">
+            <span class="chip">예정</span><span class="chip time">집결 07:00</span>
+            <div class="title-s">김포공항行 셔틀</div>
+            <div class="loc">판교·성수 사옥 앞 집결</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 옵션 A: 웜 다크 브라운 -->
+      <section class="option">
+        <div class="label" style="color:#8B7355">옵션 A (권장)</div>
+        <h2 class="title">웜 다크 브라운 #2D2A26</h2>
+        <p class="meta">
+          배경 <code>#2D2A26</code> · 텍스트 <code>#FFFBF5</code> · 배지 <code>#FEE500</code><br>
+          앱 배경 색조와 <strong>같은 계열</strong>의 어두운 버전 — 토스·카카오뱅크 앵커 패턴
+        </p>
+        <div class="app">
+          <button class="banner banner-a">
+            <span class="left">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+              <span>오늘의 브리핑</span>
+            </span>
+            <span class="right">
+              <span class="badge">14</span>
+              <svg class="icon chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </span>
+          </button>
+          <div class="schedule-card">
+            <span class="chip">예정</span><span class="chip time">집결 07:00</span>
+            <div class="title-s">김포공항行 셔틀</div>
+            <div class="loc">판교·성수 사옥 앞 집결</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 옵션 B: 소프트 차콜 -->
+      <section class="option">
+        <div class="label">옵션 B</div>
+        <h2 class="title">소프트 차콜 #3C3835</h2>
+        <p class="meta">
+          배경 <code>#3C3835</code> · 텍스트 <code>#FAFAF9</code> · 배지 <code>#FEE500</code><br>
+          A보다 한 단계 밝음 — 강렬함 ↓, 구분감도 소폭 ↓
+        </p>
+        <div class="app">
+          <button class="banner banner-b">
+            <span class="left">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+              <span>오늘의 브리핑</span>
+            </span>
+            <span class="right">
+              <span class="badge">14</span>
+              <svg class="icon chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </span>
+          </button>
+          <div class="schedule-card">
+            <span class="chip">예정</span><span class="chip time">집결 07:00</span>
+            <div class="title-s">김포공항行 셔틀</div>
+            <div class="loc">판교·성수 사옥 앞 집결</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 옵션 C: 진한 베이지 -->
+      <section class="option">
+        <div class="label">옵션 C</div>
+        <h2 class="title">진한 베이지 #E7DFD1</h2>
+        <p class="meta">
+          배경 <code>#E7DFD1</code> · 텍스트 검정 · 좌측 4px <code>#FEE500</code> 액센트 바<br>
+          다크 포기, <strong>같은 계열 미디엄 톤</strong>으로 구분 — 가장 부드러움
+        </p>
+        <div class="app">
+          <button class="banner banner-c">
+            <span class="left">
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+              <span>오늘의 브리핑</span>
+            </span>
+            <span class="right">
+              <span class="badge">14</span>
+              <svg class="icon chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </span>
+          </button>
+          <div class="schedule-card">
+            <span class="chip">예정</span><span class="chip time">집결 07:00</span>
+            <div class="title-s">김포공항行 셔틀</div>
+            <div class="loc">판교·성수 사옥 앞 집결</div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <div class="note">
+      <strong>색조 차이 핵심</strong> — 앱 배경 <code>#F5F3EF</code>는 따뜻한 베이지.<br>
+      · <strong>현재 #111827</strong>: 차가운 블루-그레이 → 색조 불협화<br>
+      · <strong>옵션 A #2D2A26</strong>: 같은 따뜻 계열의 어두운 버전 → 조화<br>
+      · <strong>옵션 B #3C3835</strong>: 웜 톤 유지하며 한 단계 완화<br>
+      · <strong>옵션 C #E7DFD1</strong>: 밝은 톤 유지하며 같은 계열로 레이어 구분
+    </div>
+  </div>
+</body>
+</html>

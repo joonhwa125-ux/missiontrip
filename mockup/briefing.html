@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>브리핑 카드 개선 목업</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background:#F5F3EF; font-family: system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; }
+    .sheet { box-shadow: 0 12px 40px rgba(0,0,0,.08); }
+  </style>
+</head>
+<body class="py-8 px-4">
+  <div class="mx-auto max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- ===================== BEFORE (현재) ===================== -->
+    <section>
+      <h2 class="mb-3 text-sm font-bold uppercase tracking-widest text-stone-500">BEFORE — 현재</h2>
+
+      <div class="sheet bg-white rounded-2xl overflow-hidden max-h-[820px] flex flex-col">
+        <!-- Header -->
+        <div class="px-5 pt-4 pb-1 flex items-start justify-between gap-2">
+          <div>
+            <h3 class="text-base font-semibold">2조 브리핑 · 1일차</h3>
+          </div>
+          <button class="text-stone-400" aria-label="닫기">✕</button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-5 pb-4 pt-2 space-y-6 text-sm">
+
+          <section>
+            <h4 class="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">여행 역할</h4>
+            <ul class="space-y-1.5">
+              <li class="flex flex-wrap items-center gap-2 rounded-lg bg-stone-50 px-3 py-2">
+                <span class="font-medium text-stone-900">charlie.yh</span>
+                <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-800">안내견 동반 · 공항 보행지원 미아 · 트래블헬퍼 오진우</span>
+              </li>
+              <li class="flex flex-wrap items-center gap-2 rounded-lg bg-stone-50 px-3 py-2">
+                <span class="font-medium text-stone-900">conrad.0126</span>
+                <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-800">공항 보행지원 조셉 · 트래블헬퍼 김상규</span>
+              </li>
+              <li class="flex flex-wrap items-center gap-2 rounded-lg bg-stone-50 px-3 py-2">
+                <span class="font-medium text-stone-900">james.42</span>
+                <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-800">공항 보행지원 담당 (제이콥)</span>
+              </li>
+              <li class="flex flex-wrap items-center gap-2 rounded-lg bg-stone-50 px-3 py-2">
+                <span class="font-medium text-stone-900">mia.j</span>
+                <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-800">공항 보행지원 담당 (찰리)</span>
+              </li>
+              <li class="text-center text-xs text-stone-400 py-1">… 10명 생략</li>
+            </ul>
+          </section>
+
+          <section>
+            <h4 class="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">가는편 항공사</h4>
+            <p class="rounded-lg bg-stone-50 px-3 py-2 text-sm">
+              <span class="font-semibold text-stone-900">전원 티웨이 항공</span>
+              <span class="ml-1 text-stone-500">· 31명</span>
+            </p>
+          </section>
+
+          <section>
+            <h4 class="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">일정별 안내</h4>
+            <article class="rounded-xl border border-stone-200 bg-white">
+              <header class="sticky top-0 flex items-baseline justify-between gap-2 rounded-t-xl border-b border-stone-100 bg-white/95 px-3 py-2">
+                <h5 class="text-sm font-semibold text-stone-900">김포공항 3층 나래마루 집결 (본대)</h5>
+                <span class="flex-shrink-0 text-xs text-stone-500">08:00</span>
+              </header>
+              <div class="p-3">
+                <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
+                  <p class="mb-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-amber-800">공지</p>
+                  <ul class="space-y-1.5 text-xs leading-relaxed text-amber-900">
+                    <li class="flex gap-1.5"><span>•</span><span>08:00 집결 완료</span></li>
+                    <li class="flex gap-1.5"><span>•</span><span>티웨이 TW709 10:20 출발</span></li>
+                    <li class="flex gap-1.5"><span>•</span><span>신분증 필수 (모바일신분증 가능)</span></li>
+                    <li class="flex gap-1.5"><span>•</span><span>장애크루는 복지카드 지참</span></li>
+                    <li class="flex gap-1.5"><span>•</span><span>복지카드 미소지 시 2층 1번/4번 게이트 무인민원발급기에서 장애인증명서 출력</span></li>
+                    <li class="flex gap-1.5"><span>•</span><span>티웨이 직원이 3층에서 신분증 확인 후 티켓 배부</span></li>
+                    <li class="flex gap-1.5"><span>•</span><span>버스깃발 · 명찰 · 주먹밥 배부</span></li>
+                  </ul>
+                </div>
+              </div>
+            </article>
+          </section>
+        </div>
+      </div>
+
+      <ul class="mt-4 text-xs text-stone-500 space-y-1">
+        <li>• 칩이 모두 같은 indigo → 받는/주는/특성 구분 없음</li>
+        <li>• 공지 11개가 평면 리스트 → 시간·안전·준비물 혼재</li>
+        <li>• 섹션 헤더가 작음 (text-xs)</li>
+        <li>• 항공사 전원 동일인데 섹션 통째로 차지</li>
+      </ul>
+    </section>
+
+    <!-- ===================== AFTER (개선안) ===================== -->
+    <section>
+      <h2 class="mb-3 text-sm font-bold uppercase tracking-widest text-emerald-700">AFTER — 개선안 (Option C)</h2>
+
+      <div class="sheet bg-white rounded-2xl overflow-hidden max-h-[820px] flex flex-col">
+        <!-- Header 강화: 일차 배지 + 진한 타이틀 -->
+        <div class="px-5 pt-4 pb-3 flex items-start justify-between gap-2 border-b border-stone-100">
+          <div class="flex items-center gap-2">
+            <span class="inline-flex items-center justify-center rounded-lg bg-stone-900 px-2 py-0.5 text-xs font-bold text-white tracking-wider">DAY 1</span>
+            <h3 class="text-base font-bold text-stone-900">2조 브리핑</h3>
+          </div>
+          <button class="text-stone-400 min-w-11 min-h-11 flex items-center justify-center" aria-label="닫기">✕</button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-5 pb-5 pt-3 space-y-5 text-sm">
+
+          <!-- § 항공사 — 전원 동일은 한 줄 요약 카드로 압축 -->
+          <section class="rounded-xl border border-sky-100 bg-sky-50/60 px-3 py-2.5 flex items-center gap-2.5">
+            <span class="flex-shrink-0 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-sky-700" aria-hidden="true">
+              <!-- plane -->
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2L16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.2.6-.6.5-1.1z"/></svg>
+            </span>
+            <div class="min-w-0 flex-1">
+              <p class="text-[0.6875rem] font-semibold uppercase tracking-wide text-sky-700">가는편 항공</p>
+              <p class="text-sm">
+                <span class="font-semibold text-stone-900">전원 티웨이 항공</span>
+                <span class="ml-1 text-stone-500">· 31명 · TW709 10:20</span>
+              </p>
+            </div>
+          </section>
+
+          <!-- § 여행 역할 — 받는/주는 분리, 호칭 우선 -->
+          <section>
+            <header class="mb-2 flex items-center gap-2">
+              <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-stone-900 text-white" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </span>
+              <h4 class="text-sm font-bold text-stone-900">여행 역할 <span class="ml-1 font-normal text-stone-400">· 10명</span></h4>
+            </header>
+
+            <!-- Sub: 지원 받는 크루 (시각장애 등) -->
+            <div class="mb-2">
+              <p class="mb-1.5 flex items-center gap-1.5 text-[0.6875rem] font-semibold tracking-wide text-indigo-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/></svg>
+                지원 받는 크루 <span class="text-indigo-400">· 5명</span>
+              </p>
+              <ul class="space-y-1.5">
+                <li class="rounded-xl bg-indigo-50/70 px-3 py-2">
+                  <div class="flex items-baseline gap-2">
+                    <span class="text-sm font-semibold text-stone-900">찰리</span>
+                    <span class="text-xs text-stone-500">charlie.yh</span>
+                    <span class="rounded-full bg-white px-1.5 py-0.5 text-[0.6875rem] font-medium text-stone-600 border border-stone-200">🦮 안내견</span>
+                  </div>
+                  <div class="mt-1 flex flex-wrap gap-1 text-[0.6875rem]">
+                    <span class="rounded-full bg-white px-2 py-0.5 text-indigo-800 border border-indigo-100"><span class="text-indigo-400">공항 도움</span> 미아</span>
+                    <span class="rounded-full bg-white px-2 py-0.5 text-indigo-800 border border-indigo-100"><span class="text-indigo-400">트래블헬퍼</span> 오진우</span>
+                  </div>
+                </li>
+                <li class="rounded-xl bg-indigo-50/70 px-3 py-2">
+                  <div class="flex items-baseline gap-2">
+                    <span class="text-sm font-semibold text-stone-900">콘라드</span>
+                    <span class="text-xs text-stone-500">conrad.0126</span>
+                  </div>
+                  <div class="mt-1 flex flex-wrap gap-1 text-[0.6875rem]">
+                    <span class="rounded-full bg-white px-2 py-0.5 text-indigo-800 border border-indigo-100"><span class="text-indigo-400">공항 도움</span> 조셉</span>
+                    <span class="rounded-full bg-white px-2 py-0.5 text-indigo-800 border border-indigo-100"><span class="text-indigo-400">트래블헬퍼</span> 김상규</span>
+                  </div>
+                </li>
+                <li class="rounded-xl bg-indigo-50/70 px-3 py-2">
+                  <div class="flex items-baseline gap-2">
+                    <span class="text-sm font-semibold text-stone-900">키미</span>
+                    <span class="text-xs text-stone-500">kimi.03</span>
+                  </div>
+                  <div class="mt-1 flex flex-wrap gap-1 text-[0.6875rem]">
+                    <span class="rounded-full bg-white px-2 py-0.5 text-indigo-800 border border-indigo-100"><span class="text-indigo-400">공항 도움</span> 레일라</span>
+                    <span class="rounded-full bg-white px-2 py-0.5 text-amber-800 border border-amber-200 bg-amber-50">⚠ 트래블헬퍼 미배정</span>
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Sub: 지원 맡은 크루 -->
+            <div>
+              <p class="mb-1.5 flex items-center gap-1.5 text-[0.6875rem] font-semibold tracking-wide text-emerald-700">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 17a4 4 0 0 1-4-4V5a2 2 0 1 1 4 0v6.5M7 6v5.5c0 4.8 3.8 8.5 8.5 8.5H17"/></svg>
+                지원 맡은 크루 <span class="text-emerald-400">· 5명</span>
+              </p>
+              <ul class="space-y-1.5">
+                <li class="rounded-xl bg-emerald-50/70 px-3 py-2 flex flex-wrap items-baseline gap-2">
+                  <span class="text-sm font-semibold text-stone-900">미아</span>
+                  <span class="text-xs text-stone-500">mia.j</span>
+                  <span class="rounded-full bg-white px-2 py-0.5 text-[0.6875rem] font-medium text-emerald-800 border border-emerald-100">→ 찰리 공항 도우미</span>
+                </li>
+                <li class="rounded-xl bg-emerald-50/70 px-3 py-2 flex flex-wrap items-baseline gap-2">
+                  <span class="text-sm font-semibold text-stone-900">제임스</span>
+                  <span class="text-xs text-stone-500">james.42</span>
+                  <span class="rounded-full bg-white px-2 py-0.5 text-[0.6875rem] font-medium text-emerald-800 border border-emerald-100">→ 제이콥 공항 도우미</span>
+                </li>
+                <li class="rounded-xl bg-emerald-50/70 px-3 py-2 flex flex-wrap items-baseline gap-2">
+                  <span class="text-sm font-semibold text-stone-900">조셉</span>
+                  <span class="text-xs text-stone-500">joseph.13</span>
+                  <span class="rounded-full bg-white px-2 py-0.5 text-[0.6875rem] font-medium text-emerald-800 border border-emerald-100">→ 콘라드 공항 도우미</span>
+                </li>
+                <li class="rounded-xl bg-emerald-50/70 px-3 py-2 flex flex-wrap items-baseline gap-2">
+                  <span class="text-sm font-semibold text-stone-900">카이</span>
+                  <span class="text-xs text-stone-500">kai.0725</span>
+                  <span class="rounded-full bg-white px-2 py-0.5 text-[0.6875rem] font-medium text-emerald-800 border border-emerald-100">→ 듀이 공항 도우미</span>
+                </li>
+                <li class="rounded-xl bg-emerald-50/70 px-3 py-2 flex flex-wrap items-baseline gap-2">
+                  <span class="text-sm font-semibold text-stone-900">레일라</span>
+                  <span class="text-xs text-stone-500">layla.1004</span>
+                  <span class="rounded-full bg-white px-2 py-0.5 text-[0.6875rem] font-medium text-emerald-800 border border-emerald-100">→ 키미 공항 도우미</span>
+                </li>
+              </ul>
+            </div>
+          </section>
+
+          <!-- § 일정별 안내 -->
+          <section>
+            <header class="mb-2 flex items-center gap-2">
+              <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-stone-900 text-white" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+              </span>
+              <h4 class="text-sm font-bold text-stone-900">일정별 안내 <span class="ml-1 font-normal text-stone-400">· 1건</span></h4>
+            </header>
+
+            <article class="rounded-xl border border-stone-200 bg-white overflow-hidden">
+              <!-- Article header 강화: 큰 시각 + 제목 -->
+              <header class="flex items-center gap-3 bg-stone-50 px-4 py-3 border-b border-stone-200">
+                <div class="flex-shrink-0 flex flex-col items-center leading-none">
+                  <span class="text-lg font-bold text-stone-900 tabular-nums">08:00</span>
+                  <span class="mt-0.5 text-[0.625rem] font-semibold uppercase tracking-wider text-stone-500">집결</span>
+                </div>
+                <div class="w-px self-stretch bg-stone-200"></div>
+                <h5 class="text-sm font-semibold text-stone-900 leading-snug">김포공항 3층 나래마루 집결 <span class="text-stone-400">(본대)</span></h5>
+              </header>
+
+              <div class="p-3 space-y-2.5">
+
+                <!-- 공지: 3-way 분리 (시간 / 안전 / 준비물) -->
+                <!-- ① 시간순 타임라인 -->
+                <div class="rounded-lg bg-sky-50/80 border border-sky-100 px-3 py-2.5">
+                  <p class="mb-2 flex items-center gap-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-sky-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    타임라인
+                  </p>
+                  <ol class="space-y-1.5 text-xs">
+                    <li class="flex items-start gap-2">
+                      <span class="flex-shrink-0 font-bold tabular-nums text-sky-800 w-10">08:00</span>
+                      <span class="text-stone-800">나래마루 집결 완료</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                      <span class="flex-shrink-0 font-bold tabular-nums text-sky-800 w-10">10:20</span>
+                      <span class="text-stone-800">티웨이 TW709 출발</span>
+                    </li>
+                  </ol>
+                </div>
+
+                <!-- ② 안전 · 필수 -->
+                <div class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5">
+                  <p class="mb-2 flex items-center gap-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-amber-800">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    필수 확인
+                  </p>
+                  <ul class="space-y-1.5 text-xs text-amber-900">
+                    <li class="flex items-start gap-1.5"><span class="mt-1 h-1.5 w-1.5 rounded-full bg-amber-500 flex-shrink-0"></span><span><strong class="font-semibold">신분증 필수</strong> — 모바일신분증 가능</span></li>
+                    <li class="flex items-start gap-1.5"><span class="mt-1 h-1.5 w-1.5 rounded-full bg-amber-500 flex-shrink-0"></span><span><strong class="font-semibold">장애크루 복지카드 지참</strong></span></li>
+                    <li class="flex items-start gap-1.5"><span class="mt-1 h-1.5 w-1.5 rounded-full bg-amber-500 flex-shrink-0"></span><span>복지카드 미소지 시 <span class="underline decoration-amber-300">2층 1번·4번 게이트 무인민원발급기</span>에서 장애인증명서 출력</span></li>
+                  </ul>
+                </div>
+
+                <!-- ③ 운영 · 배부 -->
+                <div class="rounded-lg bg-stone-50 border border-stone-200 px-3 py-2.5">
+                  <p class="mb-2 flex items-center gap-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-stone-600">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.91 8.84 8.56 21.2a4.5 4.5 0 0 1-3.18 1.31H4a2 2 0 0 1-2-2v-1.38c0-1.19.47-2.34 1.31-3.18L15.66 3.59a2.8 2.8 0 1 1 3.95 3.95z"/><path d="m11 5 8 8"/></svg>
+                    운영 · 배부
+                  </p>
+                  <div class="flex flex-wrap gap-1.5">
+                    <span class="rounded-full bg-white px-2.5 py-1 text-[0.6875rem] font-medium text-stone-700 border border-stone-200">🎫 티켓 — 티웨이 직원이 3층 배부</span>
+                    <span class="rounded-full bg-white px-2.5 py-1 text-[0.6875rem] font-medium text-stone-700 border border-stone-200">🚩 버스깃발</span>
+                    <span class="rounded-full bg-white px-2.5 py-1 text-[0.6875rem] font-medium text-stone-700 border border-stone-200">📛 명찰</span>
+                    <span class="rounded-full bg-white px-2.5 py-1 text-[0.6875rem] font-medium text-stone-700 border border-stone-200">🍙 주먹밥</span>
+                  </div>
+                </div>
+
+              </div>
+            </article>
+          </section>
+        </div>
+      </div>
+
+      <ul class="mt-4 text-xs text-stone-600 space-y-1">
+        <li>✅ 여행 역할: <span class="text-indigo-700 font-medium">받는(indigo)</span> / <span class="text-emerald-700 font-medium">주는(emerald)</span> 구분, 호칭 우선·LDAP 부제</li>
+        <li>✅ 공지 3분할: 타임라인(sky) · 필수확인(amber, bold 강조) · 운영배부(칩)</li>
+        <li>✅ 항공 섹션 압축: 1줄 카드 + 편명·시각 통합</li>
+        <li>✅ 섹션 헤더: 아이콘 + 카운트 배지 + text-sm bold</li>
+        <li>✅ Article header: 시각을 왼쪽에 크게 (타임라인 앵커)</li>
+        <li>✅ DAY 1 배지: 스크롤 중 컨텍스트 유지</li>
+      </ul>
+
+      <div class="mt-3 rounded-lg bg-stone-900 text-white text-xs p-3 space-y-1">
+        <p class="font-semibold">컬러 의미론</p>
+        <p><span class="inline-block w-3 h-3 rounded-full bg-sky-500 align-middle mr-1"></span> sky — 시간·항공</p>
+        <p><span class="inline-block w-3 h-3 rounded-full bg-amber-500 align-middle mr-1"></span> amber — 안전·필수</p>
+        <p><span class="inline-block w-3 h-3 rounded-full bg-indigo-500 align-middle mr-1"></span> indigo — 지원 받는</p>
+        <p><span class="inline-block w-3 h-3 rounded-full bg-emerald-500 align-middle mr-1"></span> emerald — 지원 맡은</p>
+        <p><span class="inline-block w-3 h-3 rounded-full bg-stone-500 align-middle mr-1"></span> stone — 중립·운영</p>
+      </div>
+    </section>
+
+  </div>
+</body>
+</html>

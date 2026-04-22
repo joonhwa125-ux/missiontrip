@@ -57,6 +57,9 @@ data/converted/
 .claude/agent-memory/
 .claude/settings.local.json
 
+# misc logs
+eslint.log
+
 # build artifacts
 build.log
 
