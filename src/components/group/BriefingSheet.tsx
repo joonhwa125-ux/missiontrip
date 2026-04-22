@@ -305,6 +305,13 @@ function prefixToCategory(prefix: string): NoticeCategory {
   return "ops";
 }
 
+/**
+ * 공지 텍스트를 bullet 단위로 분할.
+ * 구분자: " · " 또는 줄바꿈.
+ *
+ * 데이터 정규화는 write path(`lib/utils.ts#normalizeNoticeText`)에서 처리되어
+ * 괄호 내부 줄바꿈은 공백으로 치환된 상태로 저장된다. 따라서 여기서는 단순 split만 수행.
+ */
 function splitBullets(text: string): string[] {
   return text
     .split(/(?: · |\n)/)
@@ -366,7 +373,8 @@ function parseNotice(notice: string): NoticeSection[] {
 
 /**
  * 타임라인 아이템 — "HH:MM 내용" 패턴이면 시각을 왼쪽에 tabular로 분리.
- * 시각 패턴 아닌 경우 일반 텍스트로.
+ * 시각이 없는 항목(부가 메모/이전 시간대 보충 설명)은 블릿 없이 시각 칼럼만큼 들여써서
+ * 위 항목의 연속으로 읽히게 한다.
  */
 function TimelineItem({ text }: { text: string }) {
   const m = /^(\d{1,2}:\d{2})\s*(.*)$/.exec(text);
@@ -380,11 +388,10 @@ function TimelineItem({ text }: { text: string }) {
       </li>
     );
   }
+  // 시간 없는 항목: 블릿 제거, 시각 칼럼(w-10) + gap(gap-2 = 0.5rem)만큼 들여쓰기
+  // pl-12 ≈ w-10(2.5rem) + gap-2(0.5rem) = 3rem
   return (
-    <li className="flex items-start gap-2">
-      <span className="w-10 flex-shrink-0 text-stone-400">•</span>
-      <span className="text-stone-800">{text}</span>
-    </li>
+    <li className="pl-12 text-stone-700">{text}</li>
   );
 }
 

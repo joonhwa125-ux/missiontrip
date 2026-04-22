@@ -17,6 +17,7 @@ import {
   PARTY_MAP,
   SCOPE_MAP,
 } from "@/lib/constants";
+import { normalizeNoticeText } from "@/lib/utils";
 
 const ROLE_MAP: Record<string, UserRole> = {
   조원: "member",
@@ -211,7 +212,8 @@ function validateScheduleRow(
   const shuttleRaw = sanitizeText(row[6] ?? "");
   const airlineLegRaw = sanitizeText(row[7] ?? "");
   const airlineFilter = sanitizeText(row[8] ?? "") || null;
-  const notice = row[9]?.trim() || null;
+  // 괄호 내부 줄바꿈을 공백으로 정규화 (BriefingSheet에서 bullet split 시 안전)
+  const notice = normalizeNoticeText(row[9]?.trim() || null);
   const shuttleNorm = shuttleRaw.toLowerCase();
   let shuttleType: ShuttleType | null = null;
   let shuttleInvalid = false;

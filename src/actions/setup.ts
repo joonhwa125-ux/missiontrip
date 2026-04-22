@@ -2,7 +2,7 @@
 
 import { createServiceClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth";
-import { parseKSTTime } from "@/lib/utils";
+import { parseKSTTime, normalizeNoticeText } from "@/lib/utils";
 import { canCheckin, MIN_DAY_NUMBER, MAX_DAY_NUMBER } from "@/lib/constants";
 import { revalidateMainPaths, revalidateAllPaths } from "./_shared";
 import type {
@@ -585,10 +585,13 @@ export async function updateSchedule(
   if (data.airline_leg !== null && data.airline_leg !== "outbound" && data.airline_leg !== "return")
     return { ok: false, error: "항공 구간은 가는편/오는편/없음만 가능해요" };
 
+  // 괄호 내부 줄바꿈 → 공백 (BriefingSheet bullet split 안정성)
+  const normalizedNotice = normalizeNoticeText(data.notice);
+
   const supabase = createServiceClient();
   const { error } = await supabase
     .from("schedules")
-    .update({ ...data, title: trimmedTitle })
+    .update({ ...data, title: trimmedTitle, notice: normalizedNotice })
     .eq("id", scheduleId);
 
   if (error) return { ok: false, error: "일정 수정 중 오류가 발생했어요" };

@@ -7,6 +7,51 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * 공지(notice) 텍스트 정규화 — DB 쓰기 직전에 호출.
+ *
+ * 배경: notice는 " · " / "\n"을 bullet 구분자로 사용하고, 클라이언트
+ *       (BriefingSheet)에서 이 규칙대로 split한다. 그런데 Google Sheets
+ *       원본 셀에서 사용자가 **괄호 안에서** Alt+Enter로 줄바꿈을 넣으면
+ *       "카드키(1방 6매\n2끼분\n포함) 배부" 같은 형태가 되고, 이 상태로
+ *       split하면 한 문장이 여러 bullet로 쪼개진다.
+ *
+ * 처리: 괄호 `(...)` 내부의 개행문자(\n, \r, \r\n)를 공백으로 치환.
+ *       괄호 밖의 개행은 bullet 구분자 의미로 유지한다.
+ *       중첩/엇갈린 괄호 대응을 위해 depth 카운터 사용.
+ *       닫힘 괄호가 열림보다 많이 들어오면 depth를 0으로 clamp.
+ *
+ * 입력이 비어있거나 null이면 그대로 반환.
+ */
+export function normalizeNoticeText(text: string | null | undefined): string | null {
+  if (!text) return text ?? null;
+  let depth = 0;
+  let out = "";
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (c === "(") {
+      depth++;
+      out += c;
+      continue;
+    }
+    if (c === ")") {
+      depth = Math.max(0, depth - 1);
+      out += c;
+      continue;
+    }
+    // 괄호 내부의 개행 → 공백. 연속 \r\n도 공백 하나로.
+    if (depth > 0 && (c === "\n" || c === "\r")) {
+      // 뒤에 바로 \n이 오면 같이 스킵 (\r\n 한 쌍)
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      // 직전 문자가 이미 공백이면 중복 공백 방지
+      if (!out.endsWith(" ")) out += " ";
+      continue;
+    }
+    out += c;
+  }
+  return out;
+}
+
 // 시각 포매팅 (HH:MM, KST 고정)
 export function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString("ko-KR", {
