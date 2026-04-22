@@ -1,7 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import {
+  ChevronDown,
+  Plane,
+  UserRound,
+  CalendarDays,
+  Clock,
+  AlertTriangle,
+  Wrench,
+  MapPin,
+  Activity as ActivityIcon,
+  Utensils,
+  Info,
+} from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { formatTime } from "@/lib/utils";
 import { BRIEFING_SEPARATOR } from "@/lib/constants";
+import { resolveNickname, hasNickname } from "@/lib/nicknames";
 import type {
   BriefingData,
   ScheduleGroupInfo,
@@ -29,17 +42,12 @@ interface Props {
 
 type ScheduleSummary = BriefingData["scheduleSummaries"][number];
 
-/**
- * 일정별 상세 블록에 들어갈 데이터 — 해당 일정의 조 단위 info(sgi) +
- * 내 조원(이동IN 포함) 중 해당 일정에 메타데이터가 있는 인원들(smi).
- */
 interface ScheduleBlock {
   schedule: ScheduleSummary;
   groupInfo: ScheduleGroupInfo | null;
   memberInfos: Array<{ info: ScheduleMemberInfo; name: string }>;
 }
 
-/** 인원별 메타가 "비어있는지" 판정 — 모든 필드 null이면 스킵 */
 function isMemberInfoEmpty(info: ScheduleMemberInfo): boolean {
   return (
     !info.excused_reason &&
@@ -51,12 +59,11 @@ function isMemberInfoEmpty(info: ScheduleMemberInfo): boolean {
   );
 }
 
-/** 조 단위 info가 비어있는지 — 표시 필드가 모두 null이면 스킵 */
 function isGroupInfoEmpty(info: ScheduleGroupInfo): boolean {
   return !info.group_location && !info.note;
 }
 
-/** 라벨 chip — 개인 특이사항(미참여/조이동/임시역할)에 재사용 */
+/** 라벨 chip — 개인 특이사항용 */
 function Chip({ label, value, tone = "neutral" }: { label: string; value: string; tone?: "neutral" | "warn" | "info" }) {
   const tones = {
     neutral: "bg-stone-100 text-stone-700",
@@ -72,8 +79,37 @@ function Chip({ label, value, tone = "neutral" }: { label: string; value: string
 }
 
 /**
+ * 공통 섹션 헤더 — 원형 아이콘 + bold 타이틀 + 카운트 pill
+ */
+function SectionHeader({
+  icon,
+  title,
+  count,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  count?: number | string;
+}) {
+  return (
+    <header className="mb-2 flex items-center gap-2">
+      <span
+        className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-stone-900 text-white"
+        aria-hidden="true"
+      >
+        {icon}
+      </span>
+      <h4 className="text-sm font-bold text-stone-900">
+        {title}
+        {count !== undefined && (
+          <span className="ml-1 font-normal text-stone-400">· {count}</span>
+        )}
+      </h4>
+    </header>
+  );
+}
+
+/**
  * 항공사별 인원 그룹핑 (삽입 순서 보존)
- * @returns Map<airline, 이름 배열>
  */
 function groupByAirline(
   entries: Array<{ name: string; airline: string | null }>
@@ -89,17 +125,17 @@ function groupByAirline(
 }
 
 /**
- * 항공사 섹션 — 전원 동일이면 한 줄 압축, 분기면 그룹별 이름.
- * Semantic 혼동 방지 차원에서 색상 닷/배경 없음 — 타이포그래피·간격으로 시각 위계.
+ * 항공사 압축 카드 — 전원 동일이면 1줄 요약, 분기면 그룹별 이름.
+ * 전원 동일 케이스: 편명·시각을 함께 노출 (Option C 패턴).
  */
-function AirlineSection({
-  labelId,
-  title,
+function CompactAirlineSection({
+  label,
   groups,
+  flightInfo,
 }: {
-  labelId: string;
-  title: string;
+  label: string;
   groups: Map<string, string[]>;
+  flightInfo?: string;
 }) {
   const entries = Array.from(groups.entries());
   if (entries.length === 0) return null;
@@ -107,40 +143,336 @@ function AirlineSection({
   const totalCount = entries.reduce((sum, [, names]) => sum + names.length, 0);
   const isAllSame = entries.length === 1;
 
-  return (
-    <section aria-labelledby={labelId}>
-      <h3 id={labelId} className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
-        {title}
-      </h3>
-      {isAllSame ? (
-        <p className="rounded-lg bg-stone-50 px-3 py-2 text-sm">
-          <span className="font-semibold text-stone-900">전원 {entries[0][0]}</span>
-          <span className="ml-1 text-stone-500">· {totalCount}명</span>
-        </p>
-      ) : (
-        <div className="space-y-2.5">
-          {entries.map(([airline, names]) => (
-            <div key={airline}>
-              <p className="mb-1 text-sm">
-                <span className="font-semibold text-stone-900">{airline}</span>
-                <span className="ml-1 text-stone-500">
-                  · {names.length}/{totalCount}명
-                </span>
-              </p>
-              <p className="text-xs leading-relaxed text-stone-700">
-                {names.join(BRIEFING_SEPARATOR)}
-              </p>
-            </div>
-          ))}
+  if (isAllSame) {
+    return (
+      <section
+        className="flex items-center gap-2.5 rounded-xl border border-sky-100 bg-sky-50/60 px-3 py-2.5"
+        aria-label={label}
+      >
+        <span
+          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white text-sky-700"
+          aria-hidden="true"
+        >
+          <Plane className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-[0.6875rem] font-semibold uppercase tracking-wide text-sky-700">
+            {label}
+          </p>
+          <p className="text-sm">
+            <span className="font-semibold text-stone-900">전원 {entries[0][0]}</span>
+            <span className="ml-1 text-stone-500">
+              · {totalCount}명{flightInfo ? ` · ${flightInfo}` : ""}
+            </span>
+          </p>
         </div>
-      )}
+      </section>
+    );
+  }
+
+  // 분기 케이스 — 그룹별 나열
+  return (
+    <section aria-label={label}>
+      <SectionHeader
+        icon={<Plane className="h-3 w-3" strokeWidth={2.5} />}
+        title={label}
+        count={`${totalCount}명`}
+      />
+      <div className="space-y-2.5 pl-0">
+        {entries.map(([airline, names]) => (
+          <div key={airline} className="rounded-lg bg-sky-50/60 px-3 py-2">
+            <p className="mb-1 text-sm">
+              <span className="font-semibold text-stone-900">{airline}</span>
+              <span className="ml-1 text-stone-500">
+                · {names.length}/{totalCount}명
+              </span>
+            </p>
+            <p className="text-xs leading-relaxed text-stone-700">
+              {names.join(BRIEFING_SEPARATOR)}
+            </p>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
 
 /**
- * 활동 배정 축 전환 렌더 — 같은 활동 멤버를 한 그룹으로 묶어 노출.
- * 활동 값 내 "(조장)" 접미는 해당 프로그램 조의 조장으로 별도 강조(⭐).
+ * 여행 역할 — indigo 단일 섹션 (지원 받는 크루).
+ * 호칭 있으면 호칭 메인 + LDAP 부제, 없으면 LDAP만.
+ * "안내견 동반"은 별도 chip으로, "미배정"은 amber chip으로 강조.
+ */
+function TripRoleSection({
+  roles,
+}: {
+  roles: Array<{ user_id: string; name: string; trip_role: string | null }>;
+}) {
+  if (roles.length === 0) return null;
+
+  return (
+    <section aria-labelledby="briefing-roles">
+      <SectionHeader
+        icon={<UserRound className="h-3 w-3" strokeWidth={2.5} />}
+        title="여행 역할"
+        count={`${roles.length}명`}
+      />
+      <ul className="space-y-1.5">
+        {roles.map((r) => {
+          const nickname = resolveNickname(r.name);
+          const showLdap = hasNickname(r.name);
+          // trip_role 예: "안내견 동반 · 트래블헬퍼 오진우" / "트래블헬퍼 김상규" / "트래블헬퍼 미배정"
+          const parts = (r.trip_role ?? "")
+            .split(/\s·\s/)
+            .map((p) => p.trim())
+            .filter(Boolean);
+
+          return (
+            <li key={r.user_id} className="rounded-xl bg-indigo-50/70 px-3 py-2">
+              <div className="flex flex-wrap items-baseline gap-2">
+                <span className="text-sm font-semibold text-stone-900">{nickname}</span>
+                {showLdap && (
+                  <span className="text-xs text-stone-500">{r.name}</span>
+                )}
+                {parts.map((part, idx) => {
+                  if (part === "안내견 동반") {
+                    return (
+                      <span
+                        key={idx}
+                        className="rounded-full border border-stone-200 bg-white px-1.5 py-0.5 text-[0.6875rem] font-medium text-stone-600"
+                      >
+                        🦮 안내견
+                      </span>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
+              <div className="mt-1 flex flex-wrap gap-1 text-[0.6875rem]">
+                {parts.map((part, idx) => {
+                  if (part === "안내견 동반") return null;
+                  if (part === "트래블헬퍼 미배정") {
+                    return (
+                      <span
+                        key={idx}
+                        className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-medium text-amber-800"
+                      >
+                        ⚠ 트래블헬퍼 미배정
+                      </span>
+                    );
+                  }
+                  // "트래블헬퍼 김상규" 형태를 label + value 로 분리
+                  const m = /^(트래블헬퍼|공항 도움|공항 보행지원)\s+(.+)$/.exec(part);
+                  if (m) {
+                    return (
+                      <span
+                        key={idx}
+                        className="rounded-full border border-indigo-100 bg-white px-2 py-0.5 text-indigo-800"
+                      >
+                        <span className="text-indigo-400">{m[1]}</span> {m[2]}
+                      </span>
+                    );
+                  }
+                  return (
+                    <span
+                      key={idx}
+                      className="rounded-full border border-indigo-100 bg-white px-2 py-0.5 text-indigo-800"
+                    >
+                      {part}
+                    </span>
+                  );
+                })}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+/**
+ * 공지 파서 — 접두사(#시간:/#안전:/#운영:) 우선, 없으면 키워드 폴백.
+ * 섹션은 ` | ` 로 구분된다고 가정. 각 섹션 안의 bullet은 ` · ` 로 구분.
+ */
+type NoticeCategory = "timeline" | "safety" | "ops";
+type NoticeSection = { category: NoticeCategory; items: string[] };
+
+const PREFIX_PATTERN = /^\s*#(시간|안전|운영)\s*[:：]\s*(.*)$/;
+
+function prefixToCategory(prefix: string): NoticeCategory {
+  if (prefix === "시간") return "timeline";
+  if (prefix === "안전") return "safety";
+  return "ops";
+}
+
+function splitBullets(text: string): string[] {
+  return text
+    .split(/(?: · |\n)/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function autoClassify(items: string[]): NoticeSection[] {
+  const timeline: string[] = [];
+  const safety: string[] = [];
+  const ops: string[] = [];
+  const TIME_RE = /^\d{1,2}:\d{2}/;
+  const SAFETY_RE = /(신분증|복지카드|필수|금지|주의|경사|안전|위험|난간)/;
+  for (const item of items) {
+    if (TIME_RE.test(item)) timeline.push(item);
+    else if (SAFETY_RE.test(item)) safety.push(item);
+    else ops.push(item);
+  }
+  const result: NoticeSection[] = [];
+  if (timeline.length) result.push({ category: "timeline", items: timeline });
+  if (safety.length) result.push({ category: "safety", items: safety });
+  if (ops.length) result.push({ category: "ops", items: ops });
+  return result;
+}
+
+function parseNotice(notice: string): NoticeSection[] {
+  if (!notice.trim()) return [];
+  // 접두사 기반 분할
+  if (/#(시간|안전|운영)\s*[:：]/.test(notice)) {
+    const sections = notice.split(/\s*\|\s*/);
+    const parsed: NoticeSection[] = [];
+    for (const s of sections) {
+      const m = PREFIX_PATTERN.exec(s);
+      if (m) {
+        parsed.push({
+          category: prefixToCategory(m[1]),
+          items: splitBullets(m[2]),
+        });
+      } else {
+        // 접두사 없는 섹션은 자동 분류
+        const items = splitBullets(s);
+        parsed.push(...autoClassify(items));
+      }
+    }
+    // 같은 카테고리 병합
+    const merged = new Map<NoticeCategory, string[]>();
+    for (const sec of parsed) {
+      const prev = merged.get(sec.category) ?? [];
+      merged.set(sec.category, [...prev, ...sec.items]);
+    }
+    const order: NoticeCategory[] = ["timeline", "safety", "ops"];
+    return order
+      .filter((cat) => merged.has(cat) && (merged.get(cat)?.length ?? 0) > 0)
+      .map((cat) => ({ category: cat, items: merged.get(cat) ?? [] }));
+  }
+  // 폴백: 키워드 자동 분류
+  return autoClassify(splitBullets(notice));
+}
+
+/**
+ * 타임라인 아이템 — "HH:MM 내용" 패턴이면 시각을 왼쪽에 tabular로 분리.
+ * 시각 패턴 아닌 경우 일반 텍스트로.
+ */
+function TimelineItem({ text }: { text: string }) {
+  const m = /^(\d{1,2}:\d{2})\s*(.*)$/.exec(text);
+  if (m) {
+    return (
+      <li className="flex items-start gap-2">
+        <span className="w-10 flex-shrink-0 font-bold tabular-nums text-sky-800">
+          {m[1]}
+        </span>
+        <span className="text-stone-800">{m[2]}</span>
+      </li>
+    );
+  }
+  return (
+    <li className="flex items-start gap-2">
+      <span className="w-10 flex-shrink-0 text-stone-400">•</span>
+      <span className="text-stone-800">{text}</span>
+    </li>
+  );
+}
+
+/**
+ * 공지 블록 — 3-way 분할 렌더. 없으면 null.
+ */
+function NoticeBlocks({ notice }: { notice: string }) {
+  const sections = useMemo(() => parseNotice(notice), [notice]);
+  if (sections.length === 0) return null;
+
+  return (
+    <div className="space-y-2">
+      {sections.map((sec) => {
+        if (sec.category === "timeline") {
+          return (
+            <div
+              key="timeline"
+              className="rounded-lg border border-sky-100 bg-sky-50/80 px-3 py-2.5"
+            >
+              <p className="mb-2 flex items-center gap-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-sky-700">
+                <Clock className="h-3 w-3" strokeWidth={2.5} aria-hidden="true" />
+                타임라인
+              </p>
+              <ol className="space-y-1.5 text-xs">
+                {sec.items.map((item, idx) => (
+                  <TimelineItem key={idx} text={item} />
+                ))}
+              </ol>
+            </div>
+          );
+        }
+        if (sec.category === "safety") {
+          return (
+            <div
+              key="safety"
+              className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5"
+            >
+              <p className="mb-2 flex items-center gap-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-amber-800">
+                <AlertTriangle
+                  className="h-3 w-3"
+                  strokeWidth={2.5}
+                  aria-hidden="true"
+                />
+                필수 확인
+              </p>
+              <ul className="space-y-1.5 text-xs text-amber-900">
+                {sec.items.map((item, idx) => (
+                  <li key={idx} className="flex items-start gap-1.5">
+                    <span
+                      className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-amber-500"
+                      aria-hidden="true"
+                    />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        }
+        return (
+          <div
+            key="ops"
+            className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-2.5"
+          >
+            <p className="mb-2 flex items-center gap-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-stone-600">
+              <Wrench className="h-3 w-3" strokeWidth={2.5} aria-hidden="true" />
+              운영 · 안내
+            </p>
+            <ul className="space-y-1.5 text-xs text-stone-700">
+              {sec.items.map((item, idx) => (
+                <li key={idx} className="flex items-start gap-1.5">
+                  <span
+                    className="mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-stone-400"
+                    aria-hidden="true"
+                  />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * 활동 배정 — Group-by-Activity
  */
 function ActivitySection({
   infos,
@@ -153,7 +485,6 @@ function ActivitySection({
     const map = new Map<string, Array<{ id: string; name: string; isActivityLeader: boolean }>>();
     for (const info of infos) {
       if (!info.activity) continue;
-      // "숲체험 6조 (조장)" → activityName="숲체험 6조", isActivityLeader=true
       const leaderMatch = /\s*\((조장|조장\s*지원|.+\s*지원)\)\s*$/.exec(info.activity);
       const activityName = leaderMatch
         ? info.activity.slice(0, leaderMatch.index).trim()
@@ -162,12 +493,11 @@ function ActivitySection({
       const arr = map.get(activityName) ?? [];
       arr.push({
         id: info.id,
-        name: userNameMap[info.user_id] ?? "참가자",
+        name: resolveNickname(userNameMap[info.user_id] ?? "참가자"),
         isActivityLeader,
       });
       map.set(activityName, arr);
     }
-    // 활동명 내부에서 조장 먼저, 그 외 가나다
     map.forEach((arr) => {
       arr.sort((a, b) => {
         if (a.isActivityLeader && !b.isActivityLeader) return -1;
@@ -183,21 +513,19 @@ function ActivitySection({
   const totalCount = entries.reduce((sum, [, arr]) => sum + arr.length, 0);
 
   return (
-    <div className="mb-2">
-      <p className="mb-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-stone-500">
+    <div className="rounded-lg border border-stone-200 bg-white px-3 py-2.5">
+      <p className="mb-2 flex items-center gap-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-stone-600">
+        <ActivityIcon className="h-3 w-3" strokeWidth={2.5} aria-hidden="true" />
         활동 배정 · {totalCount}명
       </p>
-      <ul className="space-y-2.5">
+      <ul className="space-y-2">
         {entries.map(([activity, members]) => {
           if (members.length === 1) {
-            // 단일 멤버 — 한 줄 압축
             const m = members[0];
             return (
               <li key={activity} className="text-xs leading-relaxed">
                 <span className="font-semibold text-stone-900">{activity}</span>
-                <span className="text-stone-500">
-                  {" · "}1명{" · "}
-                </span>
+                <span className="text-stone-500">{" · "}1명{" · "}</span>
                 <span className="text-stone-800">
                   {m.isActivityLeader && (
                     <>
@@ -239,8 +567,7 @@ function ActivitySection({
 }
 
 /**
- * 메뉴 섹션 — 메인·음료 총량 + 조원별 배정(기본 접힘).
- * menu 필드는 자유 텍스트이나 build 스크립트가 " · " 구분자로 결합하므로 split 휴리스틱 사용.
+ * 메뉴 배정 — 총량 + 조원별(접힘).
  */
 function MenuSection({
   infos,
@@ -266,7 +593,7 @@ function MenuSection({
       const drink = parts[1] ?? "";
       perPerson.push({
         id: info.id,
-        name: userNameMap[info.user_id] ?? "참가자",
+        name: resolveNickname(userNameMap[info.user_id] ?? "참가자"),
         main,
         drink,
       });
@@ -291,8 +618,9 @@ function MenuSection({
       ));
 
   return (
-    <div className="mb-2">
-      <p className="mb-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-stone-500">
+    <div className="rounded-lg border border-stone-200 bg-white px-3 py-2.5">
+      <p className="mb-2 flex items-center gap-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-stone-600">
+        <Utensils className="h-3 w-3" strokeWidth={2.5} aria-hidden="true" />
         메뉴 배정 · {perPerson.length}명
       </p>
       <div className="space-y-1.5">
@@ -341,8 +669,7 @@ function MenuSection({
 }
 
 /**
- * 개인 특이사항 (미참여·조이동·임시역할·메모) — 개인 단위 유지.
- * 수가 적고 예외적이라 축 전환보다 개인 매핑이 명확.
+ * 개인 특이사항
  */
 function SpecialInfoList({
   infos,
@@ -356,21 +683,29 @@ function SpecialInfoList({
   const sorted = useMemo(
     () =>
       [...infos]
-        .map((info) => ({ info, name: userNameMap[info.user_id] ?? "참가자" }))
+        .map((info) => ({
+          info,
+          name: resolveNickname(userNameMap[info.user_id] ?? "참가자"),
+          ldap: userNameMap[info.user_id] ?? "",
+        }))
         .sort((a, b) => a.name.localeCompare(b.name, "ko")),
     [infos, userNameMap]
   );
   if (sorted.length === 0) return null;
   return (
-    <div className="mb-2">
-      <p className="mb-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-stone-500">
+    <div className="rounded-lg border border-stone-200 bg-white px-3 py-2.5">
+      <p className="mb-2 flex items-center gap-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-stone-600">
+        <Info className="h-3 w-3" strokeWidth={2.5} aria-hidden="true" />
         개인 특이사항
       </p>
       <ul className="space-y-1.5">
-        {sorted.map(({ info, name }) => (
+        {sorted.map(({ info, name, ldap }) => (
           <li key={info.id} className="rounded-lg bg-stone-50 px-3 py-2">
-            <div className="mb-1 flex flex-wrap items-center gap-1.5">
+            <div className="mb-1 flex flex-wrap items-baseline gap-1.5">
               <span className="text-sm font-medium text-stone-900">{name}</span>
+              {hasNickname(ldap) && (
+                <span className="text-xs text-stone-500">{ldap}</span>
+              )}
               {info.excused_reason && (
                 <Chip label="미참여" value={info.excused_reason} />
               )}
@@ -401,7 +736,6 @@ export default function BriefingSheet({
   isFromCache,
   selectedDay,
 }: Props) {
-  // 해당 일차의 항공 구간 판정 — schedules.airline_leg 기반 (일차 하드코딩 없음)
   const { hasOutboundFlight, hasReturnFlight } = useMemo(() => {
     const daySchedules = briefing.scheduleSummaries.filter(
       (s) => s.day_number === selectedDay
@@ -412,7 +746,6 @@ export default function BriefingSheet({
     };
   }, [briefing.scheduleSummaries, selectedDay]);
 
-  // trip_role은 1일차에만 노출 (여행 전체 역할이므로 출발 당일 리마인드용)
   const showTripRole = selectedDay === 1;
 
   const tripRoles = useMemo(() => {
@@ -440,7 +773,28 @@ export default function BriefingSheet({
     [briefing.roleAssignments, hasReturnFlight]
   );
 
-  // 일정별 상세 블록 조립 — 선택된 일차에 속한 일정만
+  // 편명·시각 — 해당 일차 비행 일정의 notice에서 "HH:MM ... (TW|7C|...)NNN ... 출발" 패턴 추출
+  const { outboundFlightInfo, returnFlightInfo } = useMemo(() => {
+    const FLIGHT_RE =
+      /(\d{1,2}:\d{2})[^|]*?(TW|7C|RS|KE|OZ|BX|LJ|ZE|4V)(\d+)[^|]*?출발/;
+    const extract = (leg: "outbound" | "return"): string | undefined => {
+      const flights = briefing.scheduleSummaries.filter(
+        (s) => s.day_number === selectedDay && s.airline_leg === leg
+      );
+      for (const s of flights) {
+        if (!s.notice) continue;
+        const m = FLIGHT_RE.exec(s.notice);
+        if (m) return `${m[2]}${m[3]} ${m[1]} 출발`;
+      }
+      return undefined;
+    };
+    return {
+      outboundFlightInfo: extract("outbound"),
+      returnFlightInfo: extract("return"),
+    };
+  }, [briefing.scheduleSummaries, selectedDay]);
+
+  // 일정별 상세 블록
   const scheduleBlocks: ScheduleBlock[] = useMemo(() => {
     const sgByScheduleId = new Map<string, ScheduleGroupInfo>();
     for (const sgi of briefing.groupInfos) {
@@ -467,7 +821,6 @@ export default function BriefingSheet({
           }))
           .sort((a, b) => a.name.localeCompare(b.name, "ko")),
       }))
-      // 공지·조안내·개인안내 중 하나라도 있으면 블록 유지
       .filter(
         (block) =>
           !!block.schedule.notice ||
@@ -480,17 +833,23 @@ export default function BriefingSheet({
   const hasOutboundAirlines = outboundAirlineGroups.size > 0;
   const hasReturnAirlines = returnAirlineGroups.size > 0;
   const hasDetails = scheduleBlocks.length > 0;
-  const hasAnyContent = hasTripRoles || hasOutboundAirlines || hasReturnAirlines || hasDetails;
+  const hasAnyContent =
+    hasTripRoles || hasOutboundAirlines || hasReturnAirlines || hasDetails;
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="flex max-h-[85vh] w-[calc(100%-2rem)] max-w-lg flex-col overflow-hidden p-0">
-        <div className="flex-shrink-0 px-5 pb-1 pt-4">
+        {/* Dialog 헤더 — DAY 배지 + 타이틀 (bold) */}
+        <div className="flex-shrink-0 border-b border-stone-100 px-5 pb-3 pt-4">
           <DialogHeader className="text-left">
-            <DialogTitle className="text-base">
-              {groupName} 브리핑 · {selectedDay}일차
-            </DialogTitle>
-            {/* 접근성: 시각적으로는 숨기되 스크린리더에는 컨텍스트 제공 */}
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center justify-center rounded-lg bg-stone-900 px-2 py-0.5 text-xs font-bold tracking-wider text-white">
+                DAY {selectedDay}
+              </span>
+              <DialogTitle className="text-base font-bold text-stone-900">
+                {groupName} 브리핑
+              </DialogTitle>
+            </div>
             <DialogDescription className="sr-only">
               {groupName} {selectedDay}일차 브리핑 상세
               {isFromCache ? " · 오프라인 캐시 기준" : ""}
@@ -498,62 +857,41 @@ export default function BriefingSheet({
           </DialogHeader>
         </div>
 
-        {/* 스크롤 컨테이너: overflow-y-auto + overscroll-behavior-contain — 모바일 드래그 제스처 충돌 방지 */}
-        <div className="flex-1 space-y-6 overflow-y-auto overscroll-contain px-5 pb-4 pt-1 text-sm">
+        <div className="flex-1 space-y-5 overflow-y-auto overscroll-contain px-5 pb-5 pt-3 text-sm">
           {!hasAnyContent && (
             <p className="py-10 text-center text-sm text-muted-foreground">
               이 일차에 등록된 브리핑 항목이 없어요
             </p>
           )}
 
-          {/* 1. 여행 역할 (1일차만) */}
-          {hasTripRoles && (
-            <section aria-labelledby="briefing-roles">
-              <h3 id="briefing-roles" className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
-                여행 역할
-              </h3>
-              <ul className="space-y-1.5">
-                {tripRoles.map((r) => (
-                  <li
-                    key={r.user_id}
-                    className="flex flex-wrap items-center gap-2 rounded-lg bg-stone-50 px-3 py-2"
-                  >
-                    <span className="font-medium text-stone-900">{r.name}</span>
-                    {r.trip_role && (
-                      <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-800">
-                        {r.trip_role}
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {/* 2. 가는편 항공사 — 전원 동일 압축 or 그룹별 이름 */}
+          {/* 항공 섹션 — 전원 동일이면 압축 카드 */}
           {hasOutboundAirlines && (
-            <AirlineSection
-              labelId="briefing-outbound"
-              title="가는편 항공사"
+            <CompactAirlineSection
+              label="가는편 항공"
               groups={outboundAirlineGroups}
+              flightInfo={outboundFlightInfo}
             />
           )}
 
-          {/* 3. 오는편 항공사 — 동일 패턴 */}
           {hasReturnAirlines && (
-            <AirlineSection
-              labelId="briefing-return"
-              title="오는편 항공사"
+            <CompactAirlineSection
+              label="오는편 항공"
               groups={returnAirlineGroups}
+              flightInfo={returnFlightInfo}
             />
           )}
 
-          {/* 4. 일정별 상세 (선택 일차의 일정만) */}
+          {/* 여행 역할 — indigo 단일 섹션 */}
+          {hasTripRoles && <TripRoleSection roles={tripRoles} />}
+
+          {/* 일정별 안내 */}
           {hasDetails && (
             <section aria-labelledby="briefing-details">
-              <h3 id="briefing-details" className="mb-2 text-xs font-semibold uppercase tracking-wide text-stone-500">
-                일정별 안내
-              </h3>
+              <SectionHeader
+                icon={<CalendarDays className="h-3 w-3" strokeWidth={2.5} />}
+                title="일정별 안내"
+                count={`${scheduleBlocks.length}건`}
+              />
               <div className="space-y-3">
                 {scheduleBlocks.map((block) => {
                   const activityInfos = block.memberInfos
@@ -562,7 +900,6 @@ export default function BriefingSheet({
                   const menuInfos = block.memberInfos
                     .map((m) => m.info)
                     .filter((info) => !!info.menu);
-                  // 개인 특이사항: 활동·메뉴 외 필드가 하나라도 있는 info
                   const specialInfos = block.memberInfos
                     .map((m) => m.info)
                     .filter(
@@ -573,60 +910,75 @@ export default function BriefingSheet({
                         !!info.note
                     );
 
+                  const timeDisplay = block.schedule.scheduled_time
+                    ? formatTime(block.schedule.scheduled_time)
+                    : null;
+
                   return (
                     <article
                       key={block.schedule.schedule_id}
-                      className="rounded-xl border border-stone-200 bg-white"
+                      className="overflow-hidden rounded-xl border border-stone-200 bg-white"
                     >
-                      {/* Sticky 헤더 — 스크롤 중 일정명 항상 가시 (iOS UITableView 패턴) */}
-                      <header className="sticky top-0 z-10 flex items-baseline justify-between gap-2 rounded-t-xl border-b border-stone-100 bg-white/95 px-3 py-2 backdrop-blur-sm">
-                        <h4 className="text-sm font-semibold text-stone-900">
-                          {block.schedule.title}
-                        </h4>
-                        {block.schedule.scheduled_time && (
-                          <span className="flex-shrink-0 text-xs text-stone-500">
-                            {formatTime(block.schedule.scheduled_time)}
-                          </span>
-                        )}
+                      {/* Article 헤더 — 시각 좌측 크게 + 세로 구분선 + 제목 */}
+                      <header className="flex items-center gap-3 border-b border-stone-200 bg-stone-50 px-4 py-3">
+                        {timeDisplay ? (
+                          <>
+                            <div className="flex flex-shrink-0 flex-col items-center leading-none">
+                              <span className="text-lg font-bold tabular-nums text-stone-900">
+                                {timeDisplay}
+                              </span>
+                              <span className="mt-0.5 text-[0.625rem] font-semibold uppercase tracking-wider text-stone-500">
+                                집결
+                              </span>
+                            </div>
+                            <div className="w-px self-stretch bg-stone-200" />
+                          </>
+                        ) : null}
+                        <h5 className="text-sm font-semibold leading-snug text-stone-900">
+                          {block.schedule.location ?? block.schedule.title}
+                          {block.schedule.location && (
+                            <span className="ml-1 text-xs font-normal text-stone-400">
+                              {block.schedule.title}
+                            </span>
+                          )}
+                        </h5>
                       </header>
 
-                      <div className="p-3">
-                        {/* 일정별 공지 — 모든 조에 공통 */}
+                      <div className="space-y-2 p-3">
+                        {/* 공지 3분할 */}
                         {block.schedule.notice && (
-                          <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
-                            <p className="mb-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-amber-800">
-                              공지
-                            </p>
-                            <ul className="space-y-1.5 text-xs leading-relaxed text-amber-900">
-                              {block.schedule.notice
-                                .split(/(?:·|\n)/)
-                                .map((line) => line.trim())
-                                .filter(Boolean)
-                                .map((item, idx) => (
-                                  <li key={idx} className="flex items-start gap-1.5">
-                                    <span className="mt-[-1px] text-amber-600/70 select-none">•</span>
-                                    <span>{item}</span>
-                                  </li>
-                                ))}
-                            </ul>
-                          </div>
+                          <NoticeBlocks notice={block.schedule.notice} />
                         )}
 
                         {/* 조 단위 정보 */}
                         {block.groupInfo && (
-                          <div className="mb-2 space-y-1.5 rounded-lg bg-stone-50 px-3 py-2">
+                          <div className="space-y-1.5 rounded-lg border border-stone-200 bg-white px-3 py-2.5">
+                            <p className="mb-1 flex items-center gap-1.5 text-[0.6875rem] font-semibold uppercase tracking-wide text-stone-600">
+                              <MapPin
+                                className="h-3 w-3"
+                                strokeWidth={2.5}
+                                aria-hidden="true"
+                              />
+                              우리 조
+                            </p>
                             {block.groupInfo.group_location && (
                               <div className="flex flex-wrap gap-1">
-                                <Chip label="조 위치" value={block.groupInfo.group_location} tone="info" />
+                                <Chip
+                                  label="조 위치"
+                                  value={block.groupInfo.group_location}
+                                  tone="info"
+                                />
                               </div>
                             )}
                             {block.groupInfo.note && (
-                              <p className="text-xs text-stone-600">{block.groupInfo.note}</p>
+                              <p className="text-xs text-stone-600">
+                                {block.groupInfo.note}
+                              </p>
                             )}
                           </div>
                         )}
 
-                        {/* 활동 배정 — Group-by-Activity 축 전환 */}
+                        {/* 활동 배정 */}
                         {activityInfos.length > 0 && (
                           <ActivitySection
                             infos={activityInfos}
@@ -634,7 +986,7 @@ export default function BriefingSheet({
                           />
                         )}
 
-                        {/* 메뉴 배정 — 총량 요약 + 조원별 (기본 접힘) */}
+                        {/* 메뉴 배정 */}
                         {menuInfos.length > 0 && (
                           <MenuSection
                             infos={menuInfos}
@@ -642,7 +994,7 @@ export default function BriefingSheet({
                           />
                         )}
 
-                        {/* 개인 특이사항 — 미참여·조이동·임시역할·메모 */}
+                        {/* 개인 특이사항 */}
                         {specialInfos.length > 0 && (
                           <SpecialInfoList
                             infos={specialInfos}

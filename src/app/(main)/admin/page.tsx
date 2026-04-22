@@ -131,10 +131,14 @@ export default async function AdminPage() {
     return matchesAirlineFilter(s.airline_filter, filteredMembers);
   });
 
+  // 브리핑은 본인 조 한정 — 다른 조의 trip_role·개인 안내가 섞여 노출되지 않도록
+  const adminOwnGroupMembers = ((members ?? []) as AdminMember[]).filter(
+    (m) => m.group_id === currentUser.group_id
+  );
   const briefing = await getBriefingData({
     supabase,
     effectiveGroupId: currentUser.group_id,
-    members: members as AdminMember[],
+    members: adminOwnGroupMembers,
     allGroups: groups as Group[],
     schedules: schedules as Schedule[],
     currentUser,
