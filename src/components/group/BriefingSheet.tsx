@@ -944,14 +944,16 @@ export default function BriefingSheet({
                             <div className="w-px self-stretch bg-stone-200" />
                           </>
                         ) : null}
-                        <h5 className="text-sm font-semibold leading-snug text-stone-900">
-                          {block.schedule.location ?? block.schedule.title}
+                        <div className="min-w-0 flex-1">
+                          <h5 className="text-sm font-semibold leading-snug text-stone-900">
+                            {block.schedule.location ?? block.schedule.title}
+                          </h5>
                           {block.schedule.location && (
-                            <span className="ml-1 text-xs font-normal text-stone-400">
+                            <p className="mt-0.5 text-xs font-normal leading-snug text-stone-400">
                               {block.schedule.title}
-                            </span>
+                            </p>
                           )}
-                        </h5>
+                        </div>
                       </header>
 
                       <div className="space-y-2 p-3">
