@@ -25,8 +25,8 @@ export default function BriefingBanner({ roleCount, specialCount, onOpen }: Prop
   return (
     <div
       className={cn(
-        "rounded-xl bg-gray-900 text-sm text-white",
-        "shadow-[0_4px_12px_rgba(17,24,39,0.12)]"
+        "rounded-xl bg-[#2D2A26] text-sm text-[#FFFBF5]",
+        "shadow-[0_4px_12px_rgba(45,42,38,0.18)]"
       )}
       role="region"
       aria-label="조장 브리핑"
@@ -46,12 +46,12 @@ export default function BriefingBanner({ roleCount, specialCount, onOpen }: Prop
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span
-            className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#FEE500] px-1.5 text-xs font-bold text-gray-900"
+            className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#FEE500] px-1.5 text-xs font-bold text-[#1F2937]"
             aria-hidden="true"
           >
             {total}
           </span>
-          <ChevronRight className="h-4 w-4 text-white/70" aria-hidden="true" />
+          <ChevronRight className="h-4 w-4 text-white/60" aria-hidden="true" />
         </span>
       </button>
     </div>
