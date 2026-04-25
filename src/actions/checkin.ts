@@ -7,6 +7,78 @@ import { revalidateMainPaths, requireActiveSchedule } from "./_shared";
 import type { ActionResult, OfflinePendingCheckin, CheckedBy, ShuttleType, CheckIn } from "@/lib/types";
 
 /**
+ * 체크인 row의 모든 컬럼 셀렉트 spec — 클라이언트 CheckIn 타입과 1:1 매핑.
+ * createCheckin/markAbsent 응답에 일관 사용.
+ */
+const CHECKIN_COLS =
+  "id, user_id, schedule_id, checked_at, checked_by, checked_by_user_id, offline_pending, is_absent, absence_reason, absence_location, group_id_at_checkin";
+
+/**
+ * 체크인 INSERT — Checkpoint 2 정책의 단일 진실의 출처.
+ *
+ * ## 정책
+ * 같은 (user_id, schedule_id)에 이미 row가 있으면 **모드 전환 차단**:
+ *  - markAbsent로 불참 처리된 row를 createCheckin이 정상으로 덮어쓸 수 없다.
+ *  - createCheckin으로 정상 처리된 row를 markAbsent가 불참으로 덮어쓸 수 없다.
+ *  - 모드 전환은 "취소(DELETE) → 재처리"의 2단계로만 가능.
+ *
+ * ## 동작
+ * 1. INSERT 시도
+ * 2. 성공 → 새 row 반환
+ * 3. UNIQUE(user_id,schedule_id) 충돌(error code 23505) → 기존 row 조회 후 반환
+ *    (UI는 기존 상태 그대로 유지, 사용자에게 에러 노출 안 함)
+ * 4. 그 외 에러 → 실패 반환
+ *
+ * ## race-safety
+ * - PostgreSQL UNIQUE 제약 + ON CONFLICT 처리가 DB 레벨에서 원자성 보장
+ * - "선조회 후 INSERT" 패턴(과거 markAbsent)은 두 쿼리 사이에 race window가 있었으나
+ *   이 패턴은 INSERT-first라 race window가 0
+ *
+ * ## 호출 컨텍스트
+ * createCheckin (is_absent=false), markAbsent (is_absent=true) 양쪽에서 사용.
+ */
+async function insertCheckinExclusive(
+  supabase: ReturnType<typeof createServiceClient>,
+  payload: {
+    user_id: string;
+    schedule_id: string;
+    checked_by: CheckedBy;
+    checked_by_user_id: string;
+    is_absent?: boolean;
+    absence_reason?: string | null;
+    absence_location?: string | null;
+    group_id_at_checkin: string | null;
+  }
+): Promise<ActionResult<CheckIn>> {
+  const { data: inserted, error: insertError } = await supabase
+    .from("check_ins")
+    .insert(payload)
+    .select(CHECKIN_COLS)
+    .single();
+
+  if (!insertError && inserted) {
+    return { ok: true, data: inserted as CheckIn };
+  }
+
+  // PostgreSQL UNIQUE 충돌 → 기존 row 조회 후 반환 (모드 전환 차단)
+  if (insertError && insertError.code === "23505") {
+    const { data: existing } = await supabase
+      .from("check_ins")
+      .select(CHECKIN_COLS)
+      .eq("user_id", payload.user_id)
+      .eq("schedule_id", payload.schedule_id)
+      .maybeSingle();
+    if (existing) {
+      return { ok: true, data: existing as CheckIn };
+    }
+    // 충돌 직후 다른 actor가 DELETE한 극단 케이스 — 사용자에게 일반 에러 노출
+    return { ok: false, error: "처리 중 충돌이 발생했어요. 다시 시도해주세요." };
+  }
+
+  return { ok: false, error: "처리 중 오류가 발생했어요" };
+}
+
+/**
  * v2: actor가 특정 일정의 임시 조장인지 확인.
  * member 역할이어도 temp_role='leader'면 해당 일정에 한해 체크인 가능.
  */
@@ -184,30 +256,22 @@ export async function createCheckin(
   //     셔틀은 null, 일반 일정은 validateGroupAccess가 이미 계산한 값 재사용
   const targetGroupAtCheckin = access.targetGroupId;
 
-  // upsert + select(): UNIQUE 제약(user_id,schedule_id)이 동시성을 보호하고,
-  // select()로 실제 저장된 row를 그대로 반환받아 read-after-write를 보장한다.
-  // ignoreDuplicates는 제거 — onConflict로 기존 row를 그대로 유지하면서도 select 가능.
-  const { data, error } = await supabase
-    .from("check_ins")
-    .upsert(
-      {
-        user_id: userId,
-        schedule_id: scheduleId,
-        checked_by: checkedBy,
-        checked_by_user_id: actor.id,
-        group_id_at_checkin: targetGroupAtCheckin,
-      },
-      { onConflict: "user_id,schedule_id" }
-    )
-    .select("id, user_id, schedule_id, checked_at, checked_by, checked_by_user_id, offline_pending, is_absent, absence_reason, absence_location, group_id_at_checkin")
-    .single();
+  // 근본 수정 (2026-04-26 코드 리뷰 반영):
+  //   기존 코드는 upsert(merge mode)를 사용 → 충돌 시 기존 row를 덮어써 Checkpoint 2 정책을 위반.
+  //   (markAbsent로 처리된 row를 createCheckin이 정상으로 덮어쓰는 시나리오 발생 가능)
+  //   insertCheckinExclusive로 통일하여 INSERT-first + 충돌 시 기존 보존 패턴 적용.
+  const result = await insertCheckinExclusive(supabase, {
+    user_id: userId,
+    schedule_id: scheduleId,
+    checked_by: checkedBy,
+    checked_by_user_id: actor.id,
+    group_id_at_checkin: targetGroupAtCheckin,
+  });
 
-  if (error || !data) {
-    return { ok: false, error: "체크인 처리 중 오류가 발생했어요" };
-  }
+  if (!result.ok) return result;
 
   revalidateMainPaths();
-  return { ok: true, data: data as CheckIn };
+  return result;
 }
 
 // 체크인 취소 DELETE
@@ -322,41 +386,25 @@ export async function markAbsent(
 
   const targetGroupAtCheckin = access.targetGroupId;
 
-  // Checkpoint 2 정책 보존:
-  //   기존 체크인(정상/불참 모두)이 있으면 모드 전환 차단.
-  //   ignoreDuplicates 대신 "선조회 후 INSERT" 패턴으로 구현해 select() 반환과 양립.
-  const { data: existing } = await supabase
-    .from("check_ins")
-    .select("id, user_id, schedule_id, checked_at, checked_by, checked_by_user_id, offline_pending, is_absent, absence_reason, absence_location, group_id_at_checkin")
-    .eq("user_id", userId)
-    .eq("schedule_id", scheduleId)
-    .maybeSingle();
-  if (existing) {
-    // 이미 처리되어 있으면 기존 row를 그대로 반환 (UI는 자기 상태 유지)
-    return { ok: true, data: existing as CheckIn };
-  }
+  // 근본 수정 (2026-04-26 코드 리뷰 반영):
+  //   "선조회 후 INSERT" 패턴은 두 쿼리 사이 race window가 있어 동시 createCheckin과
+  //   충돌 시 23505 에러가 사용자에게 노출됐다. insertCheckinExclusive로 통일하여
+  //   INSERT-first + 충돌 시 기존 보존 패턴 적용. Checkpoint 2 정책은 헬퍼가 보장.
+  const result = await insertCheckinExclusive(supabase, {
+    user_id: userId,
+    schedule_id: scheduleId,
+    checked_by: checkedBy,
+    checked_by_user_id: actor.id,
+    is_absent: true,
+    absence_reason: sanitizedReason,
+    absence_location: sanitizedLocation,
+    group_id_at_checkin: targetGroupAtCheckin,
+  });
 
-  const { data, error } = await supabase
-    .from("check_ins")
-    .insert({
-      user_id: userId,
-      schedule_id: scheduleId,
-      checked_by: checkedBy,
-      checked_by_user_id: actor.id,
-      is_absent: true,
-      absence_reason: sanitizedReason,
-      absence_location: sanitizedLocation,
-      group_id_at_checkin: targetGroupAtCheckin,
-    })
-    .select("id, user_id, schedule_id, checked_at, checked_by, checked_by_user_id, offline_pending, is_absent, absence_reason, absence_location, group_id_at_checkin")
-    .single();
-
-  if (error || !data) {
-    return { ok: false, error: "불참 처리 중 오류가 발생했어요" };
-  }
+  if (!result.ok) return result;
 
   revalidateMainPaths();
-  return { ok: true, data: data as CheckIn };
+  return result;
 }
 
 // 오프라인 체크인 일괄 동기화
