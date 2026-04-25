@@ -133,7 +133,7 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
         group_info: gidGroupInfo,
         member_info: gidMemberInfo,
       });
-      if (res.ok && res.data) {
+      if (res.ok) {
         localStorage.setItem(SETUP_SOURCE_KEY, JSON.stringify({
           type: "sheets",
           usersUrl, schedulesUrl,
@@ -142,7 +142,7 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
         }));
         onPreviewReady(res.data);
       } else {
-        setError(res.error ?? "알 수 없는 오류");
+        setError(res.error);
       }
     });
   };
@@ -204,7 +204,7 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
       }
 
       const res = await previewFromCsv(usersCsv, schedulesCsv, groupInfoCsv, memberInfoCsv);
-      if (res.ok && res.data) {
+      if (res.ok) {
         localStorage.setItem(SETUP_SOURCE_KEY, JSON.stringify({
           type: "csv",
           userFileName: uName, scheduleFileName: sName,
@@ -221,7 +221,7 @@ export default function DataSourceStep({ onPreviewReady }: Props) {
         }));
         onPreviewReady(res.data);
       } else {
-        setError(res.error ?? "알 수 없는 오류");
+        setError(res.error);
       }
     });
   };

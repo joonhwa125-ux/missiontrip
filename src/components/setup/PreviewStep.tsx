@@ -52,10 +52,10 @@ export default function PreviewStep({
     setConfirmOpen(false);
     startTransition(async () => {
       const res = await importToDatabase(data);
-      if (res.ok && res.data) {
+      if (res.ok) {
         onImportDone(res.data);
       } else {
-        onImportError(res.error ?? "알 수 없는 오류");
+        onImportError(res.error);
       }
     });
   };

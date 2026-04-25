@@ -163,7 +163,7 @@ async function validateGroupAccess(
   targetUserId: string,
   scheduleId: string,
   shuttleType: ShuttleType | null = null
-): Promise<{ error: ActionResult } | { targetGroupId: string | null }> {
+): Promise<{ errorMessage: string } | { targetGroupId: string | null }> {
   if (isAdminRole(actor.role)) {
     // admin은 그룹 제한 없음. 일반 일정이면 스냅샷용 타겟 그룹 계산
     const targetGroupId = shuttleType
@@ -174,7 +174,7 @@ async function validateGroupAccess(
 
   if (shuttleType === "departure") {
     if (!actor.shuttle_bus) {
-      return { error: { ok: false, error: "셔틀 담당 조장만 처리할 수 있어요" } };
+      return { errorMessage: "셔틀 담당 조장만 처리할 수 있어요" };
     }
     const { data } = await supabase
       .from("users")
@@ -182,14 +182,14 @@ async function validateGroupAccess(
       .eq("id", targetUserId)
       .single();
     if (data?.shuttle_bus !== actor.shuttle_bus) {
-      return { error: { ok: false, error: "내 버스 탑승자만 처리할 수 있어요" } };
+      return { errorMessage: "내 버스 탑승자만 처리할 수 있어요" };
     }
     return { targetGroupId: null };
   }
 
   if (shuttleType === "return") {
     if (!actor.return_shuttle_bus) {
-      return { error: { ok: false, error: "귀가 셔틀 담당 조장만 처리할 수 있어요" } };
+      return { errorMessage: "귀가 셔틀 담당 조장만 처리할 수 있어요" };
     }
     const { data } = await supabase
       .from("users")
@@ -197,7 +197,7 @@ async function validateGroupAccess(
       .eq("id", targetUserId)
       .single();
     if (data?.return_shuttle_bus !== actor.return_shuttle_bus) {
-      return { error: { ok: false, error: "내 버스 탑승자만 처리할 수 있어요" } };
+      return { errorMessage: "내 버스 탑승자만 처리할 수 있어요" };
     }
     return { targetGroupId: null };
   }
@@ -213,10 +213,10 @@ async function validateGroupAccess(
   const targetGroupId = await getEffectiveGroupId(supabase, targetUserId, scheduleId);
 
   if (!actorGroupId || !targetGroupId) {
-    return { error: { ok: false, error: "사용자 정보를 찾을 수 없어요" } };
+    return { errorMessage: "사용자 정보를 찾을 수 없어요" };
   }
   if (actorGroupId !== targetGroupId) {
-    return { error: { ok: false, error: "자기 조원만 처리할 수 있어요" } };
+    return { errorMessage: "자기 조원만 처리할 수 있어요" };
   }
   return { targetGroupId };
 }
@@ -243,7 +243,7 @@ export async function createCheckin(
   if (!allowed) return { ok: false, error: "권한이 없어요" };
 
   const access = await validateGroupAccess(supabase, actor, userId, scheduleId, shuttleType);
-  if ("error" in access) return { ok: false, error: access.error.error };
+  if ("errorMessage" in access) return { ok: false, error: access.errorMessage };
 
   // v2: checked_by — admin / temp_leader / leader 구분
   const checkedBy: CheckedBy = isAdminRole(actor.role)
@@ -293,7 +293,7 @@ export async function deleteCheckin(
   if (!allowed) return { ok: false, error: "권한이 없어요" };
 
   const access = await validateGroupAccess(supabase, actor, userId, scheduleId, shuttleType);
-  if ("error" in access) return access.error;
+  if ("errorMessage" in access) return { ok: false, error: access.errorMessage };
 
   const { error } = await supabase
     .from("check_ins")
@@ -376,7 +376,7 @@ export async function markAbsent(
   if (!allowed) return { ok: false, error: "권한이 없어요" };
 
   const access = await validateGroupAccess(supabase, actor, userId, scheduleId, shuttleType);
-  if ("error" in access) return { ok: false, error: access.error.error };
+  if ("errorMessage" in access) return { ok: false, error: access.errorMessage };
 
   const checkedBy: CheckedBy = isAdminRole(actor.role)
     ? "admin"

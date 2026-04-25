@@ -78,40 +78,8 @@ export default function GroupView({
     prevSchedulesRef.current = initialSchedules;
     setSchedules(initialSchedules);
   }
-  if (prevCheckInsRef.current !== initialCheckIns) {
-    prevCheckInsRef.current = initialCheckIns;
-    // 근본 수정 (2026-04-26): prop sync race 방어 강화
-    //
-    // 기존 가드는 "빈 응답만" 막고 있어, Supabase service client의
-    // read-after-write 미보장 + revalidatePath 자동 RSC re-fetch 조합에서
-    // 방금 INSERT가 빠진 N-1 stale 응답이 도착하면 낙관적 temp가 wipe되었다.
-    //
-    // 보강 가드:
-    //   1) 빈 응답 무시 (기존 — auth 미복원 방어)
-    //   2) in-flight 낙관적 항목(temp/absent prefix, offline_pending) 보존
-    //      → 서버 응답이 도착하기 전에 RSC가 와도 temp가 살아남고,
-    //        Server Action 응답이 진짜 row로 교체할 시간을 확보
-    //   3) 서버 응답이 클라이언트 state에 있는 user_id를 모두 포함하지 않으면
-    //      stale로 간주하여 무시. 양쪽을 user_id 기준으로 union merge.
-    const hasPending = checkIns.some(
-      (c) => c.id?.startsWith("temp-") || c.id?.startsWith("absent-") || c.offline_pending
-    );
-    if (initialCheckIns.length === 0 && checkIns.length > 0) {
-      // (1) 빈 응답 + 클라이언트 데이터 있음 → 무시
-    } else if (hasPending) {
-      // (2) in-flight 낙관적 항목 보존 + server 응답 union merge
-      //     server가 가진 user_id는 server row 우선, 없으면 client temp 유지
-      const serverByUser = new Map(initialCheckIns.map((c) => [c.user_id, c]));
-      const merged: CheckIn[] = [
-        ...initialCheckIns,
-        ...checkIns.filter((c) => !serverByUser.has(c.user_id)),
-      ];
-      setCheckIns(merged);
-    } else {
-      // (3) 정상 sync — 서버가 권위
-      setCheckIns(initialCheckIns);
-    }
-  }
+  // prevCheckInsRef sync는 currentSchedule/selectedScheduleId 선언 이후로 이동
+  // (Issue #6 fix: viewSchedule 격리 위해 두 state가 필요)
   if (prevBriefingRef.current !== briefing) {
     prevBriefingRef.current = briefing;
     if (briefing) {
@@ -178,6 +146,49 @@ export default function GroupView({
   // Phase B: 현재 뷰가 바라보는 일정. feed 뷰는 currentSchedule(DB 활성),
   //          checkin 뷰는 selectedSchedule(조장이 탭한 일정). checkIns state는 이 일정 기준.
   const viewSchedule = view === "checkin" ? selectedSchedule : currentSchedule;
+
+  // 근본 수정 (2026-04-26 코드 리뷰 반영): prop sync race 방어 + schedule 격리
+  //
+  // 위치: viewSchedule 정의 후로 이동 — schedule_id 격리에 viewSchedule 필요.
+  // 기존 가드는 "빈 응답만" 막고 있어, Supabase service client의 read-after-write
+  // 미보장 + revalidatePath 자동 RSC re-fetch 조합에서 방금 INSERT가 빠진 N-1
+  // stale 응답이 도착하면 낙관적 temp가 wipe되었다.
+  //
+  // 보강 가드:
+  //   0) schedule_id 격리: initialCheckIns는 active 일정 데이터만 포함하므로
+  //      사용자가 비활성 일정(대기/완료) 열람 중이면 무관한 데이터로 덮어씀 차단.
+  //      relevantServer로 필터하여 viewSchedule 일치 row만 후속 단계 진입.
+  //   1) 빈 응답 무시 (기존 — auth 미복원 방어 + 비활성 일정 열람 시 자동 트리거)
+  //   2) in-flight 낙관적 항목(temp/absent prefix, offline_pending) 보존
+  //      → 서버 응답이 도착하기 전에 RSC가 와도 temp가 살아남고,
+  //        Server Action 응답이 진짜 row로 교체할 시간을 확보
+  //   3) 서버 응답이 클라이언트 state에 있는 user_id를 모두 포함하지 않으면
+  //      stale로 간주하여 무시. 양쪽을 user_id 기준으로 union merge.
+  if (prevCheckInsRef.current !== initialCheckIns) {
+    prevCheckInsRef.current = initialCheckIns;
+    const viewingId = viewSchedule?.id ?? null;
+    const relevantServer = viewingId
+      ? initialCheckIns.filter((c) => c.schedule_id === viewingId)
+      : [];
+    const hasPending = checkIns.some(
+      (c) => c.id?.startsWith("temp-") || c.id?.startsWith("absent-") || c.offline_pending
+    );
+    if (relevantServer.length === 0 && checkIns.length > 0) {
+      // (1) 빈/비관련 응답 + 클라이언트 데이터 있음 → 무시
+    } else if (hasPending) {
+      // (2) in-flight 낙관적 항목 보존 + server 응답 union merge
+      //     server가 가진 user_id는 server row 우선, 없으면 client temp 유지
+      const serverByUser = new Map(relevantServer.map((c) => [c.user_id, c]));
+      const merged: CheckIn[] = [
+        ...relevantServer,
+        ...checkIns.filter((c) => !serverByUser.has(c.user_id)),
+      ];
+      setCheckIns(merged);
+    } else {
+      // (3) 정상 sync — 서버가 권위
+      setCheckIns(relevantServer);
+    }
+  }
 
   // 타겟 fetch: viewSchedule의 체크인을 클라이언트에서 직접 조회
   const fetchLatestCheckIns = useCallback(async () => {

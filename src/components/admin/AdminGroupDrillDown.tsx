@@ -115,9 +115,18 @@ export default function AdminGroupDrillDown({
     startTransition(async () => {
       const res = await createCheckin(member.id, activeSchedule.id, activeSchedule.shuttle_type ?? null);
       if (res.ok) {
-        // 근본 수정: 서버 응답으로 진짜 row 교체 (prop sync race 차단)
+        // 근본 수정: 서버 응답으로 진짜 row 교체 (prop sync race 차단).
+        // Issue #2 fix: AdminCheckIn 필드만 명시 추출 — 전체 CheckIn 객체가
+        // 경량 state로 흘러들어가는 타입 누수 차단.
         if (res.data) {
-          onCheckInsChange((prev) => prev.map((c) => (c.user_id === member.id ? res.data! : c)));
+          const adminRow: CheckIn = {
+            user_id: res.data.user_id,
+            is_absent: res.data.is_absent,
+            checked_at: res.data.checked_at,
+            absence_reason: res.data.absence_reason,
+            absence_location: res.data.absence_location,
+          };
+          onCheckInsChange((prev) => prev.map((c) => (c.user_id === member.id ? adminRow : c)));
         }
         await broadcastCheckin(member.id, "insert");
       } else {
@@ -135,7 +144,14 @@ export default function AdminGroupDrillDown({
       const res = await markAbsent(member.id, activeSchedule.id, activeSchedule.shuttle_type ?? null);
       if (res.ok) {
         if (res.data) {
-          onCheckInsChange((prev) => prev.map((c) => (c.user_id === member.id ? res.data! : c)));
+          const adminRow: CheckIn = {
+            user_id: res.data.user_id,
+            is_absent: res.data.is_absent,
+            checked_at: res.data.checked_at,
+            absence_reason: res.data.absence_reason,
+            absence_location: res.data.absence_location,
+          };
+          onCheckInsChange((prev) => prev.map((c) => (c.user_id === member.id ? adminRow : c)));
         }
         await broadcastCheckin(member.id, "insert", true);
       } else {

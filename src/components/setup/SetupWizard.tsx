@@ -80,12 +80,12 @@ export default function SetupWizard() {
           member_info: gidMemberInfo,
         });
         if (cancelled) return;
-        if (res.ok && res.data) {
+        if (res.ok) {
           setPreviewData(res.data);
           setStep(2);
         } else {
           // resync 중 미리보기 실패 → Step 1 복귀 (ImportResultStep 오분류 방지)
-          setImportError(res.error ?? "시트 데이터를 불러오지 못했어요. 다시 시도해주세요.");
+          setImportError(res.error || "시트 데이터를 불러오지 못했어요. 다시 시도해주세요.");
           setStep(1);
         }
         setIsResyncing(false);

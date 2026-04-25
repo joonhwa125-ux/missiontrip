@@ -190,11 +190,17 @@ export interface OfflinePendingReport {
 }
 
 // Server Action 반환 타입
-export interface ActionResult<T = void> {
-  ok: boolean;
-  data?: T;
-  error?: string;
-}
+//
+// discriminated union으로 정의 — 호출자가 `if (res.ok)` narrowing 시
+// data/error에 안전하게 접근 가능. 기존 단일 interface는 모든 필드가
+// optional이라 `res.data!` non-null assertion에 의존했음.
+//
+// 사용 예:
+//   ActionResult                    → { ok: true } | { ok: false; error: string }
+//   ActionResult<CheckIn>           → { ok: true; data: CheckIn } | { ok: false; error: string }
+export type ActionResult<T = void> = T extends void
+  ? { ok: true } | { ok: false; error: string }
+  : { ok: true; data: T } | { ok: false; error: string };
 
 // ============================================================================
 // v2 일정별 메타데이터 (schedule_member_info / schedule_group_info)
