@@ -80,7 +80,35 @@ export default function GroupView({
   }
   if (prevCheckInsRef.current !== initialCheckIns) {
     prevCheckInsRef.current = initialCheckIns;
-    if (initialCheckIns.length > 0 || checkIns.length === 0) {
+    // 근본 수정 (2026-04-26): prop sync race 방어 강화
+    //
+    // 기존 가드는 "빈 응답만" 막고 있어, Supabase service client의
+    // read-after-write 미보장 + revalidatePath 자동 RSC re-fetch 조합에서
+    // 방금 INSERT가 빠진 N-1 stale 응답이 도착하면 낙관적 temp가 wipe되었다.
+    //
+    // 보강 가드:
+    //   1) 빈 응답 무시 (기존 — auth 미복원 방어)
+    //   2) in-flight 낙관적 항목(temp/absent prefix, offline_pending) 보존
+    //      → 서버 응답이 도착하기 전에 RSC가 와도 temp가 살아남고,
+    //        Server Action 응답이 진짜 row로 교체할 시간을 확보
+    //   3) 서버 응답이 클라이언트 state에 있는 user_id를 모두 포함하지 않으면
+    //      stale로 간주하여 무시. 양쪽을 user_id 기준으로 union merge.
+    const hasPending = checkIns.some(
+      (c) => c.id?.startsWith("temp-") || c.id?.startsWith("absent-") || c.offline_pending
+    );
+    if (initialCheckIns.length === 0 && checkIns.length > 0) {
+      // (1) 빈 응답 + 클라이언트 데이터 있음 → 무시
+    } else if (hasPending) {
+      // (2) in-flight 낙관적 항목 보존 + server 응답 union merge
+      //     server가 가진 user_id는 server row 우선, 없으면 client temp 유지
+      const serverByUser = new Map(initialCheckIns.map((c) => [c.user_id, c]));
+      const merged: CheckIn[] = [
+        ...initialCheckIns,
+        ...checkIns.filter((c) => !serverByUser.has(c.user_id)),
+      ];
+      setCheckIns(merged);
+    } else {
+      // (3) 정상 sync — 서버가 권위
       setCheckIns(initialCheckIns);
     }
   }

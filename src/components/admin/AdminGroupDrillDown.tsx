@@ -115,6 +115,10 @@ export default function AdminGroupDrillDown({
     startTransition(async () => {
       const res = await createCheckin(member.id, activeSchedule.id, activeSchedule.shuttle_type ?? null);
       if (res.ok) {
+        // 근본 수정: 서버 응답으로 진짜 row 교체 (prop sync race 차단)
+        if (res.data) {
+          onCheckInsChange((prev) => prev.map((c) => (c.user_id === member.id ? res.data! : c)));
+        }
         await broadcastCheckin(member.id, "insert");
       } else {
         onCheckInsChange((prev) => prev.filter((c) => c.user_id !== member.id));
@@ -130,6 +134,9 @@ export default function AdminGroupDrillDown({
     startTransition(async () => {
       const res = await markAbsent(member.id, activeSchedule.id, activeSchedule.shuttle_type ?? null);
       if (res.ok) {
+        if (res.data) {
+          onCheckInsChange((prev) => prev.map((c) => (c.user_id === member.id ? res.data! : c)));
+        }
         await broadcastCheckin(member.id, "insert", true);
       } else {
         onCheckInsChange((prev) => prev.filter((c) => c.user_id !== member.id));

@@ -171,6 +171,12 @@ export default function GroupCheckinView({
         try {
           const res = await createCheckin(userId, schedule.id, schedule.shuttle_type ?? null);
           if (res.ok) {
+            // 근본 수정: 서버 응답으로 temp를 진짜 row로 즉시 교체.
+            //          이후 prop sync(GroupView L77-93)가 stale RSC를 반영해도
+            //          temp ID가 아닌 진짜 ID로 일치되어 wipe 위험이 없다.
+            if (res.data) {
+              setCheckIns((prev) => prev.map((c) => (c.id === temp.id ? res.data! : c)));
+            }
             await broadcastCheckin(userId, "insert");
           } else {
             setCheckIns((prev) => prev.filter((c) => c.id !== temp.id));
@@ -244,6 +250,10 @@ export default function GroupCheckinView({
       try {
         const res = await markAbsent(userId, schedule.id, schedule.shuttle_type ?? null, reason, location);
         if (res.ok) {
+          // 근본 수정: 서버 응답으로 temp를 진짜 row로 즉시 교체 (createCheckin과 동일 패턴)
+          if (res.data) {
+            setCheckIns((prev) => prev.map((c) => (c.id === temp.id ? res.data! : c)));
+          }
           await broadcastCheckin(userId, "insert", true);
         } else {
           setCheckIns((prev) => prev.filter((c) => c.id !== temp.id));

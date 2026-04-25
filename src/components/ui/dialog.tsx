@@ -35,7 +35,9 @@ const DialogContent = React.forwardRef<
       ref={ref}
       // KWCAG: role="dialog" + aria-modal은 Radix가 자동 처리
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-sm translate-x-[-50%] translate-y-[-50%] gap-4 rounded-2xl bg-card p-6 shadow-lg",
+        // 근본 수정: max-h + overflow-y-auto로 모바일 viewport 초과 시 스크롤 보장.
+        // 100dvh로 iOS Safari 동적 주소바 대응. 짧은 콘텐츠에는 영향 없음.
+        "fixed left-[50%] top-[50%] z-50 grid w-[calc(100%-2rem)] max-w-sm max-h-[calc(100dvh-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 overflow-y-auto rounded-2xl bg-card p-6 shadow-lg",
         className
       )}
       {...props}

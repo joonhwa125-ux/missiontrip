@@ -4,7 +4,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { canCheckin, isAdminRole } from "@/lib/constants";
 import { revalidateMainPaths, requireActiveSchedule } from "./_shared";
-import type { ActionResult, OfflinePendingCheckin, CheckedBy, ShuttleType } from "@/lib/types";
+import type { ActionResult, OfflinePendingCheckin, CheckedBy, ShuttleType, CheckIn } from "@/lib/types";
 
 /**
  * v2: actor가 특정 일정의 임시 조장인지 확인.
@@ -150,11 +150,13 @@ async function validateGroupAccess(
 }
 
 // 체크인 INSERT (조장/관리자 대리 체크인)
+// 근본 수정 (2026-04-26): 진짜 row를 반환해 클라이언트가 낙관적 temp를 즉시 교체하도록 함.
+//                        prop sync race(stale RSC가 낙관적 temp를 wipe하던 버그) 차단.
 export async function createCheckin(
   userId: string,
   scheduleId: string,
   shuttleType: ShuttleType | null = null
-): Promise<ActionResult> {
+): Promise<ActionResult<CheckIn>> {
   const actor = await getCurrentUser();
   if (!actor) return { ok: false, error: "권한이 없어요" };
 
@@ -162,14 +164,14 @@ export async function createCheckin(
 
   // Phase B: 활성 일정에만 쓰기 허용 (조장 뷰가 대기/완료도 열람 가능해짐)
   const activeCheck = await requireActiveSchedule(supabase, scheduleId);
-  if (!activeCheck.ok) return activeCheck;
+  if (!activeCheck.ok) return { ok: false, error: activeCheck.error };
 
   // v2: 역할 기반 OR 임시 조장 기반 권한 체크 (본인 포함)
   const allowed = await canActorCheckin(supabase, actor, userId, scheduleId);
   if (!allowed) return { ok: false, error: "권한이 없어요" };
 
   const access = await validateGroupAccess(supabase, actor, userId, scheduleId, shuttleType);
-  if ("error" in access) return access.error;
+  if ("error" in access) return { ok: false, error: access.error.error };
 
   // v2: checked_by — admin / temp_leader / leader 구분
   const checkedBy: CheckedBy = isAdminRole(actor.role)
@@ -182,23 +184,30 @@ export async function createCheckin(
   //     셔틀은 null, 일반 일정은 validateGroupAccess가 이미 계산한 값 재사용
   const targetGroupAtCheckin = access.targetGroupId;
 
-  const { error } = await supabase.from("check_ins").upsert(
-    {
-      user_id: userId,
-      schedule_id: scheduleId,
-      checked_by: checkedBy,
-      checked_by_user_id: actor.id,
-      group_id_at_checkin: targetGroupAtCheckin,
-    },
-    { onConflict: "user_id,schedule_id", ignoreDuplicates: true }
-  );
+  // upsert + select(): UNIQUE 제약(user_id,schedule_id)이 동시성을 보호하고,
+  // select()로 실제 저장된 row를 그대로 반환받아 read-after-write를 보장한다.
+  // ignoreDuplicates는 제거 — onConflict로 기존 row를 그대로 유지하면서도 select 가능.
+  const { data, error } = await supabase
+    .from("check_ins")
+    .upsert(
+      {
+        user_id: userId,
+        schedule_id: scheduleId,
+        checked_by: checkedBy,
+        checked_by_user_id: actor.id,
+        group_id_at_checkin: targetGroupAtCheckin,
+      },
+      { onConflict: "user_id,schedule_id" }
+    )
+    .select("id, user_id, schedule_id, checked_at, checked_by, checked_by_user_id, offline_pending, is_absent, absence_reason, absence_location, group_id_at_checkin")
+    .single();
 
-  if (error) {
+  if (error || !data) {
     return { ok: false, error: "체크인 처리 중 오류가 발생했어요" };
   }
 
   revalidateMainPaths();
-  return { ok: true };
+  return { ok: true, data: data as CheckIn };
 }
 
 // 체크인 취소 DELETE
@@ -271,6 +280,7 @@ export async function deleteCheckin(
 
 // 불참 처리 INSERT (is_absent=true)
 // v2: absence_reason, absence_location 파라미터 추가
+// 근본 수정 (2026-04-26): createCheckin과 동일하게 진짜 row 반환 — prop sync race 차단.
 const ABSENCE_TEXT_MAX_LENGTH = 200;
 export async function markAbsent(
   userId: string,
@@ -278,7 +288,7 @@ export async function markAbsent(
   shuttleType: ShuttleType | null = null,
   absenceReason: string | null = null,
   absenceLocation: string | null = null
-): Promise<ActionResult> {
+): Promise<ActionResult<CheckIn>> {
   const actor = await getCurrentUser();
   if (!actor) return { ok: false, error: "권한이 없어요" };
 
@@ -296,13 +306,13 @@ export async function markAbsent(
 
   // Phase B: 활성 일정에만 불참 처리 허용
   const activeCheck = await requireActiveSchedule(supabase, scheduleId);
-  if (!activeCheck.ok) return activeCheck;
+  if (!activeCheck.ok) return { ok: false, error: activeCheck.error };
 
   const allowed = await canActorCheckin(supabase, actor, userId, scheduleId);
   if (!allowed) return { ok: false, error: "권한이 없어요" };
 
   const access = await validateGroupAccess(supabase, actor, userId, scheduleId, shuttleType);
-  if ("error" in access) return access.error;
+  if ("error" in access) return { ok: false, error: access.error.error };
 
   const checkedBy: CheckedBy = isAdminRole(actor.role)
     ? "admin"
@@ -312,11 +322,23 @@ export async function markAbsent(
 
   const targetGroupAtCheckin = access.targetGroupId;
 
-  // Checkpoint 2 수정: ignoreDuplicates=true로 기존 체크인(정상/불참 모두) 덮어쓰기 방지.
-  // UI에서는 체크인된 유저에 "불참" 버튼이 노출되지 않지만, 서버 레이어에서도 방어.
-  // 모드 전환(정상→불참)이 필요하면 취소 후 불참 처리 2단계로 수행해야 한다.
-  const { error } = await supabase.from("check_ins").upsert(
-    {
+  // Checkpoint 2 정책 보존:
+  //   기존 체크인(정상/불참 모두)이 있으면 모드 전환 차단.
+  //   ignoreDuplicates 대신 "선조회 후 INSERT" 패턴으로 구현해 select() 반환과 양립.
+  const { data: existing } = await supabase
+    .from("check_ins")
+    .select("id, user_id, schedule_id, checked_at, checked_by, checked_by_user_id, offline_pending, is_absent, absence_reason, absence_location, group_id_at_checkin")
+    .eq("user_id", userId)
+    .eq("schedule_id", scheduleId)
+    .maybeSingle();
+  if (existing) {
+    // 이미 처리되어 있으면 기존 row를 그대로 반환 (UI는 자기 상태 유지)
+    return { ok: true, data: existing as CheckIn };
+  }
+
+  const { data, error } = await supabase
+    .from("check_ins")
+    .insert({
       user_id: userId,
       schedule_id: scheduleId,
       checked_by: checkedBy,
@@ -325,16 +347,16 @@ export async function markAbsent(
       absence_reason: sanitizedReason,
       absence_location: sanitizedLocation,
       group_id_at_checkin: targetGroupAtCheckin,
-    },
-    { onConflict: "user_id,schedule_id", ignoreDuplicates: true }
-  );
+    })
+    .select("id, user_id, schedule_id, checked_at, checked_by, checked_by_user_id, offline_pending, is_absent, absence_reason, absence_location, group_id_at_checkin")
+    .single();
 
-  if (error) {
+  if (error || !data) {
     return { ok: false, error: "불참 처리 중 오류가 발생했어요" };
   }
 
   revalidateMainPaths();
-  return { ok: true };
+  return { ok: true, data: data as CheckIn };
 }
 
 // 오프라인 체크인 일괄 동기화
