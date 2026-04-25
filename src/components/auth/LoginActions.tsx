@@ -14,20 +14,34 @@ const ERROR_MESSAGES: Record<string, string> = {
 export default function LoginActions() {
   const searchParams = useSearchParams();
   const errorKey = searchParams.get("error");
-  const errorMessage = errorKey ? ERROR_MESSAGES[errorKey] : null;
+  const attemptedEmail = searchParams.get("email");
+  const errorCode = searchParams.get("code");
+  const errorRawMessage = searchParams.get("message");
+  const baseMessage = errorKey ? ERROR_MESSAGES[errorKey] : null;
+  // 에러 종류별 진단 정보 노출 — 담당자가 즉시 원인 식별 가능
+  const errorMessage = (() => {
+    if (!baseMessage) return null;
+    if (errorKey === "not-registered" && attemptedEmail) {
+      return `${baseMessage}\n(시도한 계정: ${attemptedEmail})`;
+    }
+    if (errorKey === "auth-failed" && (errorCode || errorRawMessage)) {
+      const detail = [errorCode, errorRawMessage].filter(Boolean).join(": ");
+      return `${baseMessage}\n(상세: ${detail})`;
+    }
+    return baseMessage;
+  })();
   const [loading, setLoading] = useState(false);
 
   async function handleGoogleLogin() {
     setLoading(true);
     try {
       const supabase = createClient();
+      // hd 힌트 제거 — 일부 워크스페이스 구성에서 차단 사례 확인.
+      // 도메인 검증은 middleware/auth callback에서 ALLOWED_EMAIL_DOMAIN으로 수행.
       await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: {
-            hd: "linkagelab.co.kr", // G Suite 도메인 힌트
-          },
         },
       });
     } catch {
@@ -43,7 +57,7 @@ export default function LoginActions() {
         <div
           role="alert"
           aria-live="polite"
-          className="w-full rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700"
+          className="w-full whitespace-pre-line rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700"
         >
           {errorMessage}
         </div>

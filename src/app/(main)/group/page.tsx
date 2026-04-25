@@ -96,13 +96,11 @@ export default async function GroupPage() {
       .select("id, title, location, day_number, sort_order, scheduled_time, scope, is_active, shuttle_type, airline_leg, airline_filter, notice, activated_at, created_at")
       .order("day_number")
       .order("sort_order"),
-    supabase.from("groups").select("id, name, bus_name").in("name", ["1조", "2조", "16조"]).order("name"),
+    supabase.from("groups").select("id, name, bus_name").order("name"),
     supabase.from("users").select("id, group_id, party, name, role"),
   ]);
 
-  // members filtering isn't strict here since we fetched filtered groups above, but let's filter allMembers array explicitly
-  const allowedGroupIds = new Set((allGroups ?? []).map(g => g.id));
-  const filteredAllMembers = (allMembers ?? []).filter(m => allowedGroupIds.has(m.group_id));
+  const filteredAllMembers = allMembers ?? [];
 
   // 출발/귀가 셔틀 버스 배정자인 경우 해당 버스 인원 추가 조회
   let shuttleMembers: GroupMember[] = [];

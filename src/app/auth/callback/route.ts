@@ -43,7 +43,12 @@ export async function GET(request: Request) {
 
   if (error) {
     await supabase.auth.signOut();
-    response.headers.set("location", `${origin}/login?error=auth-failed`);
+    // 진단: Supabase auth 에러 코드/메시지를 쿼리스트링으로 노출 (signups 비활성 등 설정 이슈 식별용)
+    const url = new URL(`${origin}/login`);
+    url.searchParams.set("error", "auth-failed");
+    if (error.code) url.searchParams.set("code", error.code);
+    if (error.message) url.searchParams.set("message", error.message.slice(0, 200));
+    response.headers.set("location", url.toString());
     return response;
   }
 

@@ -40,17 +40,21 @@ export async function middleware(request: NextRequest) {
   const needsRoleCheck = pathname === "/" || pathname.startsWith("/setup");
 
   if (needsRoleCheck) {
+    // 케이스/공백 매칭 안전장치 — Google이 반환한 email 그대로 .eq()로 비교하면
+    // DB와 케이스가 다를 때 매칭 실패. ilike로 case-insensitive 매칭.
+    const lookupEmail = (user.email ?? "").trim();
     const { data: userData } = await supabase
       .from("users")
       .select("role")
-      .eq("email", user.email ?? "")
+      .ilike("email", lookupEmail)
       .maybeSingle();
 
-    // 미등록 사용자
+    // 미등록 사용자 — 진단을 위해 시도한 이메일을 쿼리스트링에 포함
     if (!userData) {
-      return NextResponse.redirect(
-        new URL("/login?error=not-registered", request.url)
-      );
+      const url = new URL("/login", request.url);
+      url.searchParams.set("error", "not-registered");
+      url.searchParams.set("email", lookupEmail);
+      return NextResponse.redirect(url);
     }
 
     const role = userData.role as UserRole;

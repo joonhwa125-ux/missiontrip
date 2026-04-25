@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import { isAdminRole, matchesAirlineFilter } from "@/lib/constants";
+import { isAdminRole } from "@/lib/constants";
 import { getBriefingData } from "@/actions/briefing";
 import AdminView from "@/components/admin/AdminView";
 import type { Group, Schedule, ScheduleMemberInfo, AdminMember } from "@/lib/types";
@@ -111,25 +111,9 @@ export default async function AdminPage() {
     }
   }
 
-  // 1조, 2조, 16조(kan.k) 필터링 요구사항 적용
-  const ALLOWED_GROUPS = ["1조", "2조", "16조"];
-  const filteredGroups = ((groups as Group[]) ?? []).filter(g => ALLOWED_GROUPS.includes(g.name));
-  const allowedGroupIds = new Set(filteredGroups.map(g => g.id));
-  const filteredMembers = (members ?? []).filter(m => allowedGroupIds.has(m.group_id));
-
-  // 필터링된 인원 기준으로만 의미있는 일정(schedules)도 필터링
-  const hasAdvance = filteredMembers.some((m) => m.party === "advance");
-  const hasRear = filteredMembers.some((m) => m.party === "rear");
-  const filteredSchedules = ((schedules as Schedule[]) ?? []).filter((s) => {
-    if (s.shuttle_type === "departure") return filteredMembers.some(m => !!m.shuttle_bus);
-    if (s.shuttle_type === "return") return filteredMembers.some(m => !!m.return_shuttle_bus);
-    const scopeOk =
-      s.scope === "all" ||
-      (s.scope === "advance" && hasAdvance) ||
-      (s.scope === "rear" && hasRear);
-    if (!scopeOk) return false;
-    return matchesAirlineFilter(s.airline_filter, filteredMembers);
-  });
+  const filteredGroups = (groups as Group[]) ?? [];
+  const filteredMembers = members ?? [];
+  const filteredSchedules = (schedules as Schedule[]) ?? [];
 
   // 브리핑은 본인 조 한정 — 다른 조의 trip_role·개인 안내가 섞여 노출되지 않도록
   const adminOwnGroupMembers = ((members ?? []) as AdminMember[]).filter(
